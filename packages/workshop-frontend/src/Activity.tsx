@@ -35,10 +35,10 @@ interface ActivityProps {
 }
 
 const HISTORY_FILTERS: { value: HistoryFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'action', label: 'Actions' },
-  { value: 'observation', label: 'Observations' },
-  { value: 'bindHook', label: 'Hooks' },
+  { value: 'all', label: '全て' },
+  { value: 'action', label: 'アクション' },
+  { value: 'observation', label: '観察' },
+  { value: 'bindHook', label: 'フック' },
 ]
 
 function timeValue(date: Date | undefined): number {
@@ -83,23 +83,23 @@ function activityStatus(
   record: ActionLogEntry,
 ): { label: string; dotClass: string; textClass: string } {
   if (record.type === 'observation') {
-    return { label: 'Observed', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
+    return { label: '観察された', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
   }
   if (record.type === 'bindHook') {
     if (record.hookId === undefined) {
-      return { label: 'Deleted', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
+      return { label: '削除されました', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
     }
     return record.enabled
-      ? { label: 'Enabled', dotClass: 'bg-kumo-success', textClass: 'text-kumo-subtle' }
-      : { label: 'Disabled', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
+      ? { label: '有効', dotClass: 'bg-kumo-success', textClass: 'text-kumo-subtle' }
+      : { label: '無効', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
   }
   if (record.state === 'pending') {
-    return { label: 'Waiting', dotClass: 'bg-kumo-brand', textClass: 'text-kumo-strong' }
+    return { label: '待っている', dotClass: 'bg-kumo-brand', textClass: 'text-kumo-strong' }
   }
   if (record.state === 'rejected') {
-    return { label: 'Denied', dotClass: 'bg-kumo-danger', textClass: 'text-kumo-danger' }
+    return { label: '拒否されました', dotClass: 'bg-kumo-danger', textClass: 'text-kumo-danger' }
   }
-  return { label: 'Approved', dotClass: 'bg-kumo-success', textClass: 'text-kumo-subtle' }
+  return { label: '承認された', dotClass: 'bg-kumo-success', textClass: 'text-kumo-subtle' }
 }
 
 function TypeIcon({ record, className }: { record: ActionLogEntry; className?: string }) {
@@ -164,7 +164,7 @@ export default function Activity({
       else await overseer.disableHook(hookId)
     } catch (error) {
       console.error('Failed to toggle hook:', error)
-      toasts.add({ title: `Failed to ${enabled ? 'enable' : 'disable'} hook`, variant: 'error' })
+      toasts.add({ title: `Failed to ${enabled ? '有効にする' : '無効にする'} hook`, variant: 'error' })
     } finally {
       setTogglingHooks(previous => {
         const next = new Set(previous)
@@ -184,7 +184,7 @@ export default function Activity({
   if (!isReady) {
     return (
       <div className="flex h-full items-center justify-center text-[13px] text-kumo-subtle">
-        Loading activity…
+        アクティビティを読み込み中…
       </div>
     )
   }
@@ -198,22 +198,22 @@ export default function Activity({
               <Check size={17} weight="bold" />
             </span>
             <p className="mt-3 text-[13px] font-medium leading-[18px] tracking-[-0.25px] text-kumo-default">
-              Nothing to review
+              レビューするものはありません
             </p>
             <p className="mt-1 max-w-xs text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-              Requests that need your approval show up here and in the workspace header.
+              承認が必要なリクエストは、こことワークスペースのヘッダーに表示されます。
             </p>
             <WorkshopButton className="mt-4" onClick={() => onViewChange('history')}>
-              View history
+              履歴を見る
             </WorkshopButton>
           </div>
         ) : (
           <>
             <div className={`${PANE_BAR} gap-2 px-5`}>
               <span className="text-[12.5px] font-medium leading-[17px] tracking-[-0.15px] text-kumo-default">
-                {pendingActions.length} {pendingActions.length === 1 ? 'request' : 'requests'} waiting
+                {pendingActions.length} {pendingActions.length === 1 ? 'リクエスト' : 'リクエスト'} 待っている
               </span>
-              <span className="ml-auto text-[11.5px] leading-[17px] text-kumo-inactive">Oldest first</span>
+              <span className="ml-auto text-[11.5px] leading-[17px] text-kumo-inactive">古い順</span>
             </div>
             <div className="min-h-0 flex-1 overflow-auto">
               {pendingActions.map(record => {
@@ -268,7 +268,7 @@ export default function Activity({
               </button>
             ))}
             <span className="ml-auto pr-2 text-[11.5px] leading-[17px] tabular-nums text-kumo-inactive">
-              {historyShown} {historyShown === 1 ? 'event' : 'events'}
+              {historyShown} {historyShown === 1 ? 'イベント' : 'イベント'}
             </span>
 
           </div>
@@ -276,29 +276,29 @@ export default function Activity({
           {historyTotal === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
               <p className="m-0 text-[13px] font-medium leading-[18px] tracking-[-0.25px] text-kumo-default">
-                No activity yet
+                まだ活動はありません
               </p>
               <p className="mt-1 max-w-xs text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-                Every resource an agent reads or changes is recorded here.
+                エージェントが読み取りまたは変更したすべてのリソースがここに記録されます。
               </p>
             </div>
           ) : historyShown === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-              <p className="m-0 text-[13px] font-medium text-kumo-default">No matching events</p>
+              <p className="m-0 text-[13px] font-medium text-kumo-default">一致するイベントはありません</p>
               <button
                 type="button"
                 onClick={() => setHistoryFilter('all')}
                 className="mt-1.5 cursor-pointer text-[12px] font-medium text-kumo-subtle hover:text-kumo-default"
               >
-                Show all activity
+                すべてのアクティビティを表示
               </button>
             </div>
           ) : (
             <div className="min-h-0 flex-1 overflow-auto">
               <div className="grid grid-cols-[54px_minmax(0,1fr)_auto_16px] items-center gap-3 border-b border-kumo-line bg-kumo-elevated/50 px-5 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-                <span>Time</span>
-                <span>Event</span>
-                <span>Status</span>
+                <span>日時</span>
+                <span>イベント</span>
+                <span>ステータス</span>
                 <span />
               </div>
               {historyGroups.map(group => (
@@ -392,7 +392,7 @@ function AutoApprovalPanel({
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center text-[13px] text-kumo-subtle">
-        Loading auto-approval…
+        自動承認を読み込んでいます…
       </div>
     )
   }
@@ -401,16 +401,16 @@ function AutoApprovalPanel({
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
         <p className="m-0 text-[13px] font-medium leading-[18px] tracking-[-0.25px] text-kumo-default">
-          {loadError ? 'Could not load auto-approval' : 'Nothing can run automatically'}
+          {loadError ? '自動承認設定を読み込めませんでした' : '自動実行できる操作はありません'}
         </p>
         <p className="mt-1 max-w-xs text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
           {loadError
-            ? 'The current rules may be incomplete. Try loading them again.'
-            : 'Action types appear here once a connected resource offers one its author marked safe to apply without review.'}
+            ? '現在のルールは不完全な可能性があります。再度読み込んでください。'
+            : '接続済みリソースで、作成者が確認不要と指定した操作が利用可能になると、ここに表示されます。'}
         </p>
         {loadError && (
           <WorkshopButton className="mt-4" onClick={() => void refresh()}>
-            Retry
+            リトライ
           </WorkshopButton>
         )}
       </div>
@@ -422,8 +422,8 @@ function AutoApprovalPanel({
       <div className={`${PANE_BAR} gap-3 px-5`}>
         <p className="m-0 min-w-0 flex-1 truncate text-[12.5px] leading-[17px] tracking-[-0.2px] text-kumo-subtle">
           {loadError
-            ? 'Some auto-approval options could not be loaded.'
-            : 'Actions agents may take without asking. Everything else waits for your review.'}
+            ? '一部の自動承認設定を読み込めませんでした。'
+            : 'エージェントが確認なしで実行できる操作です。それ以外は確認を待ちます。'}
         </p>
         {loadError && (
           <button
@@ -431,7 +431,7 @@ function AutoApprovalPanel({
             onClick={() => void refresh()}
             className="cursor-pointer text-[12px] font-medium text-kumo-default hover:text-kumo-default-hover"
           >
-            Retry
+            リトライ
           </button>
         )}
       </div>
@@ -464,17 +464,17 @@ function AutoApprovalPanel({
                     </span>
                     <span className="mt-0.5 block text-[12px] leading-4 tracking-[-0.2px] text-kumo-inactive">
                       {entry.orphaned
-                        ? 'This connection no longer offers this action; the rule still applies.'
+                        ? 'この接続ではこの操作が提供されなくなりましたが、ルールは引き続き適用されます。'
                         : entry.enabled
-                          ? 'Applied without asking'
-                          : 'Waits for your approval'}
+                          ? '確認なしで適用'
+                          : '承認待ち'}
                     </span>
                   </span>
                   <Switch
                     size="sm"
                     checked={entry.enabled}
                     disabled={busy}
-                    aria-label={`${entry.enabled ? 'Disable' : 'Enable'} auto-approval for ${entry.actionKind.label}`}
+                    aria-label={`${entry.enabled ? '無効にする' : '有効にする'} auto-approval for ${entry.actionKind.label}`}
                     onCheckedChange={enabled => void setEnabled(entry, enabled)}
                   />
                 </div>
@@ -627,7 +627,7 @@ function HistoryRow({
                 rel="noopener noreferrer"
                 className="text-kumo-subtle hover:text-kumo-default hover:underline"
               >
-                Open resource
+                オープンリソース
               </a>
             )}
             {record.type === 'bindHook' && record.hookId !== undefined && (

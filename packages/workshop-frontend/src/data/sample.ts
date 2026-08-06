@@ -77,27 +77,27 @@ export interface Template {
 export const inlineDemos: InlineDemo[] = [
   {
     id: 'd1',
-    label: 'Slack bot that summarizes channels',
+    label: 'チャンネルをまとめたSlackボット',
     prompt: 'Build a Slack bot that summarizes unread channels daily',
   },
   {
     id: 'd2',
-    label: 'Jira sprint dashboard',
+    label: 'Jira スプリント ダッシュボード',
     prompt: 'Create a sprint dashboard that pulls from Jira and shows burndown charts',
   },
   {
     id: 'd3',
-    label: 'Discord moderation tool',
+    label: 'Discordモデレーションツール',
     prompt: 'Build a Discord moderation tool with auto-flagging and audit logs',
   },
   {
     id: 'd4',
-    label: 'Google Sheets expense tracker',
+    label: 'Google スプレッドシートの経費トラッカー',
     prompt: 'Create an expense tracker that syncs to Google Sheets',
   },
   {
     id: 'd5',
-    label: 'GitHub PR review dashboard',
+    label: 'GitHub PR レビュー ダッシュボード',
     prompt: 'Build a PR review dashboard that shows open reviews across repos',
   },
 ]
@@ -109,7 +109,7 @@ export const connections: Connection[] = [
   {
     id: 'slack',
     name: 'Slack',
-    description: 'Channels, messages, and threads',
+    description: 'チャンネル、メッセージ、スレッド',
     logo: 'slack',
     color: '#4A154B',
     bgColor: '#f4ecf5',
@@ -130,7 +130,7 @@ export const connections: Connection[] = [
   {
     id: 'discord',
     name: 'Discord',
-    description: 'Servers, channels, and messages',
+    description: 'サーバー、チャネル、メッセージ',
     logo: 'discord',
     color: '#5865F2',
     bgColor: '#eef0ff',
@@ -138,18 +138,18 @@ export const connections: Connection[] = [
     lastUsed: '5 hours ago',
     resourceConfig: {
       resourceType: 'server',
-      placeholder: 'Server name or invite link',
+      placeholder: 'サーバー名または招待リンク',
       inputLabel: 'Add a server',
       browsable: true,
     },
     resources: [
-      { id: 'r-d1', label: 'Acme Dev Server', value: 'acme-dev', type: 'server', active: true },
+      { id: 'r-d1', label: 'Acme 開発サーバー', value: 'acme-dev', type: 'server', active: true },
     ],
   },
   {
     id: 'jira',
     name: 'Jira',
-    description: 'Issues, sprints, and boards',
+    description: '課題、スプリント、ボード',
     logo: 'jira',
     color: '#0052CC',
     bgColor: '#e6efff',
@@ -157,19 +157,19 @@ export const connections: Connection[] = [
     lastUsed: '1 day ago',
     resourceConfig: {
       resourceType: 'board',
-      placeholder: 'Board name or project key (e.g. ENG)',
+      placeholder: 'ボード名またはプロジェクト キー (例: ENG)',
       inputLabel: 'Add a board or project',
       browsable: true,
     },
     resources: [
-      { id: 'r-j1', label: 'ENG Board', value: 'ENG', type: 'board', active: true },
-      { id: 'r-j2', label: 'DESIGN Board', value: 'DESIGN', type: 'board', active: true },
+      { id: 'r-j1', label: 'ENGボード', value: 'ENG', type: 'board', active: true },
+      { id: 'r-j2', label: 'デザインボード', value: 'DESIGN', type: 'board', active: true },
     ],
   },
   {
     id: 'google',
     name: 'Google',
-    description: 'Drive, Sheets, Docs, and Calendar',
+    description: 'ドライブ、スプレッドシート、ドキュメント、カレンダー',
     logo: 'google',
     color: '#4285F4',
     bgColor: '#e8f0fe',
@@ -177,19 +177,19 @@ export const connections: Connection[] = [
     lastUsed: '3 hours ago',
     resourceConfig: {
       resourceType: 'url',
-      placeholder: 'Paste a Google Docs, Sheets, or Drive URL',
+      placeholder: 'Google ドキュメント、スプレッドシート、またはドライブの URL を貼り付けます',
       inputLabel: 'Add a document',
       browsable: false,
     },
     resources: [
-      { id: 'r-g1', label: 'Q1 Planning Doc', value: 'https://docs.google.com/document/d/1a2b3c', type: 'url', active: true },
-      { id: 'r-g2', label: 'Expense Tracker', value: 'https://docs.google.com/spreadsheets/d/4d5e6f', type: 'url', active: true },
+      { id: 'r-g1', label: '第 1 四半期の計画ドキュメント', value: 'https://docs.google.com/document/d/1a2b3c', type: 'url', active: true },
+      { id: 'r-g2', label: '経費追跡ツール', value: 'https://docs.google.com/spreadsheets/d/4d5e6f', type: 'url', active: true },
     ],
   },
   {
     id: 'github',
     name: 'GitHub',
-    description: 'Repos, issues, and pull requests',
+    description: 'リポジトリ、問題、プル リクエスト',
     logo: 'github',
     color: '#24292e',
     bgColor: '#f0f0f0',
@@ -204,14 +204,14 @@ export const connections: Connection[] = [
   {
     id: 'notion',
     name: 'Notion',
-    description: 'Pages, databases, and wikis',
+    description: 'ページ、データベース、Wiki',
     logo: 'notion',
     color: '#000000',
     bgColor: '#f5f5f5',
     connected: false,
     resourceConfig: {
       resourceType: 'page',
-      placeholder: 'Paste a Notion page URL',
+      placeholder: 'Notion ページの URL を貼り付けます',
       inputLabel: 'Add a page or database',
       browsable: false,
     },
@@ -219,14 +219,14 @@ export const connections: Connection[] = [
   {
     id: 'linear',
     name: 'Linear',
-    description: 'Issues, projects, and cycles',
+    description: '課題、プロジェクト、サイクル',
     logo: 'linear',
     color: '#5E6AD2',
     bgColor: '#eeeffa',
     connected: false,
     resourceConfig: {
       resourceType: 'project',
-      placeholder: 'Project name or identifier',
+      placeholder: 'プロジェクト名または識別子',
       inputLabel: 'Add a project',
       browsable: true,
     },
@@ -234,14 +234,14 @@ export const connections: Connection[] = [
   {
     id: 'figma',
     name: 'Figma',
-    description: 'Design files and components',
+    description: '設計ファイルとコンポーネント',
     logo: 'figma',
     color: '#F24E1E',
     bgColor: '#fef0ec',
     connected: false,
     resourceConfig: {
       resourceType: 'file',
-      placeholder: 'Paste a Figma file URL',
+      placeholder: 'Figma ファイルの URL を貼り付けます',
       inputLabel: 'Add a design file',
       browsable: false,
     },
@@ -256,8 +256,8 @@ export const recentConnections = connections.filter((c) => c.connected)
 export const recentApps: App[] = [
   {
     id: 'app-1',
-    title: 'Slack Channel Summarizer',
-    description: 'Summarizes unread Slack channels into a daily digest using Workers AI',
+    title: 'Slack チャンネルサマライザー',
+    description: 'Workers AI を使用して、未読の Slack チャネルを 1 日のダイジェストに要約します',
     gradient: 'from-[#4A154B] to-[#7C3085]',
     updatedAt: '2 hours ago',
     status: 'live',
@@ -265,8 +265,8 @@ export const recentApps: App[] = [
   },
   {
     id: 'app-2',
-    title: 'Sprint Burndown Tracker',
-    description: 'Pulls Jira sprint data and renders burndown charts in real-time',
+    title: 'スプリントバーンダウントラッカー',
+    description: 'Jira スプリント データを取得し、バーンダウン チャートをリアルタイムでレンダリングします。',
     gradient: 'from-[#0052CC] to-[#2684FF]',
     updatedAt: '5 hours ago',
     status: 'live',
@@ -274,8 +274,8 @@ export const recentApps: App[] = [
   },
   {
     id: 'app-3',
-    title: 'Discord Mod Dashboard',
-    description: 'Auto-flags messages and shows audit logs for Discord servers',
+    title: 'Discord Mod ダッシュボード',
+    description: 'メッセージに自動フラグを付け、Discord サーバーの監査ログを表示します',
     gradient: 'from-[#5865F2] to-[#7983F5]',
     updatedAt: '1 day ago',
     status: 'draft',
@@ -283,8 +283,8 @@ export const recentApps: App[] = [
   },
   {
     id: 'app-4',
-    title: 'Expense Tracker',
-    description: 'Track expenses and sync totals to Google Sheets automatically',
+    title: '経費追跡ツール',
+    description: '経費を追跡し、合計を Google スプレッドシートに自動的に同期します',
     gradient: 'from-[#34A853] to-[#4285F4]',
     updatedAt: '2 days ago',
     status: 'live',
@@ -292,8 +292,8 @@ export const recentApps: App[] = [
   },
   {
     id: 'app-5',
-    title: 'PR Review Queue',
-    description: 'Shows open pull requests across all repos with review status',
+    title: 'PRレビューキュー',
+    description: 'すべてのリポジトリにわたるオープンなプルリクエストをレビューステータスとともに表示します',
     gradient: 'from-[#24292e] to-[#555]',
     updatedAt: '3 days ago',
     status: 'building',
@@ -301,8 +301,8 @@ export const recentApps: App[] = [
   },
   {
     id: 'app-6',
-    title: 'Team Standup Bot',
-    description: 'Collects async standups from Slack and posts summaries to Notion',
+    title: 'チームスタンドアップボット',
+    description: 'Slack から非同期スタンドアップを収集し、概要を Notion に投稿します',
     gradient: 'from-[#E01E5A] to-[#ECB22E]',
     updatedAt: '4 days ago',
     status: 'live',
@@ -316,8 +316,8 @@ export const recentApps: App[] = [
 export const templates: Template[] = [
   {
     id: '1',
-    title: 'Workers AI Playground',
-    description: 'Interactive AI model playground with streaming responses',
+    title: 'ワーカー AI プレイグラウンド',
+    description: 'ストリーミング応答を備えたインタラクティブな AI モデル プレイグラウンド',
     category: 'apps',
     gradient: 'from-orange-600 via-red-600 to-pink-600',
     author: { name: 'cloudflare', avatar: 'CF' },
@@ -327,8 +327,8 @@ export const templates: Template[] = [
   },
   {
     id: '2',
-    title: 'SaaS Landing Page',
-    description: 'Modern SaaS landing page with pricing and features',
+    title: 'SaaS ランディング ページ',
+    description: '価格と機能を備えた最新の SaaS ランディング ページ',
     category: 'landing-pages',
     gradient: 'from-blue-600 via-indigo-600 to-violet-600',
     author: { name: 'designco', avatar: 'DC' },
@@ -338,8 +338,8 @@ export const templates: Template[] = [
   },
   {
     id: '3',
-    title: 'D1 Database Explorer',
-    description: 'Visual database explorer for Cloudflare D1',
+    title: 'D1 データベース エクスプローラー',
+    description: 'Cloudflare D1 のビジュアル データベース エクスプローラー',
     category: 'apps',
     gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
     author: { name: 'devtools', avatar: 'DT' },
@@ -349,8 +349,8 @@ export const templates: Template[] = [
   },
   {
     id: '4',
-    title: 'KV Store Manager',
-    description: 'Manage your Workers KV namespaces with a clean UI',
+    title: 'KV ストアマネージャー',
+    description: 'クリーンな UI で Workers KV 名前空間を管理する',
     category: 'dashboards',
     gradient: 'from-violet-600 via-purple-600 to-fuchsia-600',
     author: { name: 'cloudflare', avatar: 'CF' },
@@ -360,8 +360,8 @@ export const templates: Template[] = [
   },
   {
     id: '5',
-    title: 'AI Gateway Starter',
-    description: 'Route and manage AI API calls through Cloudflare',
+    title: 'AIゲートウェイスターター',
+    description: 'Cloudflareを介してAI API呼び出しをルーティングおよび管理する',
     category: 'apps',
     gradient: 'from-gray-800 via-gray-700 to-gray-600',
     author: { name: 'aitools', avatar: 'AI' },
@@ -371,8 +371,8 @@ export const templates: Template[] = [
   },
   {
     id: '6',
-    title: 'R2 File Browser',
-    description: 'Upload and browse files stored in Cloudflare R2',
+    title: 'R2 ファイルブラウザ',
+    description: 'Cloudflare R2に保存されているファイルのアップロードと参照',
     category: 'components',
     gradient: 'from-amber-600 via-orange-600 to-red-600',
     author: { name: 'storage', avatar: 'ST' },
@@ -383,10 +383,10 @@ export const templates: Template[] = [
 ]
 
 export const templateCategories = [
-  { id: 'apps', label: 'Apps and Games', icon: 'blocks' },
-  { id: 'landing-pages', label: 'Landing Pages', icon: 'layout' },
-  { id: 'components', label: 'Components', icon: 'grid' },
-  { id: 'dashboards', label: 'Dashboards', icon: 'bar-chart' },
+  { id: 'apps', label: 'アプリとゲーム', icon: 'blocks' },
+  { id: 'landing-pages', label: 'ランディングページ', icon: 'layout' },
+  { id: 'components', label: 'コンポーネント', icon: 'grid' },
+  { id: 'dashboards', label: 'ダッシュボード', icon: 'bar-chart' },
 ] as const
 
 export function formatNumber(num: number): string {

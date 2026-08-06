@@ -25,7 +25,7 @@ export default function GatekeeperAppPage({ appId }: { appId: string }) {
       .getGatekeeperApp(appId)
       .then((frame) => {
         if (!frame) {
-          if (!cancelled) setError('This app is not available on this deployment.')
+          if (!cancelled) setError('このアプリはこの展開では使用できません。')
           return
         }
         if (cancelled) {
@@ -54,7 +54,7 @@ export default function GatekeeperAppPage({ appId }: { appId: string }) {
     )
   }
   if (!state) {
-    return <div className="px-4 py-16 text-center text-sm text-kumo-subtle">Loading…</div>
+    return <div className="px-4 py-16 text-center text-sm text-kumo-subtle">読み込み中…</div>
   }
 
   // Fill the viewport below the header so the embedded app can manage its own internal layout.

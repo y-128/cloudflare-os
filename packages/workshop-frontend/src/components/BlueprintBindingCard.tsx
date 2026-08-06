@@ -60,17 +60,17 @@ export function BlueprintBindingCard({
       <div className={headerClass}>
         <GatekeeperIcon vendorId={vendorId} fallbackText={resourceTitle || bindingName} />
         <div className="min-w-0 flex-1">
-          <label htmlFor={titleId} className="sr-only">Connection name</label>
+          <label htmlFor={titleId} className="sr-only">接続名</label>
           <WorkshopInput
             id={titleId}
-            aria-label={`Name for ${bindingName}`}
+            aria-label={`${bindingName}の名前`}
             value={annotation.title}
             onChange={(e) => onChange({ ...annotation, title: e.target.value })}
-            placeholder="Connection name"
+            placeholder="接続名"
             className="!h-8 w-full bg-kumo-base text-[13px] leading-5 font-medium tracking-[-0.25px]"
           />
           <p className="mt-1 text-[11px] leading-4 tracking-[-0.1px] text-kumo-inactive">
-            Referenced in code as: <span className="font-mono text-kumo-subtle">{bindingName}</span>
+            コード内では次のように参照されます。 <span className="font-mono text-kumo-subtle">{bindingName}</span>
           </p>
         </div>
       </div>
@@ -78,10 +78,10 @@ export function BlueprintBindingCard({
       <div className={descriptionWrapperClass}>
         <WorkshopInputArea
           id={descriptionId}
-          aria-label={`Help text for ${displayTitle}`}
+          aria-label={`${displayTitle}の説明`}
           value={annotation.description}
           onChange={(e) => onChange({ ...annotation, description: e.target.value })}
-          placeholder="What should people connect here?"
+          placeholder="ここで人々は何を接続すべきでしょうか?"
           rows={2}
           autoFocus={autoFocusDescription}
           className="w-full resize-none"

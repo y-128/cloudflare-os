@@ -27,7 +27,7 @@ describe('SiteLogo', () => {
     let config = { siteLogo: logoUrl ? { url: logoUrl } : undefined } as ServerConfig
     act(() => root!.render(
       <ServerConfigContext.Provider value={config}>
-        <SiteLogo size={20}><span data-fallback>fallback</span></SiteLogo>
+        <SiteLogo size={20}><span data-fallback>後退する</span></SiteLogo>
       </ServerConfigContext.Provider>,
     ))
   }
@@ -36,7 +36,7 @@ describe('SiteLogo', () => {
     let config = { siteLogo: logoUrl ? { url: logoUrl } : undefined } as ServerConfig
     act(() => root!.render(
       <ServerConfigContext.Provider value={config}>
-        <SiteLogo size={20}><span data-fallback>fallback</span></SiteLogo>
+        <SiteLogo size={20}><span data-fallback>後退する</span></SiteLogo>
       </ServerConfigContext.Provider>,
     ))
   }
@@ -74,7 +74,7 @@ describe('SiteLogo', () => {
     act(() => root!.render(
       <ServerConfigContext.Provider value={config}>
         <SiteLogo size={20} srcOverride={null}>
-          <span data-fallback>fallback</span>
+          <span data-fallback>後退する</span>
         </SiteLogo>
       </ServerConfigContext.Provider>,
     ))

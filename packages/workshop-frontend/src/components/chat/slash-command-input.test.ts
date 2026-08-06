@@ -16,13 +16,13 @@ function parsed(input: string, cursorPosition = 1) {
 const choices: SlashCommandChoice[] = [{
   selection: {gatekeeperId: 1, commandId: "skill-deploy"},
   name: "deploy",
-  description: "Use the deployment runbook.",
+  description: "デプロイ Runbook を使用します。",
   providerLabel: "Context Library",
   resourceLabel: "Runbooks",
 }, {
   selection: {gatekeeperId: 2, commandId: "workflow-deploy"},
   name: "deploy",
-  description: "Run the deployment workflow.",
+  description: "導入ワークフローを実行します。",
   providerLabel: "GitHub",
 }];
 

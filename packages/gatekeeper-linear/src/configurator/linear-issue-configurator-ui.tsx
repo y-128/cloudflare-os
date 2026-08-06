@@ -25,11 +25,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Issue" description="Search issues, or type an identifier like ENG-123.">
+      <Field label="問題" description="問題を検索するか、ENG-123 などの識別子を入力します。">
         <Autocomplete
           name="issueIdentifier"
           value={values.issueIdentifier}
-          placeholder="Search issues..."
+          placeholder="課題を検索…"
           loadOptions={query => ui.listIssues(query)}
           onChange={issueIdentifier => setValues({ issueIdentifier })}
         />

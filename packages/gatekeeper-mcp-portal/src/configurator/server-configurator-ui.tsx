@@ -79,11 +79,11 @@ export default {
     if (values.endpointKind === "unavailable") {
       return <Section>
         <Field
-          label="Server"
+          label="サーバ"
           description={
-            "Could not reach the portal to list the servers behind it, so there is nothing to " +
-            "grant yet. Close this and try again; if it keeps happening, ask an administrator to " +
-            "check the portal configuration."
+            "ポータルにアクセスして背後のサーバーを一覧表示できなかったため、何もすることができません" +
+            "付与はまだです。これを閉じて、もう一度試してください。引き続き発生する場合は、管理者に問い合わせてください。" +
+            "ポータルの設定を確認してください。"
           }
         />
       </Section>;
@@ -97,13 +97,13 @@ export default {
 
     return <Section>
       {!soleServer && <Field
-        label="Server"
-        description="Which server behind this portal to grant. Its tools appear next."
+        label="サーバ"
+        description="このポータルの背後にあるどのサーバーに許可を与えるか。次にそのツールが表示されます。"
       >
         <Autocomplete
           name="server"
           value={values.server}
-          placeholder="Search servers behind this portal..."
+          placeholder="このポータル配下のサーバーを検索…"
           loadOptions={query => loadServerOptions(ui, query)}
           onChange={server => setValues({ server, tools: null })}
           onClear={() => setValues({ server: null, tools: null })}
@@ -111,8 +111,8 @@ export default {
       </Field>}
 
       {toolsReady && <Field
-        label={soleServer ? `Tools · ${soleServer.title}` : "Tools"}
-        description="Choose how much of this server this connection may call."
+        label={soleServer ? `Tools · ${soleServer.title}` : "ツール"}
+        description="この接続が呼び出すサーバーの量を選択します。"
       >
         <RadioCards
           value={mode}
@@ -134,13 +134,13 @@ export default {
       </Field>}
 
       {toolsReady && <Field
-        label="Allowed tools"
+        label="許可されたツール"
         description={mode === "all"
-          ? "Read-only tools return data straight away; the rest queue for your approval."
+          ? "読み取り専用ツールはデータをすぐに返します。残りのキューはあなたの承認を待ちます。"
           : selectedCount > 0
             ? `${selectedCount} selected. Read-only tools return data straight away; the rest `
-              + "queue for your approval."
-            : "Tick at least one tool to grant anything."}
+              + "あなたの承認を待ちます。"
+            : "何かを許可するには、少なくとも 1 つのツールにチェックを入れます。"}
       >
         <CheckboxList
           name={`tools:${serverKey}`}

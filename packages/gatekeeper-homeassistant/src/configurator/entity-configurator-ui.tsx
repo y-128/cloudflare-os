@@ -17,11 +17,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Entity" description="Choose a single Home Assistant entity (light, sensor, switch, etc).">
+      <Field label="実在物" description="単一のホーム アシスタント エンティティ (ライト、センサー、スイッチなど) を選択します。">
         <Autocomplete
           name="entityId"
           value={values.entityId}
-          placeholder="Search entities..."
+          placeholder="エンティティを検索…"
           loadOptions={query => ui.listEntities(query)}
           onChange={entityId => setValues({ entityId })}
         />

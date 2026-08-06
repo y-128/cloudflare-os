@@ -36,7 +36,7 @@ vi.mock("./AuthContext", () => ({
 vi.mock("./ChatInterface", () => ({
   ChatInput: ({ seedText, seedNonce }: { seedText?: string; seedNonce?: number }) => {
     testState.seeds.push({ text: seedText, nonce: seedNonce });
-    return <textarea aria-label="Prompt" readOnly value={seedText ?? ""} />;
+    return <textarea aria-label="プロンプト" readOnly value={seedText ?? ""} />;
   },
 }));
 
@@ -66,7 +66,7 @@ describe("Home prompt route flow", () => {
     root = createRoot(container);
     await act(async () => root!.render(<HomePageContent prompt="Create a daily brief." />));
 
-    expect(container.querySelector<HTMLTextAreaElement>('[aria-label="Prompt"]')?.value).toBe(
+    expect(container.querySelector<HTMLTextAreaElement>('[aria-label="プロンプト"]')?.value).toBe(
       "Create a daily brief.",
     );
     expect(Math.max(...testState.seeds.map(({ nonce }) => nonce ?? 0))).toBe(1);

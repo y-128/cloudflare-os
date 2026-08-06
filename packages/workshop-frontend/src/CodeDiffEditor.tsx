@@ -407,7 +407,7 @@ export default function CodeDiffEditor({
         className="flex items-center justify-center bg-kumo-base text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle"
         style={{ height }}
       >
-        {!filename ? 'Select a file to view changes' : 'Loading diff...'}
+        {!filename ? 'ファイルを選択して変更を表示' : '差分を読み込み中…'}
       </div>
     )
   }
@@ -423,8 +423,8 @@ export default function CodeDiffEditor({
             <button
               type="button"
               className={layoutButtonClass(diffLayoutPreference === 'stacked')}
-              title="Stacked diff"
-              aria-label="Use stacked diff layout"
+              title="上下分割の差分"
+              aria-label="上下分割の差分表示を使用"
               aria-pressed={diffLayoutPreference === 'stacked'}
               onClick={() => setDiffLayoutPreference('stacked')}
             >
@@ -433,8 +433,8 @@ export default function CodeDiffEditor({
             <button
               type="button"
               className={layoutButtonClass(diffLayoutPreference === 'split' && canSplitDiff, !canSplitDiff)}
-              title={canSplitDiff ? 'Split diff' : 'Split diff needs more space'}
-              aria-label="Use split diff layout"
+              title={canSplitDiff ? '分割差分' : '分割差分にはさらに多くのスペースが必要です'}
+              aria-label="左右分割の差分表示を使用"
               aria-pressed={diffLayoutPreference === 'split' && canSplitDiff}
               disabled={!canSplitDiff}
               onClick={() => setDiffLayoutPreference('split')}

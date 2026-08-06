@@ -86,7 +86,7 @@ export default function OAuthButtons({ rpcStub, vendors, onSuccess }: OAuthButto
       else window.location.reload()
     } catch (err) {
       if (!mountedRef.current) return
-      setError(err instanceof Error ? err.message : 'Could not sign in')
+      setError(err instanceof Error ? err.message : 'サインインできませんでした')
       setPending(null)
     }
   }
@@ -111,7 +111,7 @@ export default function OAuthButtons({ rpcStub, vendors, onSuccess }: OAuthButto
               style={{ height: 18, width: 'auto' }}
             />
           )}
-          Continue with {vendor.displayName}
+          続けて {vendor.displayName}
         </Button>
       ))}
     </div>

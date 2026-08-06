@@ -207,7 +207,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc1',
         name: 'create_project',
-        label: 'Creating project scaffold',
+        label: 'プロジェクトの足場を作成する',
         status: 'complete',
         duration: 1240,
         icon: 'file',
@@ -217,7 +217,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc2',
         name: 'request_connection',
-        label: 'Requesting Slack access — #general, #engineering',
+        label: 'Slack アクセスのリクエスト — #general、#engineering',
         status: 'complete',
         duration: 320,
         icon: 'connection',
@@ -227,7 +227,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc3',
         name: 'setup_ai_binding',
-        label: 'Configuring Workers AI',
+        label: 'Workers AI の構成',
         status: 'complete',
         duration: 890,
         icon: 'zap',
@@ -245,7 +245,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc4',
         name: 'fetch_slack_channels',
-        label: 'Reading #general, #engineering via Slack',
+        label: 'Slack 経由で #general、#engineering を読む',
         status: 'complete',
         duration: 456,
         icon: 'search',
@@ -255,7 +255,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc5',
         name: 'write_file',
-        label: 'Writing worker.ts',
+        label: 'worker.ts の作成',
         status: 'complete',
         duration: 2100,
         icon: 'code',
@@ -265,7 +265,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc6',
         name: 'write_file',
-        label: 'Writing lib/slack.ts',
+        label: 'lib/slack.ts の作成',
         status: 'complete',
         duration: 1800,
         icon: 'code',
@@ -275,7 +275,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc7',
         name: 'write_file',
-        label: 'Writing lib/ai.ts',
+        label: 'lib/ai.ts の作成',
         status: 'complete',
         duration: 950,
         icon: 'code',
@@ -293,7 +293,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc8',
         name: 'create_d1_database',
-        label: 'Creating D1 database',
+        label: 'D1データベースの作成',
         status: 'complete',
         duration: 1450,
         icon: 'database',
@@ -303,7 +303,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc9',
         name: 'deploy_worker',
-        label: 'Deploying to Cloudflare',
+        label: 'Cloudflareへのデプロイ',
         status: 'complete',
         duration: 3200,
         icon: 'deploy',
@@ -313,7 +313,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc10',
         name: 'run_healthcheck',
-        label: 'Running health check',
+        label: 'ヘルスチェックの実行中',
         status: 'complete',
         duration: 210,
         icon: 'shield',
@@ -343,7 +343,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc11',
         name: 'update_file',
-        label: 'Adding cron handler to worker.ts',
+        label: 'cron ハンドラーを worker.ts に追加する',
         status: 'complete',
         duration: 1600,
         icon: 'code',
@@ -353,7 +353,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc12',
         name: 'request_scope',
-        label: 'Requesting chat:write for #general',
+        label: 'チャットのリクエスト:#general に書き込み',
         status: 'complete',
         duration: 280,
         icon: 'shield',
@@ -363,7 +363,7 @@ export const sampleMessages: ChatMessage[] = [
       {
         id: 'tc13',
         name: 'deploy_worker',
-        label: 'Redeploying with cron trigger',
+        label: 'cronトリガーによる再デプロイ',
         status: 'running',
         icon: 'deploy',
         input: { name: 'slack-summarizer', cron: '0 9 * * *' },

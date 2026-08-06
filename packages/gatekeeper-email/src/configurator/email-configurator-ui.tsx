@@ -20,11 +20,11 @@ export default {
 
   render({ values, setValues }) {
     return <Section>
-      <Field label="Email name" description="Choose the local part of the mailbox address this connection can receive.">
+      <Field label="メール名" description="この接続が受信できるメールボックス アドレスのローカル部分を選択します。">
         <TextInput
           name="emailName"
           value={values.emailName}
-          placeholder="alerts"
+          placeholder="アラート"
           onChange={emailName => setValues({ emailName })}
         />
       </Field>

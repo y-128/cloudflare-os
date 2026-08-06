@@ -14,11 +14,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Document" description="Search recent documents from Drive.">
+      <Field label="書類" description="ドライブから最近のドキュメントを検索します。">
         <Autocomplete
           name="docId"
           value={values.docId}
-          placeholder="Search recent docs..."
+          placeholder="最近のドキュメントを検索…"
           loadOptions={query => ui.listDocs(query)}
           onChange={docId => setValues({ docId })}
         />

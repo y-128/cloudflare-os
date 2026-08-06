@@ -4,8 +4,8 @@ import type { ManagementSchedule } from "../src/management-types";
 
 const common = {
   scheduleId: "schedule-a",
-  title: "Morning brief",
-  description: "Prepare the morning brief.",
+  title: "朝の概要",
+  description: "朝の要約を準備します。",
   workspaceId: "a".repeat(64),
 };
 

@@ -26,14 +26,14 @@ export default function GadgetExportMenu({ gadget, gadgetTitle, chatId, disabled
         () => gadget.exportPdf(chatId),
         makeExportFilename(gadgetTitle, '.pdf'),
         {
-          description: 'PDF document',
+          description: 'PDFドキュメント',
           contentType: 'application/pdf',
           extension: '.pdf',
         },
       )
     } catch (error) {
       console.error('Failed to export Gadget as PDF:', error)
-      toasts.add({ title: 'Failed to export PDF', variant: 'error' })
+      toasts.add({ title: 'PDFのエクスポートに失敗しました', variant: 'error' })
     } finally {
       setExporting(false)
     }
@@ -43,7 +43,7 @@ export default function GadgetExportMenu({ gadget, gadgetTitle, chatId, disabled
     <Tooltip content={exporting ? 'Exporting to PDF' : 'Export to PDF'} asChild>
       <span className="relative inline-flex">
         <WorkshopIconButton
-          aria-label="Export to PDF"
+          aria-label="PDFに書き出す"
           disabled={disabled || !gadget || exporting}
           onClick={() => { void download() }}
         >

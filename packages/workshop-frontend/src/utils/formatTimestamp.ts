@@ -11,7 +11,7 @@ let fullTimestampFormatter: Intl.DateTimeFormat | null = null;
 
 function getFullTimestampFormatter(): Intl.DateTimeFormat {
   if (fullTimestampFormatter === null) {
-    fullTimestampFormatter = new Intl.DateTimeFormat(undefined, {
+    fullTimestampFormatter = new Intl.DateTimeFormat("ja-JP", {
       dateStyle: "short",
       timeStyle: "short",
     });

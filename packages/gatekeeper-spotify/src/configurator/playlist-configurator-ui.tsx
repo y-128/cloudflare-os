@@ -17,11 +17,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Playlist" description="Search your playlists, or paste a Spotify playlist URL or link.">
+      <Field label="プレイリスト" description="プレイリストを検索するか、Spotify プレイリストの URL またはリンクを貼り付けます。">
         <Autocomplete
           name="playlistId"
           value={values.playlistId}
-          placeholder="Search playlists or paste a URL..."
+          placeholder="プレイリストを検索またはURLを貼り付け…"
           loadOptions={query => ui.listPlaylists(query)}
           onChange={playlistId => setValues({ playlistId })}
         />

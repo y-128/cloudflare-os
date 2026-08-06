@@ -21,11 +21,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Space" description="Search the spaces shared with this connection.">
+      <Field label="空間" description="この接続で共有されているスペースを検索します。">
         <Autocomplete
           name="spaceUrl"
           value={values.spaceUrl}
-          placeholder="Search spaces..."
+          placeholder="スペースを検索…"
           loadOptions={query => ui.listSpaces(query)}
           onChange={spaceUrl => setValues({ spaceUrl })}
         />

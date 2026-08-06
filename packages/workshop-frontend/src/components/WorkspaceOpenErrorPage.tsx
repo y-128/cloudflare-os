@@ -10,20 +10,20 @@ export type WorkspaceOpenFailureKind = 'access-denied' | 'not-found' | 'unexpect
 
 const CONTENT = {
   'access-denied': {
-    title: "You don't have access to this workspace",
-    message: 'Ask the workspace owner to grant you access, then try again.',
+    title: "このワークスペースへのアクセス権がありません",
+    message: 'ワークスペースの所有者にアクセスを許可するよう依頼してから、再試行してください。',
     Icon: Lock,
     retryable: true,
   },
   'not-found': {
-    title: 'Workspace not found',
-    message: 'The link may be incorrect, or the workspace may have been deleted.',
+    title: 'ワークスペースが見つかりません',
+    message: 'リンクが間違っているか、ワークスペースが削除されている可能性があります。',
     Icon: MagnifyingGlass,
     retryable: false,
   },
   unexpected: {
-    title: "We couldn't load this workspace",
-    message: 'Try again. If the problem continues, return to your workspaces.',
+    title: "このワークスペースを読み込めませんでした",
+    message: 'もう一度やり直してください。問題が解決しない場合は、ワークスペースに戻ってください。',
     Icon: WarningCircle,
     retryable: true,
   },
@@ -88,11 +88,11 @@ export default function WorkspaceOpenErrorPage({ kind, onRetry, onGoToWorkspaces
             className="!h-9"
             onClick={onGoToWorkspaces}
           >
-            Go to workspaces
+            ワークスペースに移動
           </WorkshopButton>
           {retryable && (
             <WorkshopButton tone="primary" onClick={onRetry}>
-              Try again
+              再試行
             </WorkshopButton>
           )}
         </div>

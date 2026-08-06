@@ -24,40 +24,40 @@ type TaskSuggestion = {
 const SUGGESTIONS: TaskSuggestion[] = [
   {
     id: 'one-on-one',
-    label: 'Write a 1:1 pre-read',
-    description: 'A doc with a snapshot, things to inspect, and one ask',
+    label: '1:1 プリリードを書き込む',
+    description: 'スナップショット、検査対象、および質問が記載されたドキュメント',
     icon: FileText,
     prompt:
       'Create a document to prepare for my next 1:1 with a direct report: a current snapshot, a coaching frame, things to inspect, carryover items from last time, and one clear ask.',
   },
   {
     id: 'team-meeting',
-    label: 'Build a team meeting deck',
-    description: 'Slides with progress, risks, and what needs a decision',
+    label: 'チームミーティングの資料を作成する',
+    description: '進捗状況、リスク、決定が必要な内容を記載したスライド',
     icon: Presentation,
     prompt:
       'Create a slide deck for my next team meeting: where things stand, what shipped, risks and blockers, and the decisions I need from the room. Ask me what the team is working on first.',
   },
   {
     id: 'insights',
-    label: 'Find insights in my data',
-    description: 'Turn a spreadsheet or CSV into trends and recommendations',
+    label: 'データから洞察を見つける',
+    description: 'スプレッドシートまたは CSV をトレンドと推奨事項に変換する',
     icon: ChartLineUp,
     prompt:
       'Turn a dataset I will share (a spreadsheet, CSV, or pasted table) into a narrative analysis: key trends, anomalies, the "so what", and concrete recommendations.',
   },
   {
     id: 'workflow',
-    label: 'Automate a workflow',
-    description: 'Trigger an agent when a new email arrives',
+    label: 'ワークフローを自動化する',
+    description: '新しいメールの到着時にエージェントをトリガーする',
     icon: Lightning,
     prompt:
       'Create an agent workflow that runs automatically when a new email arrives: read the message, decide what to do, and take action or draft a reply. Ask me which inbox to watch and what it should handle.',
   },
   {
     id: 'app',
-    label: 'Build a quick tool',
-    description: 'A small interactive app, calculator, or dashboard',
+    label: 'クイックツールを構築する',
+    description: '小さなインタラクティブなアプリ、電卓、またはダッシュボード',
     icon: AppWindow,
     prompt:
       'Build a small interactive tool I can use right here — a calculator, dashboard, or explorer. Ask me what it should do, then create it.',
@@ -122,9 +122,9 @@ export default function HomeTaskSuggestions({
   const visible = useMemo(pickSuggestions, [])
 
   return (
-    <section aria-label="Example tasks" className="flex flex-col gap-1">
+    <section aria-label="タスクの例" className="flex flex-col gap-1">
       <h3 className="px-1 pb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-        Get started
+        始めましょう
       </h3>
       <ul className="flex flex-col gap-0.5">
         {visible.map((suggestion) => (

@@ -52,7 +52,7 @@ export default function ConnectAccountModal({
         setVendors(vendorList.filter(v => !v.unavailable).map(v => ({ id: v.id, description: v.description })))
       } catch (error) {
         console.error('Failed to fetch vendors:', error)
-        toasts.add({ title: 'Failed to load available services', variant: 'error' })
+        toasts.add({ title: '利用可能なサービスを読み込めませんでした', variant: 'error' })
       } finally {
         setVendorsLoading(false)
       }
@@ -69,7 +69,7 @@ export default function ConnectAccountModal({
       onInitiated()
     } catch (error) {
       console.error('Failed to initiate connection:', error)
-      toasts.add({ title: 'Failed to start connection flow', variant: 'error' })
+      toasts.add({ title: '接続フローの開始に失敗しました', variant: 'error' })
       setConnecting(null)
     }
   }
@@ -77,14 +77,14 @@ export default function ConnectAccountModal({
   return (
     <Dialog.Root open={visible} onOpenChange={(open) => { if (!open) onCancel() }}>
       <Dialog className="p-6" size="base">
-        <Dialog.Title className="text-lg font-semibold mb-4">Connect Account</Dialog.Title>
+        <Dialog.Title className="text-lg font-semibold mb-4">アカウントを接続</Dialog.Title>
         {vendorsLoading ? (
           <div className="text-center py-8">
             <Loader />
           </div>
         ) : vendors.length === 0 ? (
           <div className="text-center py-8">
-            <Text variant="secondary">No services available to connect.</Text>
+            <Text variant="secondary">接続できるサービスはありません。</Text>
           </div>
         ) : (
           <div className="flex flex-col gap-3 mt-2">

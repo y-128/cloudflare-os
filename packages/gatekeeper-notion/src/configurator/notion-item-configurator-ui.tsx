@@ -22,13 +22,13 @@ export default {
   render({ values, setValues, ui }) {
     return <Section>
       <Field
-        label="Page or database"
-        description="Search the Notion pages and databases shared with this connection, or paste a Notion URL."
+        label="ページまたはデータベース"
+        description="この接続で共有されている Notion ページとデータベースを検索するか、Notion URL を貼り付けます。"
       >
         <Autocomplete
           name="itemUrl"
           value={values.itemUrl}
-          placeholder="Search Notion..."
+          placeholder="Notionを検索…"
           loadOptions={query => ui.listItems(query)}
           onChange={itemUrl => setValues({ itemUrl })}
         />

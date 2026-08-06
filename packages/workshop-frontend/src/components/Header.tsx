@@ -62,7 +62,7 @@ export default function Header() {
               activeProps={{ className: navLinkActiveClass }}
               activeOptions={{ exact: true }}
             >
-              Home
+              ホーム
             </Link>
             <Link
               to="/gatekeepers"
@@ -70,14 +70,14 @@ export default function Header() {
               activeProps={{ className: navLinkActiveClass }}
               activeOptions={{ exact: true }}
             >
-              Gatekeepers
+              ゲートキーパー
             </Link>
             <Link
               to="/explore"
               className={navLinkClass}
               activeProps={{ className: navLinkActiveClass }}
             >
-              Explore
+              見つける
             </Link>
             {gatekeeperApps.map((app) => (
               <Link
@@ -125,7 +125,7 @@ export default function Header() {
               activeProps={{ className: navLinkActiveClass }}
               activeOptions={{ exact: true }}
             >
-              Home
+              ホーム
             </Link>
             <Link
               to="/gatekeepers"
@@ -134,7 +134,7 @@ export default function Header() {
               activeProps={{ className: navLinkActiveClass }}
               activeOptions={{ exact: true }}
             >
-              Gatekeepers
+              ゲートキーパー
             </Link>
             <Link
               to="/explore"
@@ -142,7 +142,7 @@ export default function Header() {
               className={navLinkClass}
               activeProps={{ className: navLinkActiveClass }}
             >
-              Explore
+              見つける
             </Link>
             {gatekeeperApps.map((app) => (
               <Link
@@ -167,7 +167,7 @@ export default function Header() {
                   className={navLinkClass}
                   activeProps={{ className: navLinkActiveClass }}
                 >
-                  Profile
+                  プロフィール
                 </Link>
                 <Link
                   to="/providers"
@@ -175,7 +175,7 @@ export default function Header() {
                   className={navLinkClass}
                   activeProps={{ className: navLinkActiveClass }}
                 >
-                  Providers
+                  プロバイダー
                 </Link>
                 {auth.isAdmin && (
                   <Link
@@ -184,14 +184,14 @@ export default function Header() {
                     className={navLinkClass}
                     activeProps={{ className: navLinkActiveClass }}
                   >
-                    Admin
+                    管理
                   </Link>
                 )}
                 <button
                   onClick={() => { closeMobileMenu(); auth.logout() }}
                   className="text-left text-sm px-3 py-1.5 rounded-md text-kumo-danger hover:bg-kumo-tint transition-colors"
                 >
-                  Sign out
+                  サインアウト
                 </button>
               </>
             )}

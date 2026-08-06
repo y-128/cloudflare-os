@@ -79,12 +79,12 @@ export function AgentSpawnerConfigForm({
   return (
     <section className="grid gap-4">
       <ConnectionConfigField
-        label="Display name"
-        description="Name this agent capability for this connection."
+        label="表示名"
+        description="この接続に対するエージェント機能に名前を付けます。"
       >
         <WorkshopInput
-          aria-label="Agent display name"
-          placeholder="e.g. Email Responder"
+          aria-label="エージェントの表示名"
+          placeholder="例えば電子メールレスポンダー"
           value={displayName}
           onChange={(e) => onDisplayNameChange(e.target.value)}
           className="w-full"
@@ -92,14 +92,14 @@ export function AgentSpawnerConfigForm({
       </ConnectionConfigField>
 
       <ConnectionConfigField
-        label="Model"
-        description="Choose the model spawned agents will use."
+        label="モデル"
+        description="生成されたエージェントが使用するモデルを選択します。"
       >
         <Select
-          aria-label="Agent model"
+          aria-label="エージェントのモデル"
           className="w-full text-sm [&_button]:!h-9"
           container={selectContainer}
-          placeholder="Select a model"
+          placeholder="モデルを選択"
           value={modelId}
           onValueChange={(v) => onModelIdChange(v as string | null)}
           renderValue={(id) => {
@@ -108,7 +108,7 @@ export function AgentSpawnerConfigForm({
           }}
         >
           <Select.Option value={null as any}>
-            None (no agent)
+            なし（エージェントなし）
           </Select.Option>
           {availableModels.map(model => (
             <Select.Option key={model.id} value={model.id}>
@@ -117,30 +117,30 @@ export function AgentSpawnerConfigForm({
           ))}
         </Select>
         <p className="mt-1 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-          Choose "None" to create conversations without an agent.
+          エージェントなしで会話を作成するには、「なし」を選択します。
         </p>
       </ConnectionConfigField>
 
       <ConnectionConfigField
-        label="Agent bindings"
-        description="What spawned agents may use, and the names they see it under."
+        label="エージェントバインディング"
+        description="生成されたエージェントが使用できるものと、エージェントに表示される名前。"
       >
         {env.length === 0 ? (
           <p className="text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-            Nothing is available to offer spawned agents here. Create the agent from a gadget's
-            Connections tab to give it access to that gadget and its resources.
+            ここでは、生成されたエージェントを提供できるものは何もありません。ガジェットからエージェントを作成する
+            [接続] タブをクリックして、そのガジェットとそのリソースへのアクセスを許可します。
           </p>
         ) : (
           <div className="grid gap-2">
             {env.map((row, index) => (
               <div key={`${row.target}:${index}`} className="flex items-center gap-2">
                 <Checkbox
-                  aria-label={`Give spawned agents access to ${row.targetTitle}`}
+                  aria-label={`生成したエージェントに${row.targetTitle}へのアクセスを許可`}
                   checked={row.enabled}
                   onCheckedChange={(checked) => updateRow(index, { enabled: checked === true })}
                 />
                 <WorkshopInput
-                  aria-label={`Binding name for ${row.targetTitle}`}
+                  aria-label={`${row.targetTitle}のバインディング名`}
                   value={row.name}
                   disabled={!row.enabled}
                   onChange={(e) => updateRow(index, { name: e.target.value })}

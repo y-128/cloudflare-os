@@ -17,7 +17,7 @@ export function HookToggle({ enabled, disabled = false, onToggle, size = 'sm' }:
           disabled={disabled}
           size={size}
           onCheckedChange={(checked) => onToggle(checked)}
-          aria-label={enabled ? 'Disable hook' : 'Enable hook'}
+          aria-label={enabled ? 'フックを無効にする' : 'フックを有効にする'}
         />
       </span>
     </Tooltip>

@@ -257,7 +257,7 @@ function IconPickerButton({
         ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        title="Choose an icon"
+        title="アイコンを選択"
         className={
           inline
             ? "grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-kumo-tint text-[18px] leading-none text-kumo-subtle transition-colors hover:bg-kumo-fill"
@@ -310,12 +310,12 @@ function CollectionProvenance({ source }: { source: EnabledCollectionInfo["sourc
       className="flex w-52 items-center gap-1 whitespace-nowrap"
       title={
         isPublic
-          ? "Provided by your organization for everyone"
-          : "A collection you created"
+          ? "組織が全員に提供するもの"
+          : "あなたが作成したコレクション"
       }
     >
       {isPublic ? <Buildings size={11} /> : <User size={11} />}
-      {isPublic ? "Required by your organization" : "Created by you"}
+      {isPublic ? "組織により必須" : "あなたが作成"}
     </span>
   );
 }
@@ -389,7 +389,7 @@ function CollectionRow({
             hasDescription ? "text-kumo-subtle" : "italic text-kumo-inactive"
           }`}
         >
-          {hasDescription ? collection.description : "No description"}
+          {hasDescription ? collection.description : "説明なし"}
         </p>
       </div>
       {/* Fixed-width meta columns so rows line up like a table. */}
@@ -509,7 +509,7 @@ function FieldLabel({
   return (
     <label className="mb-1.5 flex items-center gap-1.5 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-subtle">
       <span>{children}</span>
-      {optional ? <span className="font-normal text-kumo-inactive">Optional</span> : null}
+      {optional ? <span className="font-normal text-kumo-inactive">任意</span> : null}
     </label>
   );
 }
@@ -570,7 +570,7 @@ function CollectionNameField({
 }) {
   return (
     <>
-      <FieldLabel>Name</FieldLabel>
+      <FieldLabel>名前</FieldLabel>
       {/* Icon tile + name share one focus-within pill so the emoji reads as part of the input. */}
       <div className="flex items-center gap-2 rounded-xl border-2 border-kumo-line bg-kumo-base p-1.5 transition-[border-color,box-shadow] duration-150 ease-out focus-within:border-kumo-ring focus-within:ring-1 focus-within:ring-kumo-ring/15">
         <IconPickerButton value={icon} onChange={onIconChange} variant="inline" />
@@ -580,7 +580,7 @@ function CollectionNameField({
           onKeyDown={(e) => {
             if (e.key === "Enter") onEnter?.();
           }}
-          placeholder="A short name, e.g., Brand guidelines"
+          placeholder="短い名前 (例: ブランド ガイドライン)"
           autoFocus={autoFocus}
           className="h-9 min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 pr-2 text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-default outline-none placeholder:text-kumo-inactive"
         />
@@ -598,12 +598,12 @@ function CollectionDescriptionField({
 }) {
   return (
     <>
-      <FieldLabel optional>Description</FieldLabel>
+      <FieldLabel optional>説明</FieldLabel>
       {/* `ring-0` drops Kumo InputArea's base ring so it matches the name pill's single border. */}
       <WorkshopInputArea
         value={value}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
-        placeholder="What it contains and when to use it, e.g., voice and tone rules for customer-facing writing"
+        placeholder="内容とそれをいつ使用するか (顧客向け文書の音声と口調のルールなど)"
         rows={4}
         className="w-full border-2 ring-0 !rounded-xl transition-[border-color,box-shadow] duration-150 ease-out"
       />
@@ -632,7 +632,7 @@ function ModalHeader({
       </div>
       <Dialog.Close
         render={(props) => (
-          <WorkshopIconButton {...props} aria-label="Close">
+          <WorkshopIconButton {...props} aria-label="閉じる">
             <X size={18} />
           </WorkshopIconButton>
         )}
@@ -652,16 +652,16 @@ function DeletePermanentlyDescription({
 }) {
   return (
     <>
-      This permanently deletes{" "}
+      これにより完全に削除されます{" "}
       <span className="font-medium text-kumo-default">{name}</span>
       {documents !== undefined ? (
         <>
-          {" "}and all{" "}
+          {" "}そしてすべて{" "}
           <span className="font-medium text-kumo-danger">{pluralize(documents, "document")}</span>{" "}
-          inside it
+          その中に
         </>
       ) : null}
-      . This cannot be undone.
+      。これを元に戻すことはできません。
     </>
   );
 }
@@ -671,14 +671,14 @@ const VISIBILITY_OPTIONS = [
   {
     value: "private" as const,
     Icon: Lock,
-    title: "Only me",
-    description: "Private to your account. Only you can view and edit it.",
+    title: "私だけ",
+    description: "あなたのアカウントには非公開です。あなただけがそれを表示および編集できます。",
   },
   {
     value: "public" as const,
     Icon: Buildings,
-    title: "Everyone",
-    description: "Shared across your organization and turned on for all users.",
+    title: "みんな",
+    description: "組織全体で共有され、すべてのユーザーに対して有効になります。",
   },
 ];
 
@@ -686,14 +686,14 @@ const CONTENT_SOURCE_OPTIONS = [
   {
     value: "web" as const,
     Icon: PencilSimple,
-    title: "Editable documents",
-    description: "Create, edit, and delete files through the Cloudflare OS UI.",
+    title: "編集可能なドキュメント",
+    description: "Cloudflare OS UIを通じてファイルを作成、編集、削除します。",
   },
   {
     value: "git" as const,
     Icon: GitBranch,
-    title: "Git mirror",
-    description: "Push content from git using repository mirroring. All changes must be made through git.",
+    title: "Gitミラー",
+    description: "リポジトリ ミラーリングを使用して git からコンテンツをプッシュします。すべての変更は git を通じて行う必要があります。",
   },
 ];
 
@@ -750,10 +750,10 @@ function CreateCollectionView({
         icon,
         source,
       );
-      toasts.add({ title: "Collection created", variant: "success" });
+      toasts.add({ title: "コレクションが作成されました", variant: "success" });
       onCreated(metadata.id);
     } catch {
-      toasts.add({ title: "Failed to create collection", variant: "error" });
+      toasts.add({ title: "コレクションの作成に失敗しました", variant: "error" });
       setCreating(false);
     }
   };
@@ -767,13 +767,13 @@ function CreateCollectionView({
           className="press mb-3 -ml-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[13px] font-medium tracking-[-0.25px] text-kumo-subtle transition-colors hover:text-kumo-default"
         >
           <CaretLeft size={14} />
-          Context &amp; Skills
+          コンテキストとスキル
         </button>
         <h1 className="text-2xl font-semibold tracking-tight text-kumo-default">
-          New collection
+          新しいコレクション
         </h1>
         <p className="mt-1 max-w-2xl text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-          A collection of documents, skills, and other files your agents can use.
+          エージェントが使用できるドキュメント、スキル、その他のファイルのコレクション。
         </p>
       </header>
 
@@ -795,8 +795,8 @@ function CreateCollectionView({
             </div>
             {supportsGitCollections && (
               <div className="ctx-rise" style={{ animationDelay: "160ms" }}>
-                <FieldLabel>Type</FieldLabel>
-                <div role="radiogroup" aria-label="Collection type" className="grid gap-2">
+                <FieldLabel>種類</FieldLabel>
+                <div role="radiogroup" aria-label="コレクションの種類" className="grid gap-2">
                   {CONTENT_SOURCE_OPTIONS.map(({
                     value,
                     Icon,
@@ -843,8 +843,8 @@ function CreateCollectionView({
             )}
             {isAdmin && (
               <div className="ctx-rise" style={{ animationDelay: "200ms" }}>
-                <FieldLabel>Visibility</FieldLabel>
-                <div role="radiogroup" aria-label="Visibility" className="grid gap-2">
+                <FieldLabel>公開範囲</FieldLabel>
+                <div role="radiogroup" aria-label="公開範囲" className="grid gap-2">
                   {VISIBILITY_OPTIONS.map(({
                     value,
                     Icon,
@@ -902,7 +902,7 @@ function CreateCollectionView({
               disabled={creating}
               className="!h-9"
             >
-              Cancel
+              キャンセル
             </WorkshopButton>
             {/* Orange brand "create" button (page CTA, not a modal primary). The disabled overrides
                 keep the inactive state grey rather than faded orange. */}
@@ -913,7 +913,7 @@ function CreateCollectionView({
               disabled={!title.trim()}
               className="press !bg-kumo-brand text-white enabled:hover:!bg-kumo-brand-hover disabled:!bg-kumo-fill disabled:!text-kumo-inactive disabled:!opacity-100"
             >
-              Create collection
+              コレクションの作成
             </WorkshopButton>
           </div>
         </div>
@@ -1016,10 +1016,10 @@ export default function ContextLibraryPage() {
       <header className="flex items-end justify-between gap-4 px-3 pb-3 pt-10">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight text-kumo-default">
-            Context &amp; Skills
+            コンテキストとスキル
           </h1>
           <p className="mt-1 max-w-2xl text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-            Collections of documents, skills, and other files your agents can use.
+            エージェントが使用できるドキュメント、スキル、その他のファイルのコレクション。
           </p>
         </div>
         {enabled.length > 0 && (
@@ -1029,7 +1029,7 @@ export default function ContextLibraryPage() {
             className="press inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-kumo-brand px-3.5 text-[13px] font-medium tracking-[-0.25px] text-white transition-colors hover:bg-kumo-brand-hover"
           >
             <Plus size={14} weight="bold" />
-            New collection
+            新しいコレクション
           </button>
         )}
       </header>
@@ -1045,7 +1045,7 @@ export default function ContextLibraryPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search collections…"
+              placeholder="コレクションを検索…"
               className="h-9 w-full rounded-lg border border-kumo-line bg-kumo-base pl-9 pr-4 text-[13px] tracking-[-0.25px] text-kumo-default placeholder:text-kumo-inactive transition-[border-color,box-shadow] duration-150 ease-out focus:border-kumo-ring focus:outline-none focus:ring-[3px] focus:ring-kumo-ring/15"
             />
           </div>
@@ -1062,12 +1062,12 @@ export default function ContextLibraryPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-kumo-default">
-                {search ? "No collections match" : "No collections yet"}
+                {search ? "一致するコレクションはありません" : "コレクションはまだありません"}
               </p>
               <p className="mx-auto mt-1 max-w-sm text-[13px] leading-[18px] text-kumo-subtle">
                 {search
-                  ? "Try a different search term."
-                  : "Create a collection to give your agents context to work with."}
+                  ? "別の検索語をお試しください。"
+                  : "エージェントが利用するコンテキストのコレクションを作成します。"}
               </p>
             </div>
             {!search && (
@@ -1077,7 +1077,7 @@ export default function ContextLibraryPage() {
                 className="press mt-1 inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-kumo-brand px-3.5 text-[13px] font-medium tracking-[-0.25px] text-white transition-colors hover:bg-kumo-brand-hover"
               >
                 <Plus size={14} weight="bold" />
-                New collection
+                新しいコレクション
               </button>
             )}
           </div>
@@ -1157,7 +1157,7 @@ function CollectionOverview({
                   {metadata.title}
                 </h1>
                 <p className="mt-1 text-[13px] leading-[18px] tracking-[-0.2px] text-kumo-subtle">
-                  Context collection
+                  コンテキストコレクション
                 </p>
               </div>
             </div>
@@ -1170,14 +1170,14 @@ function CollectionOverview({
                     onClick={onRefreshSource}
                     loading={refreshingSource}
                   >
-                    Refresh
+                    リフレッシュ
                   </WorkshopButton>
                 )}
                 <KebabMenu
                   trigger={
                     <WorkshopIconButton
-                      aria-label="Collection options"
-                      title="Options"
+                      aria-label="コレクションのオプション"
+                      title="オプション"
                       className="!h-9 !w-9 data-[popup-open]:bg-kumo-tint data-[popup-open]:text-kumo-default"
                     >
                       <DotsThree size={18} weight="bold" />
@@ -1189,7 +1189,7 @@ function CollectionOverview({
                     onClick={onEditDetails}
                     className={MENU_ITEM}
                   >
-                    Edit details
+                    詳細の編集
                   </DropdownMenu.Item>
                   {isSynced && supportsGitCollections && (
                     <DropdownMenu.Item
@@ -1197,7 +1197,7 @@ function CollectionOverview({
                       onClick={onManageGitTokens}
                       className={MENU_ITEM}
                     >
-                      Manage git tokens
+                      Gitトークンを管理
                     </DropdownMenu.Item>
                   )}
                   <DropdownMenu.Separator />
@@ -1206,7 +1206,7 @@ function CollectionOverview({
                     onClick={onDelete}
                     className={`${MENU_ITEM_DANGER} text-kumo-danger`}
                   >
-                    Delete collection
+                    コレクションを削除
                   </DropdownMenu.Item>
                 </KebabMenu>
               </div>
@@ -1214,17 +1214,17 @@ function CollectionOverview({
           </div>
 
           <div className="mt-9 grid grid-cols-2 gap-x-8 gap-y-5 @xl:grid-cols-4">
-            <MetaField label="Source">
+            <MetaField label="ソース">
               <span className="inline-flex items-center gap-1.5">
                 {isPublic ? <Buildings size={12} className="shrink-0" /> : <User size={12} className="shrink-0" />}
-                {isPublic ? "Your organization" : "You"}
+                {isPublic ? "組織" : "あなた"}
               </span>
             </MetaField>
-            <MetaField label="Access">
-              {isPublic ? "Everyone (required)" : "Private to you"}
+            <MetaField label="アクセス">
+              {isPublic ? "全員（必須）" : "自分のみ"}
             </MetaField>
-            <MetaField label="Documents">{metadata.documentCount}</MetaField>
-            <MetaField label={isSynced ? "Refreshed" : "Updated"} align="right">
+            <MetaField label="書類">{metadata.documentCount}</MetaField>
+            <MetaField label={isSynced ? "リフレッシュされた" : "更新されました"} align="right">
               {metadata.content.source === "git"
                 ? formatRelativeTime(metadata.content.lastRefreshedAt)
                 : formatRelativeTime(metadata.lastUpdated)}
@@ -1235,17 +1235,17 @@ function CollectionOverview({
         {isSynced && !supportsGitCollections && (
           <section className="mt-8 rounded-xl border border-kumo-line bg-kumo-elevated/60 px-5 py-4">
             <p className="text-[13px] font-medium tracking-[-0.2px] text-kumo-default">
-              Git synchronization unavailable
+              Git同期が利用できない
             </p>
             <p className="mt-1 text-[13px] leading-5 tracking-[-0.2px] text-kumo-subtle">
-              Git content is read-only and shows its most recently cached version.
+              Git コンテンツは読み取り専用であり、最後にキャッシュされたバージョンが表示されます。
             </p>
           </section>
         )}
 
         <section className="mt-9 border-t border-kumo-line pt-8">
           <p className="mb-3 text-[13px] font-medium leading-none tracking-[-0.2px] text-kumo-subtle">
-            Description
+            説明
           </p>
           {metadata.description ? (
             <p className="max-w-3xl text-[15px] leading-7 tracking-[-0.2px] text-kumo-default">
@@ -1253,7 +1253,7 @@ function CollectionOverview({
             </p>
           ) : (
             <p className="text-[13px] italic leading-5 text-kumo-inactive">
-              No description yet.
+              説明はまだありません。
             </p>
           )}
         </section>
@@ -1266,16 +1266,16 @@ function CollectionOverview({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium tracking-[-0.2px] text-kumo-default">
-                  No files in this collection
+                  このコレクションにはファイルがありません
                 </p>
                 <p className="mt-1 max-w-xl text-[13px] leading-5 tracking-[-0.2px] text-kumo-subtle">
                   {isSynced
                     ? supportsGitCollections
-                      ? "This git mirror is empty. Mirror content from git, then refresh."
-                      : "No Git content was cached before synchronization became unavailable."
+                      ? "このGitミラーは空です。Gitからコンテンツをミラーして更新してください。"
+                      : "同期できなくなる前にキャッシュされたGitコンテンツはありません。"
                     : canWrite
-                    ? "Use the + in the Files panel to create or upload skills or files. Agents use the names and descriptions to decide what to read."
-                    : "This collection is empty."}
+                    ? "ファイルパネルの＋からスキルやファイルを作成またはアップロードできます。エージェントは名前と説明を基に読む対象を判断します。"
+                    : "このコレクションは空です。"}
                 </p>
               </div>
             </div>
@@ -1367,17 +1367,17 @@ function CollectionSettingsModal({
       return;
     }
     if (!title.trim()) {
-      toasts.add({ title: "Name can't be empty", variant: "error" });
+      toasts.add({ title: "名前を空にすることはできません", variant: "error" });
       return;
     }
     setSaving(true);
     try {
       await context.updateContextCollection(collectionId, updates);
-      toasts.add({ title: "Collection updated", variant: "success" });
+      toasts.add({ title: "コレクションが更新されました", variant: "success" });
       onUpdated();
       onClose();
     } catch {
-      toasts.add({ title: "Failed to update collection", variant: "error" });
+      toasts.add({ title: "コレクションの更新に失敗しました", variant: "error" });
       setSaving(false);
     }
   };
@@ -1386,10 +1386,10 @@ function CollectionSettingsModal({
     setDeleting(true);
     try {
       await context.deleteContextCollection(collectionId);
-      toasts.add({ title: "Collection deleted", variant: "success" });
+      toasts.add({ title: "コレクションが削除されました", variant: "success" });
       onDeleted();
     } catch {
-      toasts.add({ title: "Failed to delete collection", variant: "error" });
+      toasts.add({ title: "コレクションの削除に失敗しました", variant: "error" });
       setDeleting(false);
     }
   };
@@ -1410,7 +1410,7 @@ function CollectionSettingsModal({
       >
         {mode === "edit" ? (
           <>
-            <ModalHeader title="Edit collection" />
+            <ModalHeader title="コレクションを編集" />
 
             <div className="space-y-5 px-4 py-5 sm:px-6">
               <div>
@@ -1428,7 +1428,7 @@ function CollectionSettingsModal({
               </div>
               {metadata.content.source === "git" && supportsGitCollections && (
                 <div>
-                  <FieldLabel>Git branch</FieldLabel>
+                  <FieldLabel>Gitブランチ</FieldLabel>
                   <WorkshopInput
                     value={branch}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBranch(e.target.value)}
@@ -1439,7 +1439,7 @@ function CollectionSettingsModal({
                     className="w-full"
                   />
                   <p className="mt-1 text-[12px] leading-4 text-kumo-subtle">
-                    This branch to pull from when refreshing the collection.
+                    コレクションを更新するときに取得するこのブランチ。
                   </p>
                 </div>
               )}
@@ -1447,7 +1447,7 @@ function CollectionSettingsModal({
 
             <div className="flex items-center justify-end gap-2 border-t border-kumo-line px-4 py-3 sm:px-6">
               <WorkshopButton tone="secondary" className="!h-9" disabled={saving} onClick={onClose}>
-                Cancel
+                キャンセル
               </WorkshopButton>
               <WorkshopButton
                 tone="primary"
@@ -1455,14 +1455,14 @@ function CollectionSettingsModal({
                 loading={saving}
                 disabled={!hasChanges || !title.trim()}
               >
-                Save
+                保存
               </WorkshopButton>
             </div>
           </>
         ) : (
           <>
             <ModalHeader
-              title="Delete collection"
+              title="コレクションを削除"
               description={
                 <DeletePermanentlyDescription
                   name={metadata.title}
@@ -1473,11 +1473,11 @@ function CollectionSettingsModal({
 
             <div className="px-4 py-5 sm:px-6">
               <FieldLabel>
-                Type{" "}
+                種類{" "}
                 <span className="font-mono text-kumo-default">
                   {metadata.title}
                 </span>{" "}
-                to confirm
+                確認する
               </FieldLabel>
               <WorkshopInput
                 value={confirmText}
@@ -1499,7 +1499,7 @@ function CollectionSettingsModal({
                 disabled={!canDelete}
                 loading={deleting}
               >
-                Delete collection
+                コレクションを削除
               </WorkshopButton>
             </div>
           </>
@@ -1566,7 +1566,7 @@ function GitTokenManagementModal({
       const token = await context.createContextCollectionGitToken(collectionId);
       setNewGitToken(token);
       await loadGitTokens();
-      toasts.add({ title: "Git token created", variant: "success" });
+      toasts.add({ title: "Gitトークンが作成されました", variant: "success" });
     } catch (err) {
       toasts.add({ title: `Failed to create Git token: ${(err as Error).message}`, variant: "error" });
     } finally {
@@ -1579,7 +1579,7 @@ function GitTokenManagementModal({
     try {
       await context.revokeContextCollectionGitToken(collectionId, tokenId);
       await loadGitTokens();
-      toasts.add({ title: "Git token revoked", variant: "success" });
+      toasts.add({ title: "Git トークンが取り消されました", variant: "success" });
     } catch (err) {
       toasts.add({ title: `Failed to revoke Git token: ${(err as Error).message}`, variant: "error" });
     } finally {
@@ -1608,13 +1608,13 @@ function GitTokenManagementModal({
         size="sm"
       >
         <ModalHeader
-          title="Manage git tokens"
+          title="Gitトークンを管理"
         />
 
         <div className="space-y-3 px-4 py-5 sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <p className="max-w-sm text-[12px] leading-4 text-kumo-subtle">
-              Create a token to mirror content from an external git repository.
+              外部 git リポジトリからコンテンツをミラーリングするためのトークンを作成します。
             </p>
             <WorkshopButton
               tone="secondary"
@@ -1623,21 +1623,21 @@ function GitTokenManagementModal({
               loading={creatingToken}
               disabled={busy}
             >
-              Create token
+              トークンの作成
             </WorkshopButton>
           </div>
 
           {newGitToken && (
             <div className="space-y-3 rounded-lg border border-green-500/30 bg-green-500/5 px-3 py-3 text-[12px] leading-5 text-kumo-subtle">
               <div>
-                <div className="font-medium text-kumo-default">Token created</div>
+                <div className="font-medium text-kumo-default">トークンを作成しました</div>
                 <p className="mt-0.5">
-                  Use these credentials to push content to your collection. The password is only shown once.
+                  これらの認証情報を使用して、コンテンツをコレクションにプッシュします。パスワードは一度だけ表示されます。
                 </p>
               </div>
               <div className="space-y-2">
                 <div>
-                  <FieldLabel>Remote URL</FieldLabel>
+                  <FieldLabel>リモートURL</FieldLabel>
                   <div className="mt-1 flex gap-2">
                     <input
                       readOnly
@@ -1649,12 +1649,12 @@ function GitTokenManagementModal({
                       className="h-8!"
                       onClick={() => copyToClipboard(newGitToken.remote, "Remote URL copied", "Failed to copy remote URL")}
                     >
-                      Copy
+                      コピー
                     </WorkshopButton>
                   </div>
                 </div>
                 <div>
-                  <FieldLabel>Password</FieldLabel>
+                  <FieldLabel>パスワード</FieldLabel>
                   <div className="mt-1 flex gap-2">
                     <input
                       readOnly
@@ -1667,27 +1667,27 @@ function GitTokenManagementModal({
                       className="h-8!"
                       onClick={() => copyToClipboard(newGitToken.plaintext, "Password copied", "Failed to copy password")}
                     >
-                      Copy
+                      コピー
                     </WorkshopButton>
                   </div>
                 </div>
               </div>
               <div className="border-t border-green-500/20 pt-3">
-                <div className="font-medium text-kumo-default">Configure GitLab mirroring</div>
+                <div className="font-medium text-kumo-default">GitLab ミラーリングを構成する</div>
                 <p className="mt-0.5">
-                  These steps are specific to GitLab. Other git providers may use different setup flows.
+                  これらの手順は GitLab に固有です。他の git プロバイダーは異なるセットアップ フローを使用する場合があります。
                 </p>
                 <ol className="mt-2 list-decimal space-y-1.5 pl-4">
-                  <li>Open your GitLab project and go to Settings &gt; Repository &gt; Mirroring repositories</li>
-                  <li>Click "Add new" button to open setup flow</li>
-                  <li>Set Git repository URL to the remote URL above</li>
-                  <li>Set Mirror direction to Push</li>
-                  <li>Set Authentication method to Username and Password</li>
-                  <li>Set Username to "gitlab"</li>
-                  <li>Set Password to the password above</li>
-                  <li>Select Mirror specific branches and type in "{branch}"</li>
-                  <li>Click "Mirror repository" button to finish</li>
-                  <li>Click "Update now" button to trigger an initial push</li>
+                  <li>GitLab プロジェクトを開き、[設定] &gt; [リポジトリ] &gt; [リポジトリのミラーリング] に移動します。</li>
+                  <li>「新規追加」ボタンをクリックしてセットアップフローを開きます</li>
+                  <li>Git リポジトリ URL を上記のリモート URL に設定します</li>
+                  <li>ミラーの方向をプッシュに設定します</li>
+                  <li>認証方法をユーザー名とパスワードに設定します</li>
+                  <li>ユーザー名を「gitlab」に設定します</li>
+                  <li>パスワードを上記のパスワードに設定します</li>
+                  <li>[特定のブランチをミラーリング] を選択し、「{branch}」と入力します</li>
+                  <li>「リポジトリをミラーリング」ボタンをクリックして完了します</li>
+                  <li>「今すぐ更新」ボタンをクリックして最初のプッシュをトリガーします</li>
                 </ol>
               </div>
             </div>
@@ -1695,9 +1695,9 @@ function GitTokenManagementModal({
 
           <div className="rounded-lg border border-kumo-line bg-kumo-base">
             {loadingTokens ? (
-              <div className="px-3 py-2 text-[12px] text-kumo-subtle">Loading tokens...</div>
+              <div className="px-3 py-2 text-[12px] text-kumo-subtle">トークンをロード中...</div>
             ) : gitTokens.length === 0 ? (
-              <div className="px-3 py-2 text-[12px] text-kumo-subtle">No Git tokens yet.</div>
+              <div className="px-3 py-2 text-[12px] text-kumo-subtle">Git トークンはまだありません。</div>
             ) : (
               <div className="divide-y divide-kumo-line">
                 {gitTokens.map((token) => (
@@ -1708,7 +1708,7 @@ function GitTokenManagementModal({
                     <div className="min-w-0">
                       <div className="truncate font-mono text-[11px] text-kumo-default">{token.id}</div>
                       <div className="text-kumo-subtle">
-                        expires {new Date(token.expiresAt).toLocaleDateString()}
+                        有効期限が切れます {new Date(token.expiresAt).toLocaleDateString()}
                       </div>
                     </div>
                     <WorkshopButton
@@ -1718,7 +1718,7 @@ function GitTokenManagementModal({
                       loading={revokingToken === token.id}
                       disabled={revokingToken !== null}
                     >
-                      Revoke
+                      取り消す
                     </WorkshopButton>
                   </div>
                 ))}
@@ -1729,7 +1729,7 @@ function GitTokenManagementModal({
 
         <div className="flex items-center justify-end gap-2 border-t border-kumo-line px-4 py-3 sm:px-6">
           <WorkshopButton tone="secondary" className="h-9!" disabled={busy} onClick={onClose}>
-            Close
+            閉じる
           </WorkshopButton>
         </div>
       </Dialog>
@@ -1882,7 +1882,7 @@ function CreateRow({ depth, ctx }: { depth: number; ctx: TreeCtx }) {
         onChange={ctx.setCreatingName}
         onCommit={ctx.commitCreate}
         onCancel={ctx.cancelCreate}
-        placeholder={isFolder ? "folder-name" : "file-name.md"}
+        placeholder={isFolder ? "フォルダ名" : "ファイル名.md"}
       />
     </div>
   );
@@ -1975,10 +1975,10 @@ function FolderView({
                 </span>
                 {isSkill && (
                   <span
-                    title="Contains a valid Agent Skill"
+                    title="有効なエージェント スキルが含まれています"
                     className="shrink-0 text-[10px] font-medium uppercase leading-none tracking-[0.4px] text-kumo-inactive"
                   >
-                    skill
+                    スキル
                   </span>
                 )}
               </>
@@ -1989,7 +1989,7 @@ function FolderView({
               stopPropagation
               trigger={
                 <WorkshopIconButton
-                  aria-label={`Actions for ${folder.name}`}
+                  aria-label={`${folder.name}の操作`}
                   onClick={(e: React.MouseEvent) => e.stopPropagation()}
                   className={TREE_ROW_TRIGGER}
                 >
@@ -2002,21 +2002,21 @@ function FolderView({
                 onClick={() => ctx.startCreate(folder.path, "file")}
                 className={MENU_ITEM}
               >
-                New file
+                新しいファイル
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 icon={<FolderPlus size={12} className="mr-2" />}
                 onClick={() => ctx.startCreate(folder.path, "folder")}
                 className={MENU_ITEM}
               >
-                New folder
+                新しいフォルダー
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 icon={<PencilSimple size={12} className="mr-2" />}
                 onClick={() => ctx.startRename(folder.path)}
                 className={MENU_ITEM}
               >
-                Rename
+                名前の変更
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item
@@ -2025,7 +2025,7 @@ function FolderView({
                 onClick={() => ctx.deletePath(folder.path, true)}
                 className={MENU_ITEM_DANGER}
               >
-                Delete
+                削除
               </DropdownMenu.Item>
             </KebabMenu>
           )}
@@ -2115,7 +2115,7 @@ function FileView({
           stopPropagation
           trigger={
             <WorkshopIconButton
-              aria-label={`Actions for ${baseName(doc.path)}`}
+              aria-label={`${baseName(doc.path)}の操作`}
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
               className={TREE_ROW_TRIGGER}
             >
@@ -2128,7 +2128,7 @@ function FileView({
             onClick={() => ctx.startRename(doc.path)}
             className={MENU_ITEM}
           >
-            Rename
+            名前の変更
           </DropdownMenu.Item>
           <DropdownMenu.Item
             icon={<Trash size={12} className="mr-2" />}
@@ -2136,7 +2136,7 @@ function FileView({
             onClick={() => ctx.deletePath(doc.path, false)}
             className={MENU_ITEM_DANGER}
           >
-            Delete
+            削除
           </DropdownMenu.Item>
         </KebabMenu>
       )}
@@ -2255,7 +2255,7 @@ function CollectionEditor({
     try {
       await context.syncContextCollectionArtifactSource(collectionId);
       await loadDocs();
-      toasts.add({ title: "Collection refreshed", variant: "success" });
+      toasts.add({ title: "コレクションが更新されました", variant: "success" });
     } catch (err) {
       toasts.add({ title: `Failed to refresh: ${(err as Error).message}`, variant: "error" });
     } finally {
@@ -2323,7 +2323,7 @@ function CollectionEditor({
       setEditOnOpenPath(filePath);
       setSelectedPath(filePath);
     } catch {
-      toasts.add({ title: "Failed to create file", variant: "error" });
+      toasts.add({ title: "ファイルの作成に失敗しました", variant: "error" });
     }
   };
 
@@ -2435,7 +2435,7 @@ function CollectionEditor({
       setPendingDelete(null);
     } catch {
       toasts.add({
-        title: isDir ? "Failed to delete folder" : "Failed to delete document",
+        title: isDir ? "フォルダの削除に失敗しました" : "文書の削除に失敗しました",
         variant: "error",
       });
     } finally {
@@ -2518,15 +2518,15 @@ function CollectionEditor({
             className="press -ml-1 mb-4 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[13px] font-medium tracking-[-0.25px] text-kumo-subtle transition-colors hover:text-kumo-default"
           >
             <CaretLeft size={14} />
-            Context &amp; Skills
+            コンテキストとスキル
           </button>
           <div className="rounded-xl border border-kumo-line bg-kumo-base px-5 py-10 text-center shadow-[0_1px_2px_rgba(20,17,16,0.03)]">
             <BookOpen size={32} className="mx-auto mb-3 text-kumo-subtle" />
             <p className="m-0 text-[15px] leading-5 font-medium tracking-[-0.25px] text-kumo-default">
-              This collection is no longer available
+              このコレクションはもう利用できません
             </p>
             <p className="mt-1 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-              It may have been deleted.
+              削除された可能性があります。
             </p>
           </div>
         </div>
@@ -2577,7 +2577,7 @@ function CollectionEditor({
           size="sm"
         >
           <ModalHeader
-            title={pendingDelete?.isDir ? "Delete folder" : "Delete document"}
+            title={pendingDelete?.isDir ? "フォルダの削除" : "ドキュメントを削除"}
             description={
               <DeletePermanentlyDescription
                 name={pendingDelete ? baseName(pendingDelete.path) : ""}
@@ -2596,7 +2596,7 @@ function CollectionEditor({
               disabled={deletingPath}
               onClick={() => setPendingDelete(null)}
             >
-              Cancel
+              キャンセル
             </WorkshopButton>
             <WorkshopButton
               tone="danger"
@@ -2604,7 +2604,7 @@ function CollectionEditor({
               onClick={performDeletePath}
               loading={deletingPath}
             >
-              {pendingDelete?.isDir ? "Delete folder" : "Delete document"}
+              {pendingDelete?.isDir ? "フォルダーを削除" : "ドキュメントを削除"}
             </WorkshopButton>
           </div>
         </Dialog>
@@ -2624,7 +2624,7 @@ function CollectionEditor({
             className="press -ml-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[13px] font-medium tracking-[-0.25px] text-kumo-subtle transition-colors hover:text-kumo-default"
           >
             <CaretLeft size={14} />
-            Context &amp; Skills
+            コンテキストとスキル
           </button>
         </div>
           {metadata && (
@@ -2633,7 +2633,7 @@ function CollectionEditor({
                   when nothing is selected. */}
               <button
                 onClick={() => setSelectedPath(null)}
-                title="Collection overview"
+                title="コレクションの概要"
                 aria-current={selectedPath ? undefined : "page"}
                 className={`flex w-full transform-none items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring/30 active:scale-100 ${
                   selectedPath ? "hover:bg-kumo-tint" : "bg-kumo-recessed"
@@ -2649,15 +2649,15 @@ function CollectionEditor({
 
           <div className="flex h-8 shrink-0 items-center justify-between gap-2 px-5">
             <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-kumo-inactive">
-              Files
+              ファイル
             </span>
             {canEditDocuments && (
               <>
             <KebabMenu
               trigger={
                 <WorkshopIconButton
-                  aria-label="Add"
-                  title="Add file or folder"
+                  aria-label="追加"
+                  title="ファイルまたはフォルダーを追加"
                   className="!h-6 !w-6 text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default data-[popup-open]:bg-kumo-tint data-[popup-open]:text-kumo-default"
                 >
                   <Plus size={14} weight="bold" />
@@ -2669,14 +2669,14 @@ function CollectionEditor({
                 onClick={() => startCreate("", "file")}
                 className={MENU_ITEM}
               >
-                New file
+                新しいファイル
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 icon={<FolderPlus size={13} className="mr-2" />}
                 onClick={() => startCreate("", "folder")}
                 className={MENU_ITEM}
               >
-                New folder
+                新しいフォルダー
               </DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item
@@ -2684,14 +2684,14 @@ function CollectionEditor({
                 onClick={() => fileInputRef.current?.click()}
                 className={MENU_ITEM}
               >
-                Upload files
+                ファイルをアップロードする
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 icon={<Folder size={13} className="mr-2" />}
                 onClick={() => dirInputRef.current?.click()}
                 className={MENU_ITEM}
               >
-                Upload folder
+                アップロードフォルダー
               </DropdownMenu.Item>
             </KebabMenu>
             <input
@@ -2721,14 +2721,14 @@ function CollectionEditor({
           </div>
           <div className="ctx-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3.5 pb-6 pt-0.5">
             {loading ? (
-              <p className="px-2 py-2 text-[13px] text-kumo-subtle">Loading…</p>
+              <p className="px-2 py-2 text-[13px] text-kumo-subtle">読み込み中…</p>
             ) : docs.length === 0 && pendingFolders.size === 0 && !creating ? (
               <p className="px-2 py-2 text-[12px] leading-5 text-kumo-inactive">
                 {metadata?.content.source === "git"
                   ? supportsGitCollections
-                    ? "No files yet. Mirror content from git, then refresh."
-                    : "No Git content was cached before synchronization became unavailable."
-                  : canWrite ? "No files yet. Use + to create or upload skills or files." : "No files yet."}
+                    ? "ファイルはまだありません。Gitからコンテンツをミラーして更新してください。"
+                    : "同期できなくなる前にキャッシュされたGitコンテンツはありません。"
+                  : canWrite ? "ファイルはまだありません。＋からスキルやファイルを作成またはアップロードしてください。" : "ファイルはまだありません。"}
               </p>
             ) : (
               <FolderView folder={tree} depth={0} ctx={ctx} />
@@ -2746,7 +2746,7 @@ function CollectionEditor({
                 className="flex sm:hidden flex-shrink-0 items-center gap-1 border-b border-kumo-line px-4 py-2.5 text-[13px] text-kumo-subtle transition-colors hover:text-kumo-default"
               >
                 <CaretLeft size={14} />
-                Files
+                ファイル
               </button>
               <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
                 <DocumentEditor
@@ -2870,7 +2870,7 @@ function MarkdownPreview({
               {content}
             </ReactMarkdown>
           ) : (
-            <p className="italic text-kumo-inactive">This document is empty.</p>
+            <p className="italic text-kumo-inactive">このドキュメントは空です。</p>
           )}
         </div>
       </div>
@@ -2920,8 +2920,8 @@ function renderDocumentBody({
   if (!isText) {
     return (
       <div className="p-4 text-[13px] text-kumo-subtle">
-        Binary document ({contentType}, {Math.round((body.length * 3) / 4 / 1024)} KB). Use Replace to
-        update it.
+        バイナリドキュメント ({contentType}, {Math.round((body.length * 3) / 4 / 1024)} KB）。 「置換」を使用して、
+        更新してください。
       </div>
     );
   }
@@ -3064,10 +3064,10 @@ function DocumentEditor({
       };
       setSkillName(saved?.skillName ?? null);
       setDirty(false);
-      toasts.add({ title: "Saved", variant: "success" });
+      toasts.add({ title: "保存されました", variant: "success" });
       onChanged();
     } catch {
-      toasts.add({ title: "Failed to save", variant: "error" });
+      toasts.add({ title: "保存に失敗しました", variant: "error" });
     } finally {
       setSaving(false);
     }
@@ -3081,7 +3081,7 @@ function DocumentEditor({
       return;
     }
     if (trimmed.includes("/")) {
-      toasts.add({ title: "File name can't contain '/'", variant: "error" });
+      toasts.add({ title: "ファイル名に「/」を含めることはできません", variant: "error" });
       setFilename(baseName(path));
       return;
     }
@@ -3109,7 +3109,7 @@ function DocumentEditor({
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-kumo-subtle">
-        Loading…
+        読み込み中…
       </div>
     );
   }
@@ -3133,8 +3133,8 @@ function DocumentEditor({
               else if (e.key === "Escape") { setFilename(baseName(path)); e.currentTarget.blur(); }
             }}
             className="w-full bg-transparent text-[18px] font-semibold leading-6 tracking-[-0.4px] text-kumo-default focus:outline-none"
-            placeholder="file-name.md"
-            title="File name — edit to rename (the extension sets the type)"
+            placeholder="ファイル名.md"
+            title="ファイル名 — 編集して名前を変更します（拡張子によってタイプが設定されます）"
           />
 
         </div>
@@ -3149,12 +3149,12 @@ function DocumentEditor({
             loading={saving}
             disabled={!dirty}
           >
-            Save
+            保存
           </WorkshopButton>
         )}
         {!readOnly && !isText && mode === "edit" && (
           <label className="press flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-kumo-line px-2.5 text-[12px] font-medium text-kumo-subtle transition-colors hover:bg-kumo-tint hover:text-kumo-default">
-            <UploadSimple size={14} /> Replace
+            <UploadSimple size={14} /> 置換
             <input
               type="file"
               className="hidden"
@@ -3169,8 +3169,8 @@ function DocumentEditor({
         {showModeToggle && (
           <div className="inline-flex h-8 shrink-0 items-center rounded-lg border border-kumo-line bg-kumo-fill p-0.5">
             {[
-              { m: "read" as const, Icon: Eye, label: "View" },
-              { m: "edit" as const, Icon: readOnly ? Code : PencilSimple, label: readOnly ? "Source" : "Edit" },
+              { m: "read" as const, Icon: Eye, label: "ビュー" },
+              { m: "edit" as const, Icon: readOnly ? Code : PencilSimple, label: readOnly ? "ソース" : "編集" },
             ].map(({ m, Icon, label }) => (
               <button
                 key={m}
@@ -3196,7 +3196,7 @@ function DocumentEditor({
           <span className="mx-0.5 h-5 w-px shrink-0 bg-kumo-line" aria-hidden="true" />
           <button
             onClick={onRequestDelete}
-            title="Delete document"
+            title="ドキュメントを削除"
             className="press flex h-8 w-8 items-center justify-center rounded-md text-kumo-subtle transition-colors hover:bg-kumo-tint hover:text-kumo-danger"
           >
             <Trash size={16} />
@@ -3209,23 +3209,23 @@ function DocumentEditor({
           declare their own description show it read-only; otherwise the author writes it. */}
       <div className="border-b border-kumo-line px-6 py-3.5 sm:px-10">
         <label className="mb-1.5 block text-[12px] font-medium tracking-[-0.15px] text-kumo-subtle">
-          When to use this
+          これをいつ使用するか
           {skillName && (
             <span className="ml-1 font-mono text-kumo-brand">· /{skillName}</span>
           )}
           {extractedDescription !== null && (
             <span
               className="ml-1 text-kumo-inactive"
-              title="Defined in this file; edit it in the document below."
+              title="このファイルで定義されています。以下のドキュメントで編集してください。"
             >
-              · from file
+              · ファイルから
             </span>
           )}
         </label>
         {extractedDescription !== null ? (
           <p className="max-w-3xl text-[14px] leading-5 tracking-[-0.2px] text-kumo-default">
             {effectiveDescription || (
-              <span className="italic text-kumo-inactive">No description in this file yet.</span>
+              <span className="italic text-kumo-inactive">このファイルには説明がまだありません。</span>
             )}
           </p>
         ) : descriptionIsEditable ? (
@@ -3236,13 +3236,13 @@ function DocumentEditor({
               setDescription(nextDescription);
               setDirty(documentIsDirty(nextDescription, body));
             }}
-            placeholder="Describe what this document contains and when an agent should use it…"
+            placeholder="この文書の内容と、エージェントがいつ使用する必要があるかを説明します。"
             className="w-full bg-transparent text-[14px] leading-5 tracking-[-0.2px] text-kumo-default placeholder:text-kumo-inactive focus:outline-none"
           />
         ) : (
           <p className="max-w-3xl text-[14px] leading-5 tracking-[-0.2px] text-kumo-default">
             {description || (
-              <span className="italic text-kumo-inactive">No description yet.</span>
+              <span className="italic text-kumo-inactive">説明はまだありません。</span>
             )}
           </p>
         )}

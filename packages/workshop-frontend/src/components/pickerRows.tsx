@@ -21,7 +21,7 @@ export function TabHint() {
       aria-hidden="true"
       className="flex-shrink-0 rounded border border-kumo-line bg-kumo-base px-1 py-px font-sans text-[10px] font-medium leading-4 tracking-[0.02em] text-kumo-subtle"
     >
-      Tab
+      タブ
     </kbd>
   )
 }

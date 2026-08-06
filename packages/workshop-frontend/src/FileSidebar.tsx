@@ -58,12 +58,12 @@ export default function FileSidebar({
 
   const handleCreateFile = () => {
     if (!newFileName.trim()) {
-      toasts.add({ title: 'Filename cannot be empty', variant: 'error' })
+      toasts.add({ title: 'ファイル名を空にすることはできません', variant: 'error' })
       return
     }
 
     if (files.includes(newFileName.trim())) {
-      toasts.add({ title: 'A file with this name already exists', variant: 'error' })
+      toasts.add({ title: 'この名前のファイルはすでに存在します', variant: 'error' })
       return
     }
 
@@ -88,7 +88,7 @@ export default function FileSidebar({
     }
 
     if (files.includes(trimmed)) {
-      toasts.add({ title: 'A file with this name already exists', variant: 'error' })
+      toasts.add({ title: 'この名前のファイルはすでに存在します', variant: 'error' })
       return
     }
 
@@ -98,7 +98,7 @@ export default function FileSidebar({
 
   const startDelete = (filename: string) => {
     if (files.length <= 1) {
-      toasts.add({ title: 'Cannot delete the last remaining file', variant: 'error' })
+      toasts.add({ title: '最後に残ったファイルを削除できません', variant: 'error' })
       return
     }
     setDeletingFile(filename)
@@ -117,13 +117,13 @@ export default function FileSidebar({
     <div className="flex h-full w-[244px] flex-col border-r border-kumo-line bg-kumo-base">
       <div className="flex h-9 shrink-0 items-center justify-between gap-2 px-3 pt-3 pb-2">
         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-kumo-inactive">
-          Files
+          ファイル
         </span>
         <WorkshopIconButton
           onClick={() => setIsCreateModalOpen(true)}
           disabled={editLocked}
-          aria-label="New file"
-          title="New file"
+          aria-label="新しいファイル"
+          title="新しいファイル"
           className="!h-6 !w-6 text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
         >
           <Plus size={14} weight="bold" />
@@ -185,10 +185,10 @@ export default function FileSidebar({
           <div className="flex items-start justify-between gap-4 border-b border-kumo-line px-5 py-4">
             <div className="min-w-0">
               <Dialog.Title className="text-[15px] leading-5 font-medium tracking-[-0.3px] text-kumo-default">
-                New file
+                新しいファイル
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                Create a new file in this gadget.
+                このガジェットに新しいファイルを作成します。
               </Dialog.Description>
             </div>
             <Dialog.Close
@@ -196,7 +196,7 @@ export default function FileSidebar({
                 <WorkshopIconButton
                   {...props}
                   className="!h-7 !w-7"
-                  aria-label="Close"
+                  aria-label="閉じる"
                 >
                   <X size={16} />
                 </WorkshopIconButton>
@@ -208,8 +208,8 @@ export default function FileSidebar({
             <WorkshopInput
               ref={createInputRef}
               autoFocus
-              placeholder="filename.ts"
-              aria-label="Filename"
+              placeholder="ファイル名.ts"
+              aria-label="ファイル名"
               value={newFileName}
               onChange={(e) => setNewFileName(e.target.value)}
               onKeyDown={(e) => {
@@ -232,7 +232,7 @@ export default function FileSidebar({
                   {...props}
                   className="!h-9"
                 >
-                  Cancel
+                  キャンセル
                 </WorkshopButton>
               )}
             />
@@ -241,7 +241,7 @@ export default function FileSidebar({
               onClick={handleCreateFile}
               disabled={!newFileName.trim()}
             >
-              Create file
+              ファイルの作成
             </WorkshopButton>
           </div>
         </Dialog>
@@ -255,8 +255,8 @@ export default function FileSidebar({
             setDeletingFile(null)
           }
         }}
-        title="Delete file?"
-        description={<>This removes <span className="font-mono text-kumo-default">{deletingFile}</span> from the gadget. You can&apos;t undo this.</>}
+        title="ファイルを削除しますか?"
+        description={<>これにより削除されます <span className="font-mono text-kumo-default">{deletingFile}</span> ガジェットから。これを元に戻すことはできません。</>}
         onConfirm={confirmDelete}
       />
     </div>
@@ -365,7 +365,7 @@ function FileRow({
           spellCheck={false}
           autoCapitalize="off"
           autoCorrect="off"
-          aria-label={`Rename ${filename}`}
+          aria-label={`${filename}の名前を変更`}
           className="min-w-0 flex-1 bg-transparent text-[13px] leading-[18px] tracking-[-0.2px] text-kumo-default outline-none placeholder:text-kumo-inactive"
         />
       ) : (
@@ -383,7 +383,7 @@ function FileRow({
             <span
               className="h-1.5 w-1.5 shrink-0 rounded-full bg-kumo-success"
               aria-label={`${filename} is being edited`}
-              title="Agent is editing this file"
+              title="エージェントがこのファイルを編集中です"
             />
           )}
         </button>
@@ -394,7 +394,7 @@ function FileRow({
           <DropdownMenu.Trigger
             render={(
               <WorkshopIconButton
-                aria-label={`Actions for ${filename}`}
+                aria-label={`${filename}の操作`}
                 onClick={(event) => event.stopPropagation()}
                 className="!h-5 !w-5 text-kumo-inactive opacity-0 hover:bg-kumo-tint hover:text-kumo-default focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100 data-[popup-open]:opacity-100"
               >
@@ -411,7 +411,7 @@ function FileRow({
               onClick={onDownload}
               className="!h-auto rounded-md !px-2.5 !py-1.5 text-[12px] leading-4 tracking-[-0.2px] text-kumo-default transition-colors data-highlighted:bg-kumo-tint"
             >
-              Download
+              ダウンロード
             </DropdownMenu.Item>
             {!editLocked && (
               <>
@@ -420,7 +420,7 @@ function FileRow({
                   onClick={onRename}
                   className="!h-auto rounded-md !px-2.5 !py-1.5 text-[12px] leading-4 tracking-[-0.2px] text-kumo-default transition-colors data-highlighted:bg-kumo-tint"
                 >
-                  Rename
+                  名前の変更
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   icon={<Trash size={12} className="mr-2" />}
@@ -428,7 +428,7 @@ function FileRow({
                   onClick={onDelete}
                   className="!h-auto rounded-md !px-2.5 !py-1.5 text-[12px] leading-4 tracking-[-0.2px] transition-colors data-highlighted:bg-kumo-danger-tint"
                 >
-                  Delete
+                  削除
                 </DropdownMenu.Item>
               </>
             )}

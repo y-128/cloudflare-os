@@ -37,12 +37,12 @@ export default {
   render({ values, setValues, clearFields }) {
     const mode = values.mode ?? "all";
     return <Section>
-      <Field label="Mailbox scope" description="Choose whether this connection can access all Gmail messages or a narrower native Gmail view.">
+      <Field label="メールボックスのスコープ" description="この接続ですべての Gmail メッセージにアクセスできるか、それとも狭いネイティブ Gmail ビューにアクセスできるかを選択します。">
         <RadioCards
           value={mode}
           options={[
             { value: "all", title: "All Gmail", description: "Allow access to the whole mailbox." },
-            { value: "search", title: "Search", description: "Allow messages matching a Gmail search query." },
+            { value: "search", title: "検索", description: "Allow messages matching a Gmail search query." },
             { value: "label", title: "Label", description: "Allow messages with a specific Gmail label." },
           ]}
           onChange={nextMode => {
@@ -53,20 +53,20 @@ export default {
         />
       </Field>
 
-      {mode === "search" && <Field label="Search query" description="Use the same query syntax as Gmail search.">
+      {mode === "search" && <Field label="検索クエリ" description="Gmail 検索と同じクエリ構文を使用します。">
         <TextInput
           name="query"
           value={values.query}
-          placeholder="from:alerts@example.com newer_than:30d"
+          placeholder="from:alerts@example.com 新しい_than:30d"
           onChange={query => setValues({ query })}
         />
       </Field>}
 
-      {mode === "label" && <Field label="Label" description="Use the Gmail label name exactly as it appears in Gmail.">
+      {mode === "label" && <Field label="ラベル" description="Gmail に表示される Gmail ラベル名を正確に使用してください。">
         <TextInput
           name="label"
           value={values.label}
-          placeholder="Receipts"
+          placeholder="領収書"
           onChange={label => setValues({ label })}
         />
       </Field>}

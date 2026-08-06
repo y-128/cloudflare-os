@@ -23,8 +23,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole-account access"
-        description="This binding grants access to the connected Spotify account: profile, catalog search, your library, your playlists, and playback control on your Spotify Connect devices.">
+        label="アカウント全体のアクセス"
+        description="このバインディングにより、接続された Spotify アカウント (プロファイル、カタログ検索、ライブラリ、プレイリスト、Spotify Connect デバイス上の再生コントロール) へのアクセスが許可されます。">
       </Field>
     </Section>;
   },

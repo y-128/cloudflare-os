@@ -19,11 +19,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Repository" description="Search your repositories, or enter a GitHub URL.">
+      <Field label="リポジトリ" description="リポジトリを検索するか、GitHub URL を入力します。">
         <Autocomplete
           name="repoFullName"
           value={values.repoFullName}
-          placeholder="Search or paste a repository URL..."
+          placeholder="リポジトリURLを検索または貼り付け…"
           loadOptions={query => ui.listRepos(query)}
           onChange={repoFullName => setValues({ repoFullName })}
         />

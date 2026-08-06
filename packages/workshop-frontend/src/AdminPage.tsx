@@ -12,12 +12,12 @@ import AdminFormatsPanel from './components/format/AdminFormatsPanel'
 
 // Preset accent colors offered in the Theme section ('' = default brand).
 const ACCENT_PRESETS: { label: string; value: string }[] = [
-  { label: 'Default', value: '' },
-  { label: 'Blue', value: '#3b82f6' },
-  { label: 'Green', value: '#16a34a' },
-  { label: 'Purple', value: '#7c3aed' },
-  { label: 'Pink', value: '#db2777' },
-  { label: 'Teal', value: '#0d9488' },
+  { label: 'デフォルト', value: '' },
+  { label: '青', value: '#3b82f6' },
+  { label: '緑', value: '#16a34a' },
+  { label: '紫', value: '#7c3aed' },
+  { label: 'ピンク', value: '#db2777' },
+  { label: 'ティール', value: '#0d9488' },
 ]
 
 // Swatch background per banner color, matching AnnouncementBanner's accent styles.
@@ -33,7 +33,7 @@ const BANNER_SWATCH: Record<BannerColor, string> = {
 export default function AdminPage() {
   const { authenticatedApi, isAdmin } = useAuthenticatedApi()
   const toasts = useKumoToastManager()
-  useDocumentTitle('Admin')
+  useDocumentTitle('管理')
 
   // The admin capability (minted once via getAdminApi; null until loaded / for non-admins). Wrapped
   // in an object so useState doesn't treat the (callable) RPC stub as a state updater function.
@@ -235,7 +235,7 @@ export default function AdminPage() {
     try {
       await admin.api.setAnnouncement(announcementDraft)
       setSavedAnnouncement(announcementDraft)
-      toasts.add({ title: 'Announcement saved', variant: 'success' })
+      toasts.add({ title: 'お知らせを保存しました', variant: 'success' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save announcement'
       toasts.add({ title: message, variant: 'error' })
@@ -253,7 +253,7 @@ export default function AdminPage() {
     try {
       await admin.api.setBanner(bannerTextDraft, bannerColorDraft)
       setSavedBanner({ text: bannerTextDraft, color: bannerColorDraft })
-      toasts.add({ title: 'Banner saved', variant: 'success' })
+      toasts.add({ title: 'バナーが保存されました', variant: 'success' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save banner'
       toasts.add({ title: message, variant: 'error' })
@@ -270,7 +270,7 @@ export default function AdminPage() {
     try {
       await admin.api.setAccentColor(accentDraft)
       setSavedAccent(accentDraft)
-      toasts.add({ title: 'Accent color saved', variant: 'success' })
+      toasts.add({ title: 'アクセントカラーを保存しました', variant: 'success' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save accent color'
       toasts.add({ title: message, variant: 'error' })
@@ -300,7 +300,7 @@ export default function AdminPage() {
     try {
       await admin.api.setSiteName(siteNameDraft)
       setSavedSiteName(siteNameDraft)
-      toasts.add({ title: 'Site name saved', variant: 'success' })
+      toasts.add({ title: 'サイト名が保存されました', variant: 'success' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save site name'
       toasts.add({ title: message, variant: 'error' })
@@ -319,7 +319,7 @@ export default function AdminPage() {
       const data = await prepareSiteLogo(file)
       const logo = await admin.api.setSiteLogo(data)
       setSiteLogoUrl(logo ? cacheBustSiteLogoUrl(logo.url) : null)
-      toasts.add({ title: 'Logo saved', variant: 'success' })
+      toasts.add({ title: 'ロゴが保存されました', variant: 'success' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save logo'
       toasts.add({ title: message, variant: 'error' })
@@ -334,7 +334,7 @@ export default function AdminPage() {
     try {
       await admin.api.setSiteLogo(null)
       setSiteLogoUrl(null)
-      toasts.add({ title: 'Default logo restored', variant: 'success' })
+      toasts.add({ title: 'デフォルトのロゴが復元されました', variant: 'success' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to remove logo'
       toasts.add({ title: message, variant: 'error' })
@@ -349,7 +349,7 @@ export default function AdminPage() {
     try {
       await admin.api.setInstanceInstructions(instructionsDraft)
       setSavedInstructions(instructionsDraft)
-      toasts.add({ title: 'System prompt instructions saved', variant: 'success' })
+      toasts.add({ title: 'システムプロンプトの指示が保存されました', variant: 'success' })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save instructions'
       toasts.add({ title: message, variant: 'error' })
@@ -362,7 +362,7 @@ export default function AdminPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16 text-center">
         <ShieldWarning size={32} className="mx-auto text-kumo-subtle mb-3" />
-        <p className="text-sm text-kumo-default">You don't have access to this page.</p>
+        <p className="text-sm text-kumo-default">このページへのアクセス権がありません。</p>
       </div>
     )
   }
@@ -370,7 +370,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-        <p className="text-kumo-subtle">Loading admin settings...</p>
+        <p className="text-kumo-subtle">管理設定を読み込んでいます...</p>
       </div>
     )
   }
@@ -378,9 +378,9 @@ export default function AdminPage() {
   if (loadError || !admin) {
     return (
       <div className="mx-auto w-full max-w-[1040px] px-4 sm:px-8 py-16 text-center">
-        <p className="text-sm text-kumo-danger">Something went wrong loading admin settings.</p>
+        <p className="text-sm text-kumo-danger">管理者設定の読み込み中に問題が発生しました。</p>
         <button onClick={() => window.location.reload()} className="text-kumo-brand mt-2 text-sm underline">
-          Try again
+          再試行
         </button>
       </div>
     )
@@ -389,9 +389,9 @@ export default function AdminPage() {
   return (
     <div className="mx-auto w-full max-w-[1040px] px-4 sm:px-8 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-kumo-default">Admin</h1>
+        <h1 className="text-2xl font-semibold text-kumo-default">管理</h1>
         <p className="text-sm text-kumo-subtle mt-1">
-          Deployment-wide settings. Changes apply to all users on their next connection.
+          デプロイメント全体の設定。変更は、次回の接続時にすべてのユーザーに適用されます。
         </p>
       </div>
 
@@ -401,7 +401,7 @@ export default function AdminPage() {
         onValueChange={setActiveTab}
         tabs={[
           { value: 'general', label: 'General' },
-          { value: 'gatekeepers', label: 'Gatekeepers' },
+          { value: 'gatekeepers', label: 'ゲートキーパー' },
           { value: 'formats', label: 'Formats' },
           { value: 'access', label: 'Access' },
         ]}
@@ -424,9 +424,9 @@ export default function AdminPage() {
               <UserPlus size={18} className="text-kumo-subtle" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-semibold text-kumo-strong">Allow new sign-ups</h2>
+              <h2 className="text-lg font-semibold text-kumo-strong">新規登録を許可</h2>
               <p className="text-sm text-kumo-subtle mt-0.5">
-                When off, existing users can still log in but no new accounts can be created.
+                オフの場合、既存のユーザーは引き続きログインできますが、新しいアカウントは作成できません。
               </p>
             </div>
             <Switch
@@ -441,10 +441,10 @@ export default function AdminPage() {
       {/* Site name */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Site name</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">サイト名</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Shown next to the logo in the top bar. Leave empty to use the default
-            (&ldquo;{DEFAULT_SITE_NAME}&rdquo;). Applies on each user&rsquo;s next connection.
+            トップバーのロゴの横に表示されます。デフォルトを使用するには空のままにしてください
+            (「{DEFAULT_SITE_NAME}”)。各ユーザーの次回の接続に適用されます。
           </p>
 
           <Input
@@ -462,7 +462,7 @@ export default function AdminPage() {
                 onClick={() => setSiteNameDraft(savedSiteName)}
                 disabled={savingSiteName}
               >
-                Reset
+                リセット
               </Button>
             )}
             <Button
@@ -472,7 +472,7 @@ export default function AdminPage() {
               loading={savingSiteName}
               disabled={siteNameDraft === savedSiteName}
             >
-              Save
+              保存
             </Button>
           </div>
         </div>
@@ -481,11 +481,11 @@ export default function AdminPage() {
       {/* Site logo */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Logo</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">ロゴ</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Shown in the app chrome, sign-in screens, and browser tab. Images are scaled without
-            cropping and converted to a static PNG. Square images work best. Applies on each
-            user&rsquo;s next connection.
+            アプリのクロム、サインイン画面、ブラウザーのタブに表示されます。画像は拡大縮小されません
+            トリミングされ、静的 PNG に変換されます。正方形の画像が最適です。それぞれに適用されます
+            ユーザーの次の接続。
           </p>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -510,7 +510,7 @@ export default function AdminPage() {
                 loading={savingSiteLogo}
                 disabled={savingSiteLogo}
               >
-                {siteLogoUrl ? 'Change logo' : 'Upload logo'}
+                {siteLogoUrl ? 'ロゴを変更' : 'ロゴをアップロード'}
               </Button>
               {siteLogoUrl && (
                 <Button
@@ -519,7 +519,7 @@ export default function AdminPage() {
                   onClick={handleRemoveSiteLogo}
                   disabled={savingSiteLogo}
                 >
-                  Restore default
+                  デフォルトに戻す
                 </Button>
               )}
             </div>
@@ -530,11 +530,11 @@ export default function AdminPage() {
       {/* Theme / accent color */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Theme</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">テーマ</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Accent color used for buttons, links, and highlights. Changes preview live here; click
-            Save to apply for everyone (on their next connection). Backgrounds keep the default
-            warm theme.
+            ボタン、リンク、ハイライトに使用されるアクセントカラー。変更のプレビューはここで公開されています。クリック
+            保存して全員に適用します (次回の接続時に)。背景はデフォルトのまま
+            温かいテーマ。
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -570,7 +570,7 @@ export default function AdminPage() {
                 onChange={(e) => setAccentDraft(e.target.value)}
                 className="w-9 h-9 rounded-md border border-kumo-line bg-transparent cursor-pointer p-0.5"
               />
-              Custom
+              カスタム
             </label>
             <span className="text-xs font-mono text-kumo-subtle">
               {accentDraft || `${DEFAULT_ACCENT_COLOR} (default)`}
@@ -583,7 +583,7 @@ export default function AdminPage() {
                 onClick={() => setAccentDraft(savedAccent)}
                 disabled={savingAccent}
               >
-                Reset
+                リセット
               </Button>
             )}
             <Button
@@ -593,7 +593,7 @@ export default function AdminPage() {
               loading={savingAccent}
               disabled={!accentDirty}
             >
-              Save
+              保存
             </Button>
           </div>
         </div>
@@ -602,11 +602,11 @@ export default function AdminPage() {
       {/* Full-width banner */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Banner</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">バナー</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            A dismissible bar across the very top of the app (logged in or not). Markdown is
-            supported, so you can include links. Leave empty to hide it. Applies on each
-            user&rsquo;s next connection.
+            アプリの最上部にある閉じることができるバー (ログインしているかどうかに関係なく)。マークダウンとは
+            サポートされているため、リンクを含めることができます。非表示にするには空のままにします。それぞれに適用されます
+            ユーザーの次の接続。
           </p>
 
           <Textarea
@@ -614,7 +614,7 @@ export default function AdminPage() {
             value={bannerTextDraft}
             onValueChange={setBannerTextDraft}
             rows={1}
-            placeholder={'e.g. \uD83C\uDF89 New: blueprints now support imports \u2014 [learn more](https://example.com).'}
+            placeholder={'例えば🎉 新機能: ブループリントがインポートをサポートするようになりました — [詳細](https://example.com)。'}
             maxLength={MAX_ANNOUNCEMENT_LENGTH}
             error={
               bannerTextDraft.length > MAX_ANNOUNCEMENT_LENGTH
@@ -625,7 +625,7 @@ export default function AdminPage() {
 
           <div className="mt-4 flex items-end justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-kumo-subtle mb-2">Type</p>
+              <p className="text-xs font-medium text-kumo-subtle mb-2">種類</p>
               <div className="flex flex-wrap items-center gap-2">
                 {BANNER_COLORS.map((c) => {
                   const selected = bannerColorDraft === c
@@ -662,7 +662,7 @@ export default function AdminPage() {
                   }}
                   disabled={savingBanner}
                 >
-                  Reset
+                  リセット
                 </Button>
               )}
               <Button
@@ -672,7 +672,7 @@ export default function AdminPage() {
                 loading={savingBanner}
                 disabled={!bannerDirty || bannerTextDraft.length > MAX_ANNOUNCEMENT_LENGTH}
               >
-                Save
+                保存
               </Button>
             </div>
           </div>
@@ -682,11 +682,11 @@ export default function AdminPage() {
       {/* Top-bar notice */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Top-bar notice</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">トップバーのお知らせ</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Shown centered in the top navigation bar. Markdown is supported, so you can include
-            links. Keep it short — it renders on a single line. Leave empty to show nothing. Applies
-            on each user&rsquo;s next connection.
+            上部のナビゲーション バーの中央に表示されます。マークダウンがサポートされているため、含めることができます
+            リンク。短くしてください。1 行で表示されます。何も表示しない場合は空のままにします。適用される
+            各ユーザーの次回の接続時に。
           </p>
 
           <Textarea
@@ -694,7 +694,7 @@ export default function AdminPage() {
             value={announcementDraft}
             onValueChange={setAnnouncementDraft}
             rows={1}
-            placeholder={'e.g. Heads up: scheduled maintenance Saturday \u2014 see [status](https://status.example.com).'}
+            placeholder={'例えば注意: 土曜日に予定されているメンテナンス — [ステータス](https://status.example.com) を参照してください。'}
             maxLength={MAX_ANNOUNCEMENT_LENGTH}
             error={
               announcementDraft.length > MAX_ANNOUNCEMENT_LENGTH
@@ -705,7 +705,7 @@ export default function AdminPage() {
 
           <div className="flex items-center justify-between mt-3">
             <span className="text-xs text-kumo-subtle">
-              {announcementDraft.length.toLocaleString()} / {MAX_ANNOUNCEMENT_LENGTH.toLocaleString()} characters
+              {announcementDraft.length.toLocaleString()} / {MAX_ANNOUNCEMENT_LENGTH.toLocaleString()} キャラクター
             </span>
             <div className="flex items-center gap-2">
               {announcementDraft !== savedAnnouncement && (
@@ -715,7 +715,7 @@ export default function AdminPage() {
                   onClick={() => setAnnouncementDraft(savedAnnouncement)}
                   disabled={savingAnnouncement}
                 >
-                  Reset
+                  リセット
                 </Button>
               )}
               <Button
@@ -728,7 +728,7 @@ export default function AdminPage() {
                   announcementDraft.length > MAX_ANNOUNCEMENT_LENGTH
                 }
               >
-                Save
+                保存
               </Button>
             </div>
           </div>
@@ -738,10 +738,10 @@ export default function AdminPage() {
       {/* Agent system prompt additions */}
       {activeTab === 'general' && (
       <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-kumo-strong mb-1">Agent instructions</h2>
+        <h2 className="text-lg font-semibold text-kumo-strong mb-1">エージェントへの指示</h2>
         <p className="text-sm text-kumo-subtle mb-5">
-          Extra instructions added to every agent&rsquo;s system prompt on this deployment. Use this
-          for instance-specific context, conventions, or guardrails.
+          この展開では、すべてのエージェントのシステム プロンプトに追加の指示が追加されました。これを使用してください
+          たとえば、特定のコンテキスト、規則、ガードレールなどです。
         </p>
 
         <Textarea
@@ -749,7 +749,7 @@ export default function AdminPage() {
           value={instructionsDraft}
           onValueChange={setInstructionsDraft}
           rows={6}
-          placeholder={'e.g. ACME Corp is a logistics company that helps small businesses ship\ninternationally. Our team builds internal tools and dashboards to track shipments.'}
+          placeholder={'例えばACME Corp は中小企業の配送を支援する物流会社です\n国際的に。私たちのチームは、出荷を追跡するための内部ツールとダッシュボードを構築しています。'}
           maxLength={MAX_INSTANCE_INSTRUCTIONS_LENGTH}
           error={
             instructionsDraft.length > MAX_INSTANCE_INSTRUCTIONS_LENGTH
@@ -760,7 +760,7 @@ export default function AdminPage() {
 
         <div className="flex items-center justify-between mt-3">
           <span className="text-xs text-kumo-subtle">
-            {instructionsDraft.length.toLocaleString()} / {MAX_INSTANCE_INSTRUCTIONS_LENGTH.toLocaleString()} characters
+            {instructionsDraft.length.toLocaleString()} / {MAX_INSTANCE_INSTRUCTIONS_LENGTH.toLocaleString()} キャラクター
           </span>
           <div className="flex items-center gap-2">
             {instructionsDraft !== savedInstructions && (
@@ -770,7 +770,7 @@ export default function AdminPage() {
                 onClick={() => setInstructionsDraft(savedInstructions)}
                 disabled={savingInstructions}
               >
-                Reset
+                リセット
               </Button>
             )}
             <Button
@@ -783,7 +783,7 @@ export default function AdminPage() {
                 instructionsDraft.length > MAX_INSTANCE_INSTRUCTIONS_LENGTH
               }
             >
-              Save
+              保存
             </Button>
           </div>
         </div>
@@ -793,17 +793,17 @@ export default function AdminPage() {
       {/* Gatekeeper resources */}
       {activeTab === 'gatekeepers' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Gatekeepers</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">ゲートキーパー</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Turn connectors and resource types on or off for each service. Auto-provisioned
-            gatekeepers (like the Context Library) have three modes &mdash; disabled, optional, or
-            enabled for everyone. Changes are soft: they don&rsquo;t revoke access a gadget already
-            holds.
+            サービスごとにコネクタとリソース タイプをオンまたはオフにします。自動プロビジョニング
+            ゲートキーパー (コンテキスト ライブラリなど) には 3 つのモードがあります - 無効、オプション、または
+            誰もが利用できるようになります。変更はソフトです: ガジェットへのアクセスがすでに取り消されることはありません
+            が成立する。
           </p>
 
           {resourceVendors.length === 0 && (
             <p className="text-sm text-kumo-subtle">
-              No configurable gatekeepers are installed on this deployment.
+              この展開には構成可能なゲートキーパーはインストールされません。
             </p>
           )}
 
@@ -815,9 +815,9 @@ export default function AdminPage() {
               if (vendor.autoProvisions) {
                 const mode = vendor.ambientMode ?? 'optional'
                 const options: { value: AmbientGatekeeperMode; label: string; hint: string }[] = [
-                  { value: 'disabled', label: 'Disabled', hint: 'Off for everyone' },
-                  { value: 'optional', label: 'Optional', hint: 'Users can add it themselves' },
-                  { value: 'enabled', label: 'Enabled', hint: 'On for everyone automatically' },
+                  { value: 'disabled', label: '無効', hint: 'Off for everyone' },
+                  { value: 'optional', label: '任意', hint: 'Users can add it themselves' },
+                  { value: 'enabled', label: '有効', hint: 'On for everyone automatically' },
                 ]
                 return (
                   <div key={vendor.vendorId}>
@@ -833,7 +833,7 @@ export default function AdminPage() {
                         {vendor.displayName}
                       </h3>
                       <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-kumo-tint text-kumo-subtle border border-kumo-line">
-                        auto-provisioned
+                        自動プロビジョニングされた
                       </span>
                     </div>
                     <div className="flex gap-2 px-3 py-1">
@@ -886,12 +886,12 @@ export default function AdminPage() {
                     {vendor.displayName}
                     {!vendor.enabled && (
                       <span className="ml-2 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-kumo-tint text-kumo-subtle border border-kumo-line">
-                        disabled
+                        無効
                       </span>
                     )}
                   </h3>
                   <span className="text-xs text-kumo-subtle">
-                    {vendor.enabled ? 'Enabled' : 'Off'}
+                    {vendor.enabled ? '有効' : 'オフ'}
                   </span>
                   <span onClick={(e) => e.stopPropagation()}>
                     <Switch
@@ -943,7 +943,7 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <p className="text-xs text-kumo-subtle px-3 py-1">
-                    {vendor.resources.length} resource{vendor.resources.length === 1 ? '' : 's'} hidden while disabled.
+                    {vendor.resources.length} リソース{vendor.resources.length === 1 ? '' : 's'} 無効になっている間は非表示になります。
                   </p>
                 )}
               </div>

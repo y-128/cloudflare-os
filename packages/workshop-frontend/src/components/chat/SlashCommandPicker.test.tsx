@@ -17,19 +17,19 @@ Element.prototype.scrollIntoView ??= () => {};
 const choices: SlashCommandChoice[] = [{
   selection: {gatekeeperId: 1, commandId: "deploy"},
   name: "deploy",
-  description: "Deploy the current project.",
+  description: "現在のプロジェクトをデプロイします。",
   providerLabel: "Context",
 }, {
   selection: {gatekeeperId: 1, commandId: "debug"},
   name: "debug",
-  description: "Debug an issue.",
+  description: "問題をデバッグします。",
   providerLabel: "Context",
 }];
 
 const compact: SlashCommandChoice = {
   selection: {builtin: true, commandId: "compact"},
   name: "compact",
-  description: "Summarize older context while preserving recent messages.",
+  description: "最近のメッセージを保持しながら、古いコンテキストを要約します。",
   providerLabel: "Workshop",
 };
 
@@ -84,7 +84,7 @@ function Harness({
     <button
       type="button"
       data-testid="choose-second"
-      aria-label="Choose second command"
+      aria-label="2 番目のコマンドを選択してください"
       onClick={() => picker.setIndex(1)}
     />
     {picker.popup}

@@ -280,7 +280,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
       if (!isCurrent()) return
       loadGenerationRef.current++      // so a late reply can no longer write state
       setLoading(false)
-      setError('Timed out loading this view.')
+      setError('このビューの読み込みがタイムアウトしました。')
     }, UI_BUNDLE_LOAD_TIMEOUT_MS)
 
     const loadUiBundle = async () => {
@@ -301,7 +301,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
       } catch (err) {
         if (!isCurrent()) return
         console.error('Failed to load UI bundle:', err)
-        setError('Failed to load UI bundle')
+        setError('UIバンドルのロードに失敗しました')
       } finally {
         if (isCurrent()) setLoading(false)
         clearTimeout(giveUp)
@@ -370,7 +370,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
           port.close()
           if (!isCurrent()) return
           console.error('Failed to establish RPC connection:', caught)
-          setError('Failed to connect gadget to server')
+          setError('ガジェットをサーバーに接続できませんでした')
         } finally {
           if (handshakePendingRef.current === generation) handshakePendingRef.current = null
         }
@@ -401,7 +401,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
         style={{ height }}
       >
         <Text variant="secondary">
-          Switch to this tab to load the Gadget UI
+          このタブに切り替えてガジェット UI をロードします
         </Text>
       </div>
     )
@@ -431,7 +431,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
       }}>
         <Banner
           variant="error"
-          title="Error"
+          title="エラー"
           description={error}
           action={
             <Banner.Action
@@ -442,7 +442,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
                 setRetryNonce(n => n + 1)
               }}
             >
-              Try again
+              再試行
             </Banner.Action>
           }
         />
@@ -474,10 +474,10 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
           </div>
           <div className="space-y-1">
             <h2 className="text-[20px] leading-7 font-normal tracking-[-0.45px] text-kumo-default">
-              No gadget UI yet
+              ガジェット UI はまだありません
             </h2>
             <p className="text-[15px] leading-5 font-normal tracking-[-0.3px] text-kumo-subtle">
-              When the gadget builds one, it will appear here.
+              ガジェットがビルドすると、ここに表示されます。
             </p>
           </div>
         </div>
@@ -498,7 +498,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
           border: 'none'
         }}
         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-        title="Gadget UI"
+        title="ガジェットUI"
       />
     </div>
   )

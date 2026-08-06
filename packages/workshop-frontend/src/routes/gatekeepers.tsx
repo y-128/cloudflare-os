@@ -147,7 +147,7 @@ function ConnectorCard({
         className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-kumo-line bg-kumo-base px-3 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default transition-[background-color,border-color,opacity,transform] duration-150 ease-out hover:border-kumo-fill hover:bg-kumo-tint active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
       >
         <ArrowsClockwise size={12} weight="bold" />
-        {reconnectBusy ? 'Opening...' : 'Reconnect'}
+        {reconnectBusy ? '開いています…' : '再接続'}
       </button>
     ) : (
       <div className="grid h-7 w-7 place-items-center text-kumo-inactive transition-colors group-hover:text-kumo-default">
@@ -401,7 +401,7 @@ function ConnectorsHeroDiagram({
         <button
           type="button"
           className="themed-card-hover-shadow grid h-[52px] w-[52px] place-items-center rounded-2xl border border-kumo-line bg-kumo-base text-kumo-brand transition-[border-color,box-shadow] hover:border-kumo-fill focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring focus-visible:ring-offset-2 focus-visible:ring-offset-kumo-base"
-          aria-label="Gatekeeper keeps Gadget access limited to connected resources"
+          aria-label="ゲートキーパーはガジェットへのアクセスを接続されたリソースに制限します"
         >
           <ShieldCheck size={21} weight="duotone" />
         </button>
@@ -412,10 +412,10 @@ function ConnectorsHeroDiagram({
             </div>
             <div className="min-w-0">
               <p className="m-0 text-[12px] leading-4 font-semibold tracking-[-0.2px] text-kumo-default">
-                Gatekeeper
+                門番
               </p>
               <p className="mt-1 text-[11px] leading-4 font-normal tracking-[-0.1px] text-kumo-subtle">
-                Keeps each workspace limited to the resources you connect and ensures every user has the required permissions before accessing them.
+                各ワークスペースを接続するリソースに制限し、すべてのユーザーがアクセスする前に必要な権限を持っていることを確認します。
               </p>
             </div>
           </div>
@@ -441,7 +441,7 @@ type ModalTarget =
   | null
 
 function ConnectorsPage() {
-  useDocumentTitle('Gatekeepers')
+  useDocumentTitle('ゲートキーパー')
   const siteName = useSiteName()
 
   const { authenticatedApi } = useAuthenticatedApi()
@@ -605,7 +605,7 @@ function ConnectorsPage() {
       handleCloseModal()
     } catch (err) {
       console.error('Failed to connect account:', err)
-      toasts.add({ title: 'Failed to start connection', variant: 'error' })
+      toasts.add({ title: '接続の開始に失敗しました', variant: 'error' })
     } finally {
       setConnecting(false)
     }
@@ -626,7 +626,7 @@ function ConnectorsPage() {
       // once `grantedResourceUrlPatterns` updates.
     } catch (err) {
       console.error('Failed to expand account access:', err)
-      toasts.add({ title: 'Failed to request additional access', variant: 'error' })
+      toasts.add({ title: '追加アクセスのリクエストに失敗しました', variant: 'error' })
     } finally {
       setEnsuringResourceUrlPatterns((prev) =>
         prev.filter((p) => !resourceUrlPatterns.includes(p)),
@@ -647,7 +647,7 @@ function ConnectorsPage() {
       handleCloseModal()
     } catch (err) {
       console.error('Failed to disconnect account:', err)
-      toasts.add({ title: 'Failed to disconnect account', variant: 'error' })
+      toasts.add({ title: 'アカウントの接続を解除できませんでした', variant: 'error' })
     } finally {
       setDisconnecting(false)
     }
@@ -660,7 +660,7 @@ function ConnectorsPage() {
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
       console.error('Failed to reconnect account:', err)
-      toasts.add({ title: 'Failed to reconnect account', variant: 'error' })
+      toasts.add({ title: 'アカウントの再接続に失敗しました', variant: 'error' })
     } finally {
       setReconnectingAccountId(null)
     }
@@ -743,11 +743,11 @@ function ConnectorsPage() {
         <header className="mb-8 grid gap-8 lg:grid-cols-[minmax(0,540px)_444px] lg:items-center lg:justify-between">
           <div>
             <h1 className="m-0 text-3xl font-semibold leading-tight tracking-tight text-kumo-default sm:text-[34px]">
-              Gatekeepers
+              ゲートキーパー
             </h1>
             <p className="mt-2 text-[14px] leading-[20px] font-normal tracking-[-0.25px] text-kumo-subtle">
-              Add the apps and accounts your workspaces can use. Connect once, then wire
-              them into anything you build.
+              ワークスペースで使用できるアプリとアカウントを追加します。一度接続してから配線してください
+              あなたが構築するあらゆるものにそれらを組み込むことができます。
             </p>
           </div>
           <ConnectorsHeroDiagram accounts={accounts} vendors={vendors} siteName={siteName} />
@@ -763,7 +763,7 @@ function ConnectorsPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search gatekeepers…"
+              placeholder="ゲートキーパーを検索…"
               className="h-10 w-full rounded-lg border border-kumo-line bg-kumo-base pl-9 pr-4 text-[14px] leading-5 tracking-[-0.25px] text-kumo-default placeholder:text-kumo-inactive transition-[border-color,box-shadow] focus:border-kumo-ring focus:outline-none focus:ring-[3px] focus:ring-kumo-ring/15"
             />
           </div>
@@ -773,23 +773,23 @@ function ConnectorsPage() {
         {loadError && (
           <div className="rounded-2xl border border-kumo-line bg-kumo-base px-4 py-6 text-center">
             <p className="m-0 text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-danger">
-              Something went wrong loading your gatekeepers.
+              ゲートキーパーのロード中に問題が発生しました。
             </p>
             <p className="mt-1 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-              Check your connection and try refreshing the page.
+              接続を確認し、ページを更新してみてください。
             </p>
           </div>
         )}
 
         {initialLoading && (
           <div className="rounded-2xl border border-kumo-line bg-kumo-base px-4 py-8 text-center text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-            Loading gatekeepers...
+            ゲートキーパーを読み込み中...
           </div>
         )}
 
         {filteredAccounts.length > 0 && (
           <section className="mb-10">
-            <SectionEyebrow label="Connected" count={filteredAccounts.length} />
+            <SectionEyebrow label="接続済み" count={filteredAccounts.length} />
             <div className={sectionGridClass}>
               {filteredAccounts.map((account) => {
                 const displayName =
@@ -812,7 +812,7 @@ function ConnectorsPage() {
                       >
                         {account.credentialsValid
                           ? displayName
-                          : 'Credentials expired'}
+                          : '認証情報の期限切れ'}
                       </span>
                     }
                     tagline={tagline}
@@ -830,7 +830,7 @@ function ConnectorsPage() {
 
         {filteredAvailable.length > 0 && (
           <section className="mb-10">
-            <SectionEyebrow label="Available" />
+            <SectionEyebrow label="利用可能" />
             <div className={sectionGridClass}>
 
               {filteredAvailable.map((vendor) => (
@@ -857,13 +857,13 @@ function ConnectorsPage() {
             <EmptyState
               title={
                 search
-                  ? 'No gatekeepers match'
-                  : 'No gatekeepers yet'
+                  ? '一致するゲートキーパーがありません'
+                  : 'まだゲートキーパーがいません'
               }
               description={
                 search
-                  ? "We couldn't find anything matching your search."
-                  : 'Gatekeepers will appear here as they become available in your workspace.'
+                  ? "検索に一致するものが見つかりませんでした。"
+                  : 'ゲートキーパーがワークスペースで使用可能になると、ここに表示されます。'
               }
               icon={Plugs}
             />

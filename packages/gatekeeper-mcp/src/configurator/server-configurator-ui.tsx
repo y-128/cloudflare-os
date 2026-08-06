@@ -41,7 +41,7 @@ export default {
     const selectedCount = (values.tools ?? "").split(",").filter(Boolean).length;
 
     return <Section>
-      <Field label="Tools" description="Choose how much of this server this connection may call.">
+      <Field label="ツール" description="この接続が呼び出すサーバーの量を選択します。">
         <RadioCards
           value={mode}
           options={[
@@ -61,13 +61,13 @@ export default {
         />
       </Field>
       <Field
-        label="Allowed tools"
+        label="許可されたツール"
         description={mode === "all"
-          ? "Read-only tools return data straight away; the rest queue for your approval."
+          ? "読み取り専用ツールはデータをすぐに返します。残りのキューはあなたの承認を待ちます。"
           : selectedCount > 0
             ? `${selectedCount} selected. Read-only tools return data straight away; the rest `
-              + "queue for your approval."
-            : "Tick at least one tool to grant anything."}>
+              + "あなたの承認を待ちます。"
+            : "何かを許可するには、少なくとも 1 つのツールにチェックを入れます。"}>
         <CheckboxList
           name="tools"
           value={values.tools}

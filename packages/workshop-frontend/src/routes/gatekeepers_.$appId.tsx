@@ -16,6 +16,6 @@ export const Route = createFileRoute('/gatekeepers_/$appId')({
 function GatekeeperApp() {
   const { appId } = Route.useParams()
   const app = useGatekeeperApps().find((a) => a.id === appId)
-  useDocumentTitle(app?.title ?? 'App')
+  useDocumentTitle(app?.title ?? 'アプリ')
   return <GatekeeperAppPage appId={appId} />
 }

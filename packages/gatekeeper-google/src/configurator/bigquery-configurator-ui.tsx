@@ -27,11 +27,11 @@ export default {
 
   render({ values, setValues, clearFields, ui }) {
     return <Section>
-      <Field label="Project" description="Start with the Google Cloud project this connection can query.">
+      <Field label="プロジェクト" description="この接続でクエリできる Google Cloud プロジェクトから始めます。">
         <Autocomplete
           name="projectId"
           value={values.projectId}
-          placeholder="Search projects..."
+          placeholder="プロジェクトを検索…"
           loadOptions={query => ui.listProjects(query)}
           onChange={projectId => {
             clearFields("datasetId", "tableId");
@@ -40,11 +40,11 @@ export default {
         />
       </Field>
 
-      <Field label="Dataset" description="Leave blank to allow all datasets in the project." optional>
+      <Field label="データセット" description="プロジェクト内のすべてのデータセットを許可するには、空白のままにします。" optional>
         <Autocomplete
           name="datasetId"
           value={values.datasetId}
-          placeholder={values.projectId ? "Search datasets..." : "Choose a project first"}
+          placeholder={values.projectId ? "データセットを検索..." : "最初にプロジェクトを選択してください"}
           disabled={!values.projectId}
           loadOptions={query => values.projectId ? ui.listDatasets(values.projectId, query) : Promise.resolve([])}
           onChange={datasetId => {
@@ -59,11 +59,11 @@ export default {
         />
       </Field>
 
-      <Field label="Table" description="Leave blank to allow all tables in dataset." optional>
+      <Field label="テーブル" description="データセット内のすべてのテーブルを許可するには、空白のままにします。" optional>
         <Autocomplete
           name="tableId"
           value={values.tableId}
-          placeholder={values.datasetId ? "Search tables..." : "Choose a dataset first"}
+          placeholder={values.datasetId ? "テーブルを検索..." : "最初にデータセットを選択してください"}
           disabled={!values.projectId || !values.datasetId}
           loadOptions={query => values.projectId && values.datasetId
             ? ui.listTables(values.projectId, values.datasetId, query)

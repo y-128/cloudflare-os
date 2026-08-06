@@ -168,7 +168,7 @@ function CreatedGadgetChatCard({
             <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-kumo-subtle">
               {gadget.isPending && (
                 <span className="rounded-full bg-kumo-fill px-1.5 py-0.5 text-[10px] font-medium leading-none">
-                  Draft
+                  下書き
                 </span>
               )}
               <span>
@@ -908,7 +908,7 @@ function buildProvisionalToolSummary(
   );
 
   if (toolNames.length === 0) {
-    return { label: "Using tool", detailLines: [] };
+    return { label: "ツールの使用", detailLines: [] };
   }
 
   if (toolNames.length > 1) {
@@ -1314,7 +1314,7 @@ const AttachmentPreviewModal = memo(function AttachmentPreviewModal(
       className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[1px]"
       role="dialog"
       aria-modal="true"
-      aria-label={`Preview ${title}`}
+      aria-label={`${title}をプレビュー`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -1324,7 +1324,7 @@ const AttachmentPreviewModal = memo(function AttachmentPreviewModal(
           type="button"
           onClick={onClose}
           className="absolute right-3 top-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-kumo-line bg-kumo-base/90 text-kumo-subtle shadow-[0_1px_2px_rgba(0,0,0,0.05)] backdrop-blur-sm transition-[background-color,color,transform] duration-150 ease-out hover:bg-kumo-base hover:text-kumo-default active:scale-[0.96]"
-          aria-label="Close preview"
+          aria-label="プレビューを閉じる"
         >
           <X size={18} />
         </button>
@@ -1344,16 +1344,16 @@ const AttachmentPreviewModal = memo(function AttachmentPreviewModal(
                 </div>
                 <div className="text-[14px] font-medium text-kumo-default">{title}</div>
                 <div className="text-[12px] leading-5 text-kumo-subtle">
-                  {attachment.mimeType || "Unknown file type"}{sizeLabel ? ` · ${sizeLabel}` : ""}
+                  {attachment.mimeType || "不明なファイル形式"}{sizeLabel ? ` · ${sizeLabel}` : ""}
                 </div>
-                <div className="text-[12px] leading-5 text-kumo-inactive">This file can’t be previewed here.</div>
+                <div className="text-[12px] leading-5 text-kumo-inactive">このファイルはここではプレビューできません。</div>
                 {onDownload && (
                   <button
                     type="button"
                     onClick={() => onDownload(attachment)}
                     className="mt-1 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-kumo-line/70 bg-kumo-base px-3 py-1.5 text-[12px] font-medium text-kumo-default transition-colors hover:bg-kumo-tint/40"
                   >
-                    Download
+                    ダウンロード
                   </button>
                 )}
               </div>
@@ -1385,27 +1385,27 @@ const ChatAttachmentThumbnail = memo(function ChatAttachmentThumbnail(
       type="button"
       onClick={() => onPreview(attachment.id)}
       className="relative h-28 w-36 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-kumo-line/70 bg-kumo-elevated text-left transition-[border-color,background-color,transform] duration-150 ease-out hover:border-kumo-line hover:bg-kumo-tint/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-brand/40 active:scale-[0.98]"
-      aria-label={`Preview ${attachment.name ?? "attached file"}`}
+      aria-label={`${attachment.name ?? "添付ファイル"}をプレビュー`}
     >
       {isImage && objectUrl && imageState !== "error" ? (
         <>
           {/* Kept in layout (not display:none) so lazy-loading actually triggers. */}
           <img
             src={objectUrl}
-            alt={attachment.name ?? "Attached image"}
+            alt={attachment.name ?? "添付画像"}
             loading="lazy"
             className="block h-full w-full object-cover"
             onLoad={() => setImageState("loaded")}
             onError={() => setImageState("error")}
           />
           {imageState !== "loaded" && (
-            <div className="absolute inset-0 grid place-items-center bg-kumo-elevated text-[11px] text-kumo-inactive">Loading image…</div>
+            <div className="absolute inset-0 grid place-items-center bg-kumo-elevated text-[11px] text-kumo-inactive">画像を読み込み中…</div>
           )}
         </>
       ) : (
         <div className="flex h-full w-full min-w-0 items-center justify-center gap-2 p-3 text-[12px] leading-4 text-kumo-subtle">
           <FileIcon size={20} className="shrink-0 text-kumo-inactive" />
-          <span className="min-w-0 truncate">{attachment.name ?? "Attached file"}</span>
+          <span className="min-w-0 truncate">{attachment.name ?? "添付ファイル"}</span>
         </div>
       )}
     </button>
@@ -1463,7 +1463,7 @@ const ToolCallDetails = memo(function ToolCallDetails(
       {tc.toolName === "executeCode" ? (
         <>
           <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">
-            Code
+            コード
           </span>
           <pre className="max-h-56 overflow-auto rounded-xl border border-kumo-line/70 bg-kumo-base p-3 font-mono text-[12px] leading-[18px] text-kumo-subtle whitespace-pre-wrap">
             {tc.input.code}
@@ -1471,7 +1471,7 @@ const ToolCallDetails = memo(function ToolCallDetails(
           {tc.output && (
             <>
               <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">
-                Output
+                出力
               </span>
               <pre className="max-h-56 overflow-auto rounded-xl border border-kumo-line/70 bg-kumo-base p-3 font-mono text-[12px] leading-[18px] text-kumo-subtle whitespace-pre-wrap">
                 {tc.output}
@@ -1559,7 +1559,7 @@ const NestedToolCallRow = memo(function NestedToolCallRow({
           <span className="min-w-0 truncate">{label}</span>
           {tc.error && (
             <span className="flex-shrink-0 rounded-full bg-kumo-danger-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-kumo-danger">
-              Error
+              エラー
             </span>
           )}
           <CaretRight
@@ -1678,7 +1678,7 @@ const ToolGroupRow = memo(function ToolGroupRow({
             <span className="min-w-0 truncate">{group.label}</span>
             {group.hasError && (
               <span className="flex-shrink-0 rounded-full bg-kumo-danger-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-kumo-danger">
-                Error
+                エラー
               </span>
             )}
             <CaretRight
@@ -2053,7 +2053,7 @@ export const ChatInput = ({
         uploadState: "error",
         error: err?.message || "Upload failed",
       } : attachment));
-      toasts.add({ title: err?.message || "Failed to upload attachment", variant: "error" });
+      toasts.add({ title: err?.message || "添付ファイルのアップロードに失敗しました", variant: "error" });
     }
   };
 
@@ -2082,7 +2082,7 @@ export const ChatInput = ({
     for (const result of prepared) {
       if (result.status === "rejected") {
         console.error("Failed to process chat attachment:", result.reason);
-        toasts.add({ title: result.reason?.message || "Failed to process attachment", variant: "error" });
+        toasts.add({ title: result.reason?.message || "添付ファイルの処理に失敗しました", variant: "error" });
         continue;
       }
 
@@ -2285,11 +2285,11 @@ export const ChatInput = ({
 
     if (!inputValue.trim() && !selectedSlashCommand && readyAttachments.length === 0) return;
     if (hasUploadingAttachment) {
-      toasts.add({ title: "Please wait for attachment uploads to finish", variant: "error" });
+      toasts.add({ title: "添付ファイルのアップロードが完了するまでお待ちください", variant: "error" });
       return;
     }
     if (hasFailedAttachment) {
-      toasts.add({ title: "Remove failed attachment uploads before sending", variant: "error" });
+      toasts.add({ title: "失敗した添付ファイルのアップロードを送信前に削除する", variant: "error" });
       return;
     }
 
@@ -2345,7 +2345,7 @@ export const ChatInput = ({
         // position 0 would mean the text no longer starts with "/".
         let parsed = parseSlashCommandInput(messageInput, 1);
         if (!parsed) {
-          toasts.add({ title: "Slash command is invalid", variant: "error" });
+          toasts.add({ title: "スラッシュコマンドは無効です", variant: "error" });
           return;
         }
         let match: SlashCommandChoice | null;
@@ -2353,11 +2353,11 @@ export const ChatInput = ({
           match = await slashCommandPicker.resolveExact(parsed);
         } catch (error) {
           console.error("Failed to resolve slash command:", error);
-          toasts.add({ title: "Couldn't load slash commands", variant: "error" });
+          toasts.add({ title: "スラッシュコマンドをロードできませんでした", variant: "error" });
           return;
         }
         if (!match) {
-          toasts.add({ title: "Choose a slash command", variant: "error" });
+          toasts.add({ title: "スラッシュコマンドを選択してください", variant: "error" });
           return;
         }
         slashCommand = match;
@@ -2375,7 +2375,7 @@ export const ChatInput = ({
       }
 
       if (slashCommand && (inputCapsules.length > 0 || readyAttachments.length > 0)) {
-        toasts.add({ title: "Slash commands cannot include resources or attachments", variant: "error" });
+        toasts.add({ title: "スラッシュ コマンドにはリソースや添付ファイルを含めることはできません", variant: "error" });
         return;
       }
       let message: string | SlashCommandRequest = messageInput;
@@ -3011,8 +3011,8 @@ export const ChatInput = ({
               >
                 <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${logDotClass}`} />
                 <span className="truncate">
-                  Send {pendingConsoleLogCount} captured {logKind}
-                  {pendingConsoleLogCount !== 1 ? "s" : ""} to chat
+                  送信 {pendingConsoleLogCount} 捕らえられた {logKind}
+                  {pendingConsoleLogCount !== 1 ? "s" : ""} チャットする
                 </span>
               </button>
             </Tooltip>
@@ -3020,7 +3020,7 @@ export const ChatInput = ({
               type="button"
               onClick={onDiscardConsoleLogs}
               className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full opacity-60 transition-opacity hover:bg-kumo-tint hover:opacity-100"
-              aria-label="Discard captured logs"
+              aria-label="取得したログを破棄"
             >
               <X size={10} />
             </button>
@@ -3045,7 +3045,7 @@ export const ChatInput = ({
               <span className={`grid h-7 w-7 place-items-center rounded-full ${canAttachMore ? "bg-kumo-brand/12 text-kumo-brand" : "bg-kumo-warning/15 text-kumo-warning"}`}>
                 <FileIcon size={16} weight="duotone" />
               </span>
-              {canAttachMore ? "Drop files to attach" : "Messages are limited to 5 attachments"}
+              {canAttachMore ? "ファイルをドロップして添付" : "添付ファイルは5件までです"}
             </div>
           </div>
         )}
@@ -3128,10 +3128,10 @@ export const ChatInput = ({
                 isBlocked
                   ? blockedReason
                   : isAgentActive
-                    ? "Waiting for agent…"
+                    ? "エージェントを待っています…"
                     : newChat
-                      ? "Start a new conversation…"
-                      : "Ask a follow-up…"
+                      ? "新しい会話を開始してください…"
+                      : "フォローアップを依頼してください…"
               }
               autoFocus={autoFocus}
               rows={minRows}
@@ -3235,19 +3235,19 @@ export const ChatInput = ({
             {pendingAttachments.map((attachment) => (
               <div key={attachment.id} className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-kumo-line/70 bg-kumo-elevated">
                 {attachment.previewUrl ? (
-                  <img src={attachment.previewUrl} alt={attachment.name ?? "Attached file"} className="h-full w-full object-cover" />
+                  <img src={attachment.previewUrl} alt={attachment.name ?? "添付ファイル"} className="h-full w-full object-cover" />
                 ) : (
                   <FileIcon size={22} className="text-kumo-inactive" />
                 )}
                 {attachment.uploadState === "uploading" && (
-                  <div className="absolute inset-0 grid place-items-center rounded-lg bg-black/35 text-[10px] text-white">Uploading</div>
+                  <div className="absolute inset-0 grid place-items-center rounded-lg bg-black/35 text-[10px] text-white">アップロード中</div>
                 )}
                 {attachment.uploadState === "error" && (
-                  <div className="absolute inset-0 grid place-items-center rounded-lg bg-kumo-danger/80 px-1 text-center text-[9px] leading-3 text-white">Failed</div>
+                  <div className="absolute inset-0 grid place-items-center rounded-lg bg-kumo-danger/80 px-1 text-center text-[9px] leading-3 text-white">失敗</div>
                 )}
                 <button
                   type="button"
-                  aria-label="Remove attachment"
+                  aria-label="添付ファイルを削除"
                   onClick={() => removeAttachment(attachment.id)}
                   className="absolute right-0.5 top-0.5 flex h-4 w-4 cursor-pointer items-center justify-center rounded-full bg-black/55 text-white hover:bg-black/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                 >
@@ -3267,7 +3267,7 @@ export const ChatInput = ({
                   <button
                     type="button"
                     className="group flex h-8 w-8 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg text-kumo-inactive transition-[background-color,color,transform] duration-150 ease-out hover:bg-kumo-tint hover:text-kumo-subtle focus-visible:bg-kumo-tint focus-visible:text-kumo-subtle focus-visible:outline-none active:scale-[0.96] data-[popup-open]:bg-kumo-tint data-[popup-open]:text-kumo-subtle"
-                    aria-label="Open chat options"
+                    aria-label="チャットのオプションを開く"
                   >
                     <Plus size={18} />
                   </button>
@@ -3288,7 +3288,7 @@ export const ChatInput = ({
                       <Brain size={14} />
                     </span>
                     <span className="flex-1">
-                      {showThinkingTraces ? "Hide thinking" : "Show thinking"}
+                      {showThinkingTraces ? "思考を非表示" : "思考を表示"}
                     </span>
                   </DropdownMenu.Item>
                 )}
@@ -3299,7 +3299,7 @@ export const ChatInput = ({
                   <span className="mr-2 inline-flex h-4 w-4 items-center justify-center text-kumo-inactive">
                     <FileIcon size={14} />
                   </span>
-                  <span className="flex-1">Upload file</span>
+                  <span className="flex-1">ファイルをアップロード</span>
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu>
@@ -3309,7 +3309,7 @@ export const ChatInput = ({
               className="inline-flex h-8 flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-[13px] leading-none tracking-[-0.25px] text-kumo-inactive transition-[background-color,color,transform] duration-150 ease-out hover:bg-kumo-tint hover:text-kumo-subtle focus-visible:bg-kumo-tint focus-visible:text-kumo-subtle focus-visible:outline-none active:scale-[0.97]"
             >
               <Plug size={15} className="flex-shrink-0" />
-              <span className={`leading-none ${styles.attachLabelText}`}>{attachLabel ?? "Add resource"}</span>
+              <span className={`leading-none ${styles.attachLabelText}`}>{attachLabel ?? "リソースを追加"}</span>
             </button>
           </div>
 
@@ -3321,7 +3321,7 @@ export const ChatInput = ({
                     <button
                       type="button"
                       className="group inline-flex h-8 min-w-0 max-w-[180px] cursor-pointer items-center gap-1.5 rounded-lg px-2 text-[13px] leading-5 tracking-[-0.25px] text-kumo-subtle transition-[background-color,color,transform] duration-150 ease-out hover:bg-kumo-tint hover:text-kumo-default focus-visible:bg-kumo-tint focus-visible:text-kumo-default focus-visible:outline-none active:scale-[0.97] data-[popup-open]:bg-kumo-tint data-[popup-open]:text-kumo-default"
-                      aria-label="Select model"
+                      aria-label="モデルを選択"
                     >
                       <span className="min-w-0 truncate">{selectedModelLabel}</span>
                       <CaretDown
@@ -3353,7 +3353,7 @@ export const ChatInput = ({
                     onClick={() => onModelChange(null)}
                     className="!h-auto rounded-xl !px-2 !py-1.5 text-[12px] leading-4 font-normal tracking-[-0.15px] text-kumo-subtle transition-colors data-highlighted:bg-kumo-tint/70 data-highlighted:text-kumo-default"
                   >
-                    <span className="min-w-0 flex-1 truncate">No agent</span>
+                    <span className="min-w-0 flex-1 truncate">エージェントなし</span>
                     {selectedModel == null && (
                       <Check size={12} weight="bold" className="ml-3 flex-shrink-0 text-kumo-inactive" />
                     )}
@@ -3365,7 +3365,7 @@ export const ChatInput = ({
                   onClick={onStop}
                   tone="primary"
                   className="!h-8 !w-8"
-                  aria-label="Stop agent"
+                  aria-label="エージェントを停止"
                 >
                   <svg
                     width="14"
@@ -3382,7 +3382,7 @@ export const ChatInput = ({
                   disabled={!canSend}
                   tone="primary"
                   className="!h-8 !w-8 disabled:cursor-not-allowed disabled:opacity-30"
-                  aria-label="Send message"
+                  aria-label="メッセージを送信"
                 >
                   {/* Arrow-up icon */}
                   <svg
@@ -3591,7 +3591,7 @@ function DiscardPendingChangesPopover({
             disabled={disabled}
             className="inline-flex h-[30px] cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base px-2.5 text-[12px] font-medium leading-[18px] tracking-[-0.25px] text-kumo-default transition-colors enabled:hover:bg-kumo-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Discard…
+            破棄…
           </button>
         }
       />
@@ -3604,14 +3604,14 @@ function DiscardPendingChangesPopover({
       >
         <div className="px-3.5 pb-2.5 pt-3">
           <Popover.Title className="text-[13px] font-medium leading-[18px] tracking-[-0.25px] text-kumo-default">
-            Discard all pending changes?
+            保留中の変更をすべて破棄しますか?
           </Popover.Title>
           <p className="mt-0.5 text-[11.5px] leading-4 tracking-[-0.15px] text-kumo-subtle">
-            Return to the last accepted version. Any gadgets created by these changes will be
-            permanently deleted. Pending changes can&apos;t be restored.
+            最後に承認されたバージョンに戻ります。これらの変更によって作成されたガジェットは、
+            完全に削除されました。保留中の変更は復元できません。
           </p>
           <p className="mt-2 border-t border-kumo-line pt-2 text-[11px] leading-[15px] tracking-[-0.1px] text-kumo-inactive">
-            Use the <ArrowUUpLeft size={12} className="mx-0.5 inline-block align-[-2px]" aria-hidden="true" /><span className="sr-only">undo arrow</span> under any agent response to discard from that turn onward.
+            を使用します。 <ArrowUUpLeft size={12} className="mx-0.5 inline-block align-[-2px]" aria-hidden="true" /><span className="sr-only">元に戻す矢印</span> エージェントがそのターン以降に破棄するように応答した場合。
           </p>
         </div>
         <div className="flex items-center justify-end gap-0.5 border-t border-kumo-line px-2 py-1.5">
@@ -3621,7 +3621,7 @@ function DiscardPendingChangesPopover({
             onClick={() => onOpenChange(false)}
             className="flex h-6 cursor-pointer items-center rounded-md px-2 text-[12px] font-medium tracking-[-0.15px] text-kumo-inactive transition-colors enabled:hover:bg-kumo-tint enabled:hover:text-kumo-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Cancel
+            キャンセル
           </button>
           <button
             type="button"
@@ -3629,7 +3629,7 @@ function DiscardPendingChangesPopover({
             onClick={onConfirm}
             className="flex h-6 cursor-pointer items-center rounded-md px-2 text-[12px] font-medium tracking-[-0.15px] text-kumo-default transition-colors enabled:hover:bg-kumo-tint enabled:hover:text-kumo-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {isDiscarding ? "Discarding..." : "Discard changes"}
+            {isDiscarding ? "破棄中…" : "変更を破棄"}
           </button>
         </div>
       </Popover.Content>
@@ -4671,7 +4671,7 @@ function ChatInterface({
       }
     } catch (err: any) {
       console.error("Failed to download chat attachment:", err);
-      toasts.add({ title: err?.message || "Failed to download attachment", variant: "error" });
+      toasts.add({ title: err?.message || "添付ファイルのダウンロードに失敗しました", variant: "error" });
     }
   }, [overseer, toasts]);
 
@@ -5080,7 +5080,7 @@ function ChatInterface({
           provisional.compacting = false;
           if (event.nothingToCompact) {
             toastsRef.current.add({
-              title: "Nothing to compact — there are no earlier messages to summarize.",
+              title: "圧縮するものは何もありません。要約する以前のメッセージはありません。",
             });
           }
           break;
@@ -5215,7 +5215,7 @@ function ChatInterface({
       } catch (err) {
         console.error("Failed to subscribe to chats:", err);
         reportIssue('chat.subscription-load', err)
-        toasts.add({ title: "Unable to load conversations", variant: "error" });
+        toasts.add({ title: "会話を読み込めません", variant: "error" });
       }
     };
 
@@ -5326,7 +5326,7 @@ function ChatInterface({
       forceUpdate();
     } catch (err) {
       console.error("Failed to load earlier messages:", err);
-      toasts.add({ title: "Failed to load earlier messages", variant: "error" });
+      toasts.add({ title: "以前のメッセージを読み込めませんでした", variant: "error" });
     } finally {
       setIsLoadingEarlier(false);
     }
@@ -5367,7 +5367,7 @@ function ChatInterface({
       }
     } catch (err) {
       console.error("Failed to send message:", err);
-      toasts.add({ title: "Failed to send message", variant: "error" });
+      toasts.add({ title: "メッセージの送信に失敗しました", variant: "error" });
       throw err;
     }
   };
@@ -5389,7 +5389,7 @@ function ChatInterface({
       onNavigateToChatRef.current(newChatId);
     } catch (err) {
       console.error("Failed to create new chat:", err);
-      toasts.add({ title: "Failed to start conversation", variant: "error" });
+      toasts.add({ title: "会話を開始できませんでした", variant: "error" });
       throw err;
     }
   };
@@ -5408,7 +5408,7 @@ function ChatInterface({
       await overseer.stopAgent(selectedChatId);
     } catch (err) {
       console.error("Failed to stop agent:", err);
-      toasts.add({ title: "Failed to stop agent", variant: "error" });
+      toasts.add({ title: "エージェントの停止に失敗しました", variant: "error" });
     }
   };
 
@@ -5432,10 +5432,10 @@ function ChatInterface({
       }
 
       setIsEditingTitle(false);
-      toasts.add({ title: "Chat title updated successfully", variant: "success" });
+      toasts.add({ title: "チャットタイトルが正常に更新されました", variant: "success" });
     } catch (err) {
       console.error("Failed to update chat title:", err);
-      toasts.add({ title: "Failed to update chat title", variant: "error" });
+      toasts.add({ title: "チャットタイトルの更新に失敗しました", variant: "error" });
     }
   };
 
@@ -5459,10 +5459,10 @@ function ChatInterface({
     setIsDeleting(true);
     try {
       await overseer.deleteChat(deleteTarget.id);
-      toasts.add({ title: "Chat deleted successfully", variant: "success" });
+      toasts.add({ title: "チャットは正常に削除されました", variant: "success" });
     } catch (err) {
       console.error("Failed to delete chat:", err);
-      toasts.add({ title: "Failed to delete chat", variant: "error" });
+      toasts.add({ title: "チャットの削除に失敗しました", variant: "error" });
     }
     setIsDeleting(false);
     setDeleteTarget(null);
@@ -5501,10 +5501,10 @@ function ChatInterface({
         bumpChatListVersion();
         forceUpdate();
       }
-      toasts.add({ title: "Chat title updated successfully", variant: "success" });
+      toasts.add({ title: "チャットタイトルが正常に更新されました", variant: "success" });
     } catch (err) {
       console.error("Failed to update chat title:", err);
-      toasts.add({ title: "Failed to update chat title", variant: "error" });
+      toasts.add({ title: "チャットタイトルの更新に失敗しました", variant: "error" });
     }
   };
 
@@ -5517,10 +5517,10 @@ function ChatInterface({
 
     try {
       await overseer.mergeChanges(selectedChatId, mergeThrough, options);
-      toasts.add({ title: "Changes accepted", variant: "success" });
+      toasts.add({ title: "変更は受け入れられました", variant: "success" });
     } catch (err) {
       console.error("Failed to accept changes:", err);
-      toasts.add({ title: "Failed to accept changes", variant: "error" });
+      toasts.add({ title: "変更を受け入れられませんでした", variant: "error" });
     }
   };
 
@@ -5529,10 +5529,10 @@ function ChatInterface({
 
     try {
       await overseer.finalizeChatDraft(selectedChatId);
-      toasts.add({ title: "Changes saved", variant: "success" });
+      toasts.add({ title: "変更が保存されました", variant: "success" });
     } catch (err) {
       console.error("Failed to save changes:", err);
-      toasts.add({ title: "Failed to save changes", variant: "error" });
+      toasts.add({ title: "変更を保存できませんでした", variant: "error" });
     }
   };
 
@@ -5543,10 +5543,10 @@ function ChatInterface({
       await overseer.discardChatDraftChanges(selectedChatId);
       draftRef.current.delete(selectedChatId);
       forceUpdate();
-      toasts.add({ title: "Changes discarded", variant: "success" });
+      toasts.add({ title: "破棄された変更", variant: "success" });
     } catch (err) {
       console.error("Failed to discard changes:", err);
-      toasts.add({ title: "Failed to discard changes", variant: "error" });
+      toasts.add({ title: "変更を破棄できませんでした", variant: "error" });
     }
   };
 
@@ -5567,10 +5567,10 @@ function ChatInterface({
       setDiscardChangesTarget((current) =>
         current?.chatId === target.chatId ? null : current,
       );
-      toasts.add({ title: "Pending changes discarded", variant: "success" });
+      toasts.add({ title: "保留中の変更は破棄されました", variant: "success" });
     } catch (err) {
       console.error("Failed to discard pending changes:", err);
-      toasts.add({ title: "Failed to discard pending changes", variant: "error" });
+      toasts.add({ title: "保留中の変更を破棄できませんでした", variant: "error" });
     } finally {
       setDiscardingChangesChatIds((chatIds) => {
         const next = new Set(chatIds);
@@ -5661,10 +5661,10 @@ function ChatInterface({
 
     try {
       await overseer.revertChanges(selectedChatId, revertFrom);
-      toasts.add({ title: "Draft rewound", variant: "success" });
+      toasts.add({ title: "ドラフトの巻き戻し", variant: "success" });
     } catch (err) {
       console.error("Failed to rewind draft:", err);
-      toasts.add({ title: "Failed to rewind draft", variant: "error" });
+      toasts.add({ title: "ドラフトの巻き戻しに失敗しました", variant: "error" });
     }
   }, [overseer, selectedChatId, toasts]);
 
@@ -5696,7 +5696,7 @@ function ChatInterface({
       }
     } catch (err) {
       console.error("Failed to toggle hook:", err);
-      toasts.add({ title: `Failed to ${enabled ? "enable" : "disable"} hook`, variant: "error" });
+      toasts.add({ title: `Failed to ${enabled ? "有効にする" : "無効にする"} hook`, variant: "error" });
       // Revert the optimistic update.
       if (applyOptimisticHookEnabled(actionId, !enabled)) forceUpdate();
     } finally {
@@ -5737,7 +5737,7 @@ function ChatInterface({
       setConnectionAccept(null);
     } catch (err) {
       console.error("Failed to finalize connection:", err);
-      toasts.add({ title: "Failed to add connection", variant: "error" });
+      toasts.add({ title: "接続の追加に失敗しました", variant: "error" });
     } finally {
       gk[Symbol.dispose]();
       setProcessingConnections((prev) => {
@@ -5758,7 +5758,7 @@ function ChatInterface({
       }
     } catch (err) {
       console.error("Failed to deny connection:", err);
-      toasts.add({ title: "Failed to deny connection", variant: "error" });
+      toasts.add({ title: "接続の拒否に失敗しました", variant: "error" });
     } finally {
       setProcessingConnections((prev) => {
         const next = new Set(prev);
@@ -5838,14 +5838,14 @@ function ChatInterface({
       await overseer.retryAgent(selectedChatId, selectedModel);
     } catch (err) {
       console.error("Failed to retry agent:", err);
-      toasts.add({ title: "Failed to retry agent", variant: "error" });
+      toasts.add({ title: "エージェントの再試行に失敗しました", variant: "error" });
     }
   };
 
   const handleCopyMessage = useCallback(async (message: string) => {
     const ok = await copyToClipboard(message);
     toasts.add({
-      title: ok ? "Copied message" : "Unable to copy message",
+      title: ok ? "コピーされたメッセージ" : "メッセージをコピーできません",
       variant: ok ? "success" : "error",
     });
   }, [toasts]);
@@ -6069,7 +6069,7 @@ function ChatInterface({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span className="font-medium text-kumo-default">
-                  Connect {msg.vendorName}
+                  接続する {msg.vendorName}
                 </span>
                 {scope && (
                   <span className="rounded-full bg-kumo-tint px-2 py-0.5 text-[11px] leading-4 text-kumo-subtle">
@@ -6096,7 +6096,7 @@ function ChatInterface({
                   disabled={isProc}
                   className="cursor-pointer rounded-md px-2 py-1 font-medium text-kumo-inactive transition-colors duration-150 ease-out hover:text-kumo-danger focus-visible:text-kumo-danger focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Deny
+                  拒否
                 </button>
                 <button
                   type="button"
@@ -6104,7 +6104,7 @@ function ChatInterface({
                   disabled={isProc}
                   className="cursor-pointer rounded-md bg-kumo-brand px-3 py-1 font-medium text-white transition-[opacity,transform] duration-150 ease-out hover:opacity-90 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Set up
+                  設定
                 </button>
               </div>
             )}
@@ -6148,7 +6148,7 @@ function ChatInterface({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <span className="font-medium text-kumo-default">
-                    Hook: {log.description.title}
+                    フック: {log.description.title}
                   </span>
                   <span className={`text-[12px] font-medium ${stateLabelCls}`}>
                     {stateLabel}
@@ -6418,7 +6418,7 @@ function ChatInterface({
               <button
                 type="button"
                 className="group flex h-8 -ml-1.5 cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-left transition-colors duration-150 ease-out hover:bg-kumo-tint/60 focus-visible:bg-kumo-tint/60 focus-visible:outline-none data-[popup-open]:bg-kumo-tint/60"
-                aria-label="Filter conversations"
+                aria-label="会話を絞り込む"
               >
                 <span className="text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
                   {CHAT_LIST_SCOPE_LABELS[chatListScope]}
@@ -6461,7 +6461,7 @@ function ChatInterface({
           </div>
         ) : chatList.length === 0 ? (
           <p className="text-sm text-kumo-inactive text-center py-8">
-            No conversations yet
+            まだ会話はありません
           </p>
         ) : (
           <div className="flex flex-col gap-1">
@@ -6470,14 +6470,14 @@ function ChatInterface({
               // the all-empty case is handled by the outer chatList.length check.
               <div className="py-8 text-center">
                 <p className="text-[13px] leading-[18px] text-kumo-inactive">
-                  No conversations started by {chatListScope === "agents" ? "agents" : "people"} yet
+                  によって始まった会話はありません {chatListScope === "agents" ? "エージェント" : "人"} まだ
                 </p>
                 <button
                   type="button"
                   onClick={() => setChatListScope("all")}
                   className="mt-2 cursor-pointer rounded-md px-2 py-1 text-[12px] leading-4 font-medium text-kumo-subtle transition-colors duration-150 ease-out hover:text-kumo-default focus-visible:text-kumo-default focus-visible:outline-none"
                 >
-                  Show all
+                  すべて表示
                 </button>
               </div>
             ) : (
@@ -6524,7 +6524,7 @@ function ChatInterface({
                             spellCheck={false}
                             autoCapitalize="off"
                             autoCorrect="off"
-                            aria-label={`Rename ${chat.title}`}
+                            aria-label={`${chat.title}の名前を変更`}
                             className="min-w-0 flex-1 bg-transparent text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default outline-none placeholder:text-kumo-inactive"
                           />
                         ) : (
@@ -6535,13 +6535,13 @@ function ChatInterface({
                         {!isRenaming && chat.activeAgent ? (
                           <span className="inline-flex flex-shrink-0 cursor-pointer items-center gap-1 text-[11px] leading-4 font-medium text-kumo-brand">
                             <span className="h-1.5 w-1.5 rounded-full bg-kumo-brand animate-pulse" />
-                            Working
+                            働く
                           </span>
                         ) : !isRenaming && chat.hasProposedChanges ? (
                           <Tooltip content="This conversation has pending changes" asChild>
                             <span className="inline-flex flex-shrink-0 cursor-pointer items-center gap-1 text-[11px] leading-4 font-medium text-kumo-warning">
                               <span className="h-1.5 w-1.5 rounded-full bg-kumo-warning" />
-                              Pending changes
+                              保留中の変更
                             </span>
                           </Tooltip>
                         ) : null}
@@ -6549,7 +6549,7 @@ function ChatInterface({
                       <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4 text-kumo-inactive">
                         {chat.spawnerName && (
                           <>
-                            <span className="truncate">Agent · {chat.spawnerName}</span>
+                            <span className="truncate">エージェント ・ {chat.spawnerName}</span>
                             <span className="flex-shrink-0" aria-hidden="true">·</span>
                           </>
                         )}
@@ -6571,7 +6571,7 @@ function ChatInterface({
                         <DropdownMenu.Trigger
                           render={
                             <WorkshopIconButton
-                              aria-label={`Actions for ${chat.title}`}
+                              aria-label={`${chat.title}の操作`}
                               onClick={(e) => e.stopPropagation()}
                               className="!h-7 !w-7 flex-shrink-0 text-kumo-inactive opacity-0 focus:opacity-100 group-hover:opacity-100 data-[popup-open]:opacity-100"
                             >
@@ -6588,7 +6588,7 @@ function ChatInterface({
                             onClick={() => startListRename(chat.id, chat.title)}
                             className="!h-auto rounded-md !px-2.5 !py-1.5 text-[12px] leading-4 tracking-[-0.2px] text-kumo-default transition-colors data-highlighted:bg-kumo-tint"
                           >
-                            Rename
+                            名前の変更
                           </DropdownMenu.Item>
                           <DropdownMenu.Item
                             icon={<Trash size={12} className="mr-2" />}
@@ -6596,7 +6596,7 @@ function ChatInterface({
                             onClick={() => handleDeleteChat(chat.id, chat.title)}
                             className="!h-auto rounded-md !px-2.5 !py-1.5 text-[12px] leading-4 tracking-[-0.2px] transition-colors data-highlighted:bg-kumo-danger-tint"
                           >
-                            Delete
+                            削除
                           </DropdownMenu.Item>
                         </DropdownMenu.Content>
                       </DropdownMenu>
@@ -6685,7 +6685,7 @@ function ChatInterface({
                     : "font-normal text-kumo-subtle hover:text-kumo-default"
                 }`}
               >
-                Chat
+                チャット
               </button>
               <button
                 type="button"
@@ -6696,7 +6696,7 @@ function ChatInterface({
                     : "font-normal text-kumo-subtle hover:text-kumo-default"
                 }`}
               >
-                Connections
+                接続
               </button>
             </div>
           )}
@@ -6717,8 +6717,8 @@ function ChatInterface({
                   <WorkshopIconButton
                     onClick={() => onNavigateToChat(null)}
                     className="!h-8 !w-8 flex-shrink-0"
-                    title="Back to conversations"
-                    aria-label="Back to conversations"
+                    title="会話一覧に戻る"
+                    aria-label="会話一覧に戻る"
                   >
                     <CaretLeft size={14} />
                   </WorkshopIconButton>
@@ -6740,14 +6740,14 @@ function ChatInterface({
                         onClick={handleSaveChatTitle}
                         disabled={!titleInput.trim()}
                         className="!h-8 !w-8 hover:text-kumo-brand disabled:opacity-30"
-                        aria-label="Save chat title"
+                        aria-label="チャット名を保存"
                       >
                         <Check size={13} />
                       </WorkshopIconButton>
                       <WorkshopIconButton
                         onClick={handleCancelTitleEdit}
                         className="!h-8 !w-8"
-                        aria-label="Cancel title edit"
+                        aria-label="チャット名の編集をキャンセル"
                       >
                         <X size={13} />
                       </WorkshopIconButton>
@@ -6755,13 +6755,13 @@ function ChatInterface({
                   ) : (
                     <>
                       <span className="min-w-0 flex-1 truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
-                        {currentChatMetadata?.title || "Chat"}
+                        {currentChatMetadata?.title || "チャット"}
                       </span>
                       <WorkshopIconButton
                         onClick={() => setIsEditingTitle(true)}
                         className="!h-8 !w-8 flex-shrink-0 text-kumo-inactive hover:text-kumo-subtle"
-                        title="Rename chat"
-                        aria-label="Rename chat"
+                        title="チャット名を変更"
+                        aria-label="チャット名を変更"
                       >
                         <Pencil size={11} />
                       </WorkshopIconButton>
@@ -6772,8 +6772,8 @@ function ChatInterface({
                     onClick={() => handleDeleteChat()}
                     danger
                     className="!h-8 !w-8 flex-shrink-0 text-kumo-inactive"
-                    title="Delete chat"
-                    aria-label="Delete chat"
+                    title="チャットを削除"
+                    aria-label="チャットを削除"
                   >
                     <Trash size={14} />
                   </WorkshopIconButton>
@@ -6796,7 +6796,7 @@ function ChatInterface({
                   >
                     {isLoadingEarlier && (
                       <div className="mx-auto mb-6 text-[12px] leading-4 font-medium text-kumo-inactive">
-                        Loading earlier messages…
+                        以前のメッセージを読み込んでいます…
                       </div>
                     )}
 
@@ -6811,7 +6811,7 @@ function ChatInterface({
                             <div className="flex items-center gap-3" role="separator">
                               <span className="h-px flex-1 bg-kumo-line/60" aria-hidden="true" />
                               <span className="flex-shrink-0 text-[11px] leading-4 font-medium tracking-[0.6px] text-kumo-inactive uppercase">
-                                Kept in full from here
+                                ここから完全に保存されます
                               </span>
                               <span className="h-px flex-1 bg-kumo-line/60" aria-hidden="true" />
                             </div>
@@ -6828,10 +6828,10 @@ function ChatInterface({
                               // Says what the agent traded away and what it still has, since the
                               // marker sits at the request rather than at the cut it describes.
                               <p className="mb-3 text-[12px] leading-[17px] text-kumo-subtle">
-                                The agent reads this in place of everything earlier in the chat.{" "}
+                                エージェントは、チャットの前半のすべての代わりにこれを読み取ります。{" "}
                                 {kept === 0
-                                  ? "Nothing after it was kept."
-                                  : `The ${kept === 1 ? "message" : `${kept} messages`} after the cut ${kept === 1 ? "was" : "were"} kept in full.`}
+                                  ? "これ以降の内容は保持されていません。"
+                                  : `The ${kept === 1 ? "メッセージ" : `${kept} messages`} after the cut ${kept === 1 ? "は" : "は"} kept in full.`}
                               </p>
                             )}
                             <div className={`min-w-0 text-[13px] leading-[19px] ${styles.markdownContent}`}>
@@ -6856,7 +6856,7 @@ function ChatInterface({
                                   <Brain size={16} />
                                 </span>
                                 <span className="font-medium">
-                                  {entry.requestedBy.name} compacted the context
+                                  {entry.requestedBy.name} コンテキストを圧縮した
                                 </span>
                                 <CaretRight
                                   size={11}
@@ -6871,7 +6871,7 @@ function ChatInterface({
 
                         return (
                           <div key={entry.key} className={`${entryTopClass} mb-4 max-w-[860px]`}>
-                            <div className="flex items-center gap-3" role="separator" aria-label="Context compacted">
+                            <div className="flex items-center gap-3" role="separator" aria-label="コンテキストを圧縮しました">
                               <span className="h-px flex-1 bg-kumo-line" aria-hidden="true" />
                               <button
                                 type="button"
@@ -6880,7 +6880,7 @@ function ChatInterface({
                                 className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-1 py-0.5 text-[11px] leading-4 font-medium tracking-[0.6px] text-kumo-inactive uppercase transition-colors duration-150 ease-out hover:text-kumo-default focus-visible:text-kumo-default focus-visible:outline-none"
                               >
                                 <Brain size={13} aria-hidden="true" />
-                                Context compacted
+                                コンテキストを圧縮しました
                                 <CaretRight
                                   size={11}
                                   weight="bold"
@@ -6902,7 +6902,7 @@ function ChatInterface({
                                 <Swap size={16} />
                               </span>
                               <span className="min-w-0 truncate">
-                                Switched to {entry.author.name}
+                                に切り替えました {entry.author.name}
                               </span>
                             </div>
                           </div>
@@ -7144,7 +7144,7 @@ function ChatInterface({
                                         type="button"
                                         onClick={() => handleCopyMessage(msg.message)}
                                         className="flex cursor-pointer items-center rounded-md p-1 text-kumo-inactive transition-[color,transform] duration-150 ease-out hover:text-kumo-default focus-visible:text-kumo-default focus-visible:outline-none active:scale-[0.96]"
-                                        aria-label="Copy message"
+                                        aria-label="メッセージをコピー"
                                       >
                                         <Copy size={15} />
                                       </button>
@@ -7253,8 +7253,8 @@ function ChatInterface({
                                     <span className="font-medium">
                                       {msg.author.name}{" "}
                                       {isMerge
-                                        ? "accepted changes"
-                                        : "discarded changes"}
+                                        ? "変更を承認しました"
+                                        : "変更を破棄しました"}
                                     </span>
                                   </span>
                                 </Tooltip>
@@ -7273,7 +7273,7 @@ function ChatInterface({
                                 <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-kumo-inactive" aria-hidden="true">
                                   <Plug size={16} />
                                 </span>
-                                <span>Used the gadget</span>
+                                <span>ガジェットを使用しました</span>
                               </span>
                             </Tooltip>
                           </div>
@@ -7302,7 +7302,7 @@ function ChatInterface({
                                         </span>
                                         <span className="flex min-w-0 flex-1 items-center gap-1">
                                           <span className="min-w-0 truncate">
-                                            <span className="font-medium text-kumo-danger">Error: </span>
+                                            <span className="font-medium text-kumo-danger">エラー： </span>
                                             <span className="text-kumo-subtle">{msg.message}</span>
                                           </span>
                                           <CaretRight
@@ -7322,7 +7322,7 @@ function ChatInterface({
                                         className="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 text-[13px] leading-4 font-medium text-kumo-default transition-[color,opacity,transform] duration-150 ease-out hover:text-kumo-default-hover focus-visible:text-kumo-default-hover focus-visible:outline-none active:scale-[0.98]"
                                       >
                                         <Lightning size={12} weight="bold" />
-                                        Continue
+                                        続行
                                       </button>
                                     </Tooltip>
                                   )}
@@ -7335,7 +7335,7 @@ function ChatInterface({
                                         className="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 text-[13px] leading-4 font-medium text-kumo-default transition-[color,opacity,transform] duration-150 ease-out hover:text-kumo-default-hover focus-visible:text-kumo-default-hover focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                                       >
                                         <ArrowsClockwise size={12} weight="bold" />
-                                        Retry
+                                        リトライ
                                       </button>
                                     </Tooltip>
                                   )}
@@ -7358,7 +7358,7 @@ function ChatInterface({
                                 <Code size={16} />
                               </span>
                               <span className="min-w-0 truncate font-mono text-[13px]">
-                                self.{msg.methodName}()
+                                自己。{msg.methodName}()
                               </span>
                             </div>
                             {msg.argsSummary && (
@@ -7417,7 +7417,7 @@ function ChatInterface({
                                   onClick={handleDiscardDraftChanges}
                                   className="cursor-pointer rounded-md px-1 py-0.5 font-medium text-kumo-inactive transition-colors duration-150 ease-out hover:text-kumo-danger focus-visible:text-kumo-danger focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                  Discard
+                                  破棄
                                 </button>
                               </Tooltip>
                               <Tooltip content="Save these edits as a draft version. They won't affect the gadget until you accept changes." asChild>
@@ -7427,7 +7427,7 @@ function ChatInterface({
                                   onClick={handleFinalizeDraftChanges}
                                   className="cursor-pointer rounded-md px-1 py-0.5 font-medium text-kumo-default transition-[color,opacity,transform] duration-150 ease-out hover:text-kumo-default-hover focus-visible:text-kumo-default-hover focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                  Save draft
+                                  下書きの保存
                                 </button>
                               </Tooltip>
                             </div>
@@ -7477,13 +7477,13 @@ function ChatInterface({
                         <div className={`group/agent min-w-0 w-full max-w-[860px] space-y-2 ${provisionalTopClass}`}>
                           {isCompacting && (
                             <div className={`inline-flex px-1.5 py-1 text-[14px] leading-5 tracking-[-0.25px] ${styles.thinkingShimmer}`}>
-                              Compacting…
+                              圧縮中…
                             </div>
                           )}
 
                           {showThinking && (
                             <div className={`inline-flex px-1.5 py-1 text-[14px] leading-5 tracking-[-0.25px] ${styles.thinkingShimmer}`}>
-                              Thinking
+                              考え
                             </div>
                           )}
 
@@ -7543,7 +7543,7 @@ function ChatInterface({
                                         >
                                           {toolCall.code && (
                                             <>
-                                              <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">Code</span>
+                                              <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">コード</span>
                                               <pre className="max-h-56 overflow-auto rounded-xl border border-kumo-line/70 bg-kumo-base p-3 font-mono text-[12px] leading-[18px] text-kumo-subtle whitespace-pre-wrap">
                                                 {toolCall.code}
                                               </pre>
@@ -7551,7 +7551,7 @@ function ChatInterface({
                                           )}
                                           {toolCall.output && (
                                             <>
-                                              <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">Output</span>
+                                              <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">出力</span>
                                               <pre className="max-h-56 overflow-auto rounded-xl border border-kumo-line/70 bg-kumo-base p-3 font-mono text-[12px] leading-[18px] text-kumo-subtle whitespace-pre-wrap">
                                                 {toolCall.output}
                                               </pre>
@@ -7627,7 +7627,7 @@ function ChatInterface({
                         <div className="themed-surface-inset relative flex items-center gap-2 overflow-hidden rounded-t-[calc(1rem-1px)] border-b border-kumo-line bg-kumo-elevated px-3.5 py-2">
                           <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-kumo-brand/40 to-transparent" aria-hidden="true" />
                           <span className="min-w-0 flex-1 truncate text-[12px] font-medium leading-4 tracking-[-0.2px] text-kumo-default">
-                            Pending changes
+                            保留中の変更
                           </span>
                           <DiscardPendingChangesPopover
                             open={discardChangesTarget?.chatId === currentChatMetadata.id}
@@ -7655,7 +7655,7 @@ function ChatInterface({
                               className="!h-7 !cursor-pointer !rounded-md !border-transparent !shadow-none gap-1 text-[12px]"
                             >
                               <Check size={11} weight="bold" />
-                              Accept changes
+                              変更を受け入れる
                             </WorkshopButton>
                           </Tooltip>
                         </div>
@@ -7667,7 +7667,7 @@ function ChatInterface({
                   <div className="-mt-1 flex min-h-[1.25rem] items-start justify-end gap-4 px-4 pb-1 font-mono text-[11px] leading-4 text-kumo-inactive">
                     {currentChatMetadata?.totalTokens != null && (
                       <span>
-                        {currentChatMetadata.totalTokens.toLocaleString()} tokens
+                        {currentChatMetadata.totalTokens.toLocaleString()} トークン
                       </span>
                     )}
                     {currentChatMetadata?.totalCost != null && (
@@ -7683,8 +7683,8 @@ function ChatInterface({
 
       <DeleteConfirmationDialog
         open={deleteTarget !== null}
-        title="Delete conversation?"
-        description={<>This removes <span className="font-medium text-kumo-default">{deleteTarget?.title}</span>. You can&apos;t undo this.</>}
+        title="会話を削除しますか？"
+        description={<>これにより削除されます <span className="font-medium text-kumo-default">{deleteTarget?.title}</span>。これを元に戻すことはできません。</>}
         isDeleting={isDeleting}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);

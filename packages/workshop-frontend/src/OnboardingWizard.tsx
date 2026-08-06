@@ -68,7 +68,7 @@ export default function OnboardingWizard({
   const { resolvedThemeMode } = useTheme()
   const toasts = useKumoToastManager()
   const siteName = useSiteName()
-  useDocumentTitle('Setup')
+  useDocumentTitle('設定')
 
   // Wizard state
   const [step, setStep] = useState(0) // 0 = avatar, 1 = model, 2 = connections
@@ -243,7 +243,7 @@ export default function OnboardingWizard({
 
   const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      toasts.add({ title: 'Please select an image file', variant: 'error' })
+      toasts.add({ title: '画像ファイルを選択してください', variant: 'error' })
       return
     }
     setAvatarProcessing(true)
@@ -254,7 +254,7 @@ export default function OnboardingWizard({
       setAvatarPreview(avatarBlobUrl(compressed))
     } catch (err) {
       console.error('Failed to process avatar:', err)
-      toasts.add({ title: 'Failed to process image', variant: 'error' })
+      toasts.add({ title: '画像の処理に失敗しました', variant: 'error' })
     } finally {
       setAvatarProcessing(false)
     }
@@ -275,7 +275,7 @@ export default function OnboardingWizard({
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
       console.error('Failed to start connection:', err)
-      toasts.add({ title: 'Failed to start connection', variant: 'error' })
+      toasts.add({ title: '接続の開始に失敗しました', variant: 'error' })
     } finally {
       // Reset after a short delay — the subscription will update the UI when the connection completes
       setTimeout(() => setConnectingVendorId(null), 2000)
@@ -316,7 +316,7 @@ export default function OnboardingWizard({
       onComplete()
     } catch (err) {
       console.error('Failed to complete onboarding:', err)
-      toasts.add({ title: 'Something went wrong. Please try again.', variant: 'error' })
+      toasts.add({ title: '何か問題が発生しました。もう一度試してください。', variant: 'error' })
       setFinishing(false)
     }
   }
@@ -371,14 +371,14 @@ export default function OnboardingWizard({
               mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
           >
-            Let&apos;s set you up
+            セットアップしましょう
           </h1>
           <p
             className={`mt-2 text-sm text-kumo-subtle transition-all duration-500 delay-200 ${
               mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
           >
-            Just a few things before you start building
+            構築を開始する前にいくつかのことを行う
           </p>
         </div>
 
@@ -407,10 +407,10 @@ export default function OnboardingWizard({
             {/* ── Step 0: Profile ───────────────────────────────────────────── */}
             <div className="w-full flex-shrink-0 p-8 min-h-[420px]">
               <h2 className="text-lg font-medium text-kumo-default mb-1">
-                Create your profile
+                プロフィールを作成する
               </h2>
               <p className="text-sm text-kumo-subtle mb-12">
-                This is how you&apos;ll appear in conversations
+                会話にこのように表示されます
               </p>
 
               {/* Avatar + Display name side by side */}
@@ -436,7 +436,7 @@ export default function OnboardingWizard({
                       <>
                         <img
                           src={avatarPreview}
-                          alt="Avatar preview"
+                          alt="アバターのプレビュー"
                           className="w-full h-full rounded-full object-cover"
                         />
                         <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -468,7 +468,7 @@ export default function OnboardingWizard({
                     }}
                   />
                   <p className="text-xs text-kumo-inactive mt-1.5">
-                    {avatarPreview ? 'Change' : 'Add photo'}
+                    {avatarPreview ? '変更' : '写真を追加'}
                   </p>
                 </div>
 
@@ -478,14 +478,14 @@ export default function OnboardingWizard({
                     htmlFor="onboarding-display-name"
                     className="block text-xs font-medium text-kumo-subtle mb-1.5"
                   >
-                    Display name
+                    表示名
                   </label>
                   <input
                     id="onboarding-display-name"
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="How should we call you?"
+                    placeholder="お名前を入力してください"
                     className="w-full px-3 py-2.5 text-sm rounded-lg border border-kumo-line bg-kumo-base text-kumo-default placeholder:text-kumo-inactive focus:outline-none focus:border-kumo-brand transition-colors"
                   />
                 </div>
@@ -496,10 +496,10 @@ export default function OnboardingWizard({
             <div className="w-full flex-shrink-0 p-8 min-h-[420px]">
               <div>
                 <h2 className="text-lg font-medium text-kumo-default mb-1">
-                  Choose your model
+                  モデルを選択してください
                 </h2>
                 <p className="text-sm text-kumo-subtle mb-6">
-                  Pick the AI model you&apos;d like to use by default
+                  デフォルトで使用する AI モデルを選択します
                 </p>
 
                 {modelsLoading ? (
@@ -555,10 +555,10 @@ export default function OnboardingWizard({
                       {models.length === 0 && (
                         <div className="text-center py-8">
                           <p className="text-sm text-kumo-subtle mb-1">
-                            No models configured yet
+                            まだモデルが設定されていません
                           </p>
                           <p className="text-xs text-kumo-inactive">
-                            Add a model to get started
+                            始めるにはモデルを追加してください
                           </p>
                         </div>
                       )}
@@ -569,7 +569,7 @@ export default function OnboardingWizard({
                       className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-kumo-subtle border border-dashed border-kumo-line rounded-xl hover:border-kumo-fill hover:text-kumo-default hover:bg-kumo-tint transition-colors"
                     >
                       <Plus size={14} weight="bold" />
-                      Add new model...
+                      新しいモデルを追加...
                     </button>
                   </>
                 )}
@@ -580,10 +580,10 @@ export default function OnboardingWizard({
             <div className={`w-full flex-shrink-0 p-8 min-h-[420px] ${showConnectionsStep ? '' : 'hidden'}`}>
               <div>
                 <h2 className="text-lg font-medium text-kumo-default mb-1">
-                  Connect your services
+                  サービスを接続する
                 </h2>
                 <p className="text-sm text-kumo-subtle mb-6">
-                  Link your accounts so your gadgets can access them. You can always add more later.
+                  アカウントをリンクして、ガジェットがアクセスできるようにします。後でいつでも追加できます。
                 </p>
 
                 {vendorsLoading ? (
@@ -593,7 +593,7 @@ export default function OnboardingWizard({
                 ) : vendors.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-sm text-kumo-subtle">
-                      No services available
+                      利用できるサービスはありません
                     </p>
                   </div>
                 ) : (
@@ -635,7 +635,7 @@ export default function OnboardingWizard({
                               {vendor.description.displayName}
                             </p>
                             <p className="text-xs text-kumo-subtle truncate">
-                              {isConnected ? 'Connected' : isConnecting ? 'Connecting...' : 'Not connected'}
+                              {isConnected ? '接続済み' : isConnecting ? '接続中…' : '未接続'}
                             </p>
                           </div>
                           {isConnected && (
@@ -655,7 +655,7 @@ export default function OnboardingWizard({
                 )}
 
                 <p className="text-xs text-kumo-inactive mt-4 text-center">
-                  Optional &middot; you can manage connections any time
+                  オプション - いつでも接続を管理できます
                 </p>
               </div>
             </div>
@@ -674,7 +674,7 @@ export default function OnboardingWizard({
                 onClick={goBack}
                 className="text-sm text-kumo-subtle hover:text-kumo-default transition-colors"
               >
-                Back
+                戻る
               </button>
             ) : (
               <span />
@@ -687,7 +687,7 @@ export default function OnboardingWizard({
                   onClick={goNext}
                   className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 text-kumo-inverse bg-kumo-brand hover:bg-kumo-brand-hover"
                 >
-                  Next
+                  次へ
                   <ArrowRight size={14} weight="bold" />
                 </button>
               ) : (
@@ -706,11 +706,11 @@ export default function OnboardingWizard({
                   {finishing ? (
                     <>
                       <div className="w-4 h-4 border-2 border-kumo-inverse/30 border-t-kumo-inverse rounded-full animate-spin" />
-                      Setting up...
+                      セットアップ中...
                     </>
                   ) : (
                     <>
-                      Let&apos;s build
+                      建ててみましょう
                       <ArrowRight size={14} weight="bold" />
                     </>
                   )}
@@ -754,33 +754,33 @@ const SHOWCASE_FEATURES: ShowcaseFeature[] = [
     icon: Sparkle,
     iconColor: 'text-media-100',
     iconBg: 'bg-media-200',
-    title: 'Build gadgets or just chat',
+    title: 'ガジェットを構築するか、ただチャットする',
     description:
-      'Create full web apps, or keep it simple with agent-only conversations. Your call.',
+      '本格的なWebアプリを作ることも、エージェントとの会話だけでシンプルに使うこともできます。使い方は自由です。',
   },
   {
     icon: UsersThree,
     iconColor: 'text-compute-100',
     iconBg: 'bg-compute-200',
-    title: 'Collaborate in real time',
+    title: 'リアルタイムでコラボレーションする',
     description:
-      'Share a workspace with teammates and work on it together, live.',
+      'チームメイトとワークスペースを共有し、ライブで一緒に作業します。',
   },
   {
     icon: Key,
     iconColor: 'text-kumo-warning',
     iconBg: 'bg-kumo-warning-tint',
-    title: 'Bring your own models',
+    title: '独自のモデルを持ち込む',
     description:
-      'Plug in personal API tokens from any provider to use the models you love.',
+      '任意のプロバイダーからの個人 API トークンをプラグインして、お気に入りのモデルを使用します。',
   },
   {
     icon: Plugs,
     iconColor: 'text-storage-100',
     iconBg: 'bg-storage-200',
-    title: 'AI meets your tools',
+    title: 'AI がツールと出会う',
     description:
-      'Have AI review a Google Doc, summarize Slack threads, triage Jira tickets, and more.',
+      'AI に Google ドキュメントをレビューさせ、Slack スレッドを要約させ、Jira チケットを優先順位付けします。',
   },
 ]
 
@@ -800,10 +800,10 @@ function ShowcaseStep({ active, siteName }: { active: boolean; siteName: string 
     <div>
       <div className="text-center mb-6">
         <h2 className="text-lg font-medium text-kumo-default mb-1">
-          You&apos;re all set
+          準備は完了です
         </h2>
         <p className="text-sm text-kumo-subtle">
-          Here&apos;s a taste of what you can do with {siteName}
+          ここで何ができるかを試してみましょう {siteName}
         </p>
       </div>
 

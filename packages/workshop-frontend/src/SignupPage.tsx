@@ -20,7 +20,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
   const serverConfigError = useServerConfigError();
   const siteName = useSiteName();
   const connectionLost = useConnectionLost();
-  useDocumentTitle("Create account");
+  useDocumentTitle("アカウントを作成する");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -68,10 +68,10 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
         localStorage.setItem("authToken", token);
         window.location.href = "/";
       } else {
-        setError("Username already exists");
+        setError("ユーザー名はすでに存在します");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Account creation failed");
+      setError(err instanceof Error ? err.message : "アカウントの作成に失敗しました");
     } finally {
       setLoading(false);
     }
@@ -85,9 +85,9 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
           className="min-h-screen flex flex-col items-center justify-center gap-4 bg-kumo-base px-4"
         >
           <p className="text-sm text-kumo-danger text-center">
-            Couldn&apos;t load deployment settings.
+            展開設定を読み込めませんでした。
           </p>
-          <Button variant="secondary" onClick={() => window.location.reload()}>Reload</Button>
+          <Button variant="secondary" onClick={() => window.location.reload()}>再読み込み</Button>
         </div>
       );
     }
@@ -95,7 +95,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-kumo-base px-4">
         <Loader size="lg" />
         <p className="text-sm text-kumo-subtle text-center">
-          {connectionLost ? "Can't reach the server. Retrying…" : "Loading…"}
+          {connectionLost ? "サーバーに接続できません。再試行中…" : "読み込み中…"}
         </p>
       </div>
     );
@@ -133,16 +133,16 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
           <h1 className="text-xl font-semibold text-kumo-default">
             {siteName}
           </h1>
-          <p className="text-sm text-kumo-subtle mt-1">Create your account</p>
+          <p className="text-sm text-kumo-subtle mt-1">アカウントを作成</p>
         </div>
 
         {!signupsEnabled && (
           <Banner
             variant="default"
-            title="Signups are closed"
+            title="新規登録は停止中です"
             className="mb-4"
           >
-            New account registration is currently disabled on this deployment.
+            現在、この展開では新しいアカウントの登録が無効になっています。
           </Banner>
         )}
 
@@ -151,19 +151,19 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
-                label="Username"
+                label="ユーザー名"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
                 autoComplete="username"
                 disabled={loading}
-                placeholder="your-username"
+                placeholder="あなたのユーザー名"
                 error={usernameError}
               />
 
               <Input
                 type="password"
-                label="Password"
+                label="パスワード"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
@@ -174,7 +174,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
 
               <Input
                 type="password"
-                label="Confirm Password"
+                label="パスワードを認証する"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
@@ -192,7 +192,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
                 loading={loading}
                 className="w-full justify-center"
               >
-                Create account
+                アカウントを作成する
               </Button>
             </form>
           </>
@@ -204,7 +204,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
             {passwordAuthEnabled && (
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-px flex-1 bg-kumo-line" />
-                <span className="text-xs text-kumo-subtle">or</span>
+                <span className="text-xs text-kumo-subtle">または</span>
                 <div className="h-px flex-1 bg-kumo-line" />
               </div>
             )}
@@ -214,9 +214,9 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
 
         {passwordAuthEnabled && (
           <p className="text-center text-sm text-kumo-subtle mt-6">
-            Already have an account?{" "}
+            すでにアカウントをお持ちですか?{" "}
             <Link to="/" className="text-kumo-brand hover:underline font-medium">
-              Sign in
+              サインイン
             </Link>
           </p>
         )}

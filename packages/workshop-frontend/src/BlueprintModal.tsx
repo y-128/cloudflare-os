@@ -99,7 +99,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
       setBlueprints(await overseer.listBlueprints())
     } catch (err) {
       console.error('Failed to load blueprints:', err)
-      toasts.add({ title: 'Failed to load blueprints', variant: 'error' })
+      toasts.add({ title: 'ブループリントのロードに失敗しました', variant: 'error' })
     } finally {
       setLoading(false)
     }
@@ -157,7 +157,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      toasts.add({ title: 'Please select an image file.', variant: 'error' })
+      toasts.add({ title: '画像ファイルを選択してください。', variant: 'error' })
       return
     }
 
@@ -172,7 +172,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
       setClearScreenshot(false)
     } catch (err) {
       console.error('Failed to process blueprint screenshot:', err)
-      toasts.add({ title: 'Failed to process screenshot', variant: 'error' })
+      toasts.add({ title: 'スクリーンショットの処理に失敗しました', variant: 'error' })
     } finally {
       setProcessingScreenshot(false)
     }
@@ -205,7 +205,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
         newDescription.trim() || undefined,
         screenshot,
       )
-      toasts.add({ title: 'Blueprint created.', variant: 'success' })
+      toasts.add({ title: 'ブループリントが作成されました。', variant: 'success' })
       setFormMode('list')
       setNewTitle(metadata.title)
       setNewDescription('')
@@ -244,7 +244,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
         updateBindings: true,
         screenshot,
       })
-      toasts.add({ title: 'Blueprint updated.', variant: 'success' })
+      toasts.add({ title: 'ブループリントが更新されました。', variant: 'success' })
       setFormMode('list')
       setEditingBlueprint(null)
       setNewScreenshotBlob(null)
@@ -262,11 +262,11 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
     setDeletingId(id)
     try {
       await overseer.deleteBlueprint(id)
-      toasts.add({ title: 'Blueprint deleted.', variant: 'success' })
+      toasts.add({ title: 'ブループリントが削除されました。', variant: 'success' })
       setConfirmingDeleteId(null)
       await loadBlueprints()
     } catch (err: any) {
-      toasts.add({ title: err.message || 'Failed to delete blueprint.', variant: 'error' })
+      toasts.add({ title: err.message || 'ブループリントの削除に失敗しました。', variant: 'error' })
     } finally {
       setDeletingId(null)
     }
@@ -284,14 +284,14 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
             <div className="flex min-w-0 items-start gap-3">
               <div className="min-w-0">
               <Dialog.Title className="text-[17px] leading-6 font-medium tracking-[-0.35px] text-kumo-default">
-                {formMode === 'create' ? 'Create blueprint' : formMode === 'edit' ? 'Edit blueprint' : 'Blueprints'}
+                {formMode === 'create' ? 'ブループリントを作成' : formMode === 'edit' ? 'ブループリントを編集' : 'ブループリント'}
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
                 {formMode === 'create'
-                  ? 'Describe what people get when they start from this blueprint.'
+                  ? 'このブループリントから開始したときに作成されるものを説明してください。'
                   : formMode === 'edit'
-                    ? 'Update the details, screenshot, and connection guidance for this blueprint.'
-                    : 'Turn this gadget into a reusable starting point.'}
+                    ? 'このブループリントの詳細、スクリーンショット、接続ガイドを更新します。'
+                    : 'このガジェットを再利用可能な開始点にします。'}
               </Dialog.Description>
               </div>
             </div>
@@ -299,7 +299,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
               render={(props) => (
                 <WorkshopIconButton
                   {...props}
-                  aria-label="Close"
+                  aria-label="閉じる"
                 >
                   <X size={18} />
                 </WorkshopIconButton>
@@ -316,15 +316,15 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
                 <div className="flex-1 overflow-y-auto chat-panel space-y-5 px-4 py-5 sm:px-6">
                   <div className="space-y-3">
                     <WorkshopInput
-                      placeholder="Title"
-                      aria-label="Blueprint title"
+                      placeholder="タイトル"
+                      aria-label="ブループリントのタイトル"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       className="w-full"
                     />
                     <WorkshopInputArea
-                      placeholder="Description (optional)"
-                      aria-label="Blueprint description"
+                      placeholder="説明（任意）"
+                      aria-label="ブループリントの説明"
                       value={newDescription}
                       onChange={(e) => setNewDescription(e.target.value)}
                       rows={3}
@@ -341,11 +341,11 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <p className="m-0 text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
-                            Screenshot
+                            スクリーンショット
                           </p>
                           <p className="m-0 mt-0.5 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                            Optional image shown on Explore and the blueprint detail page.
-                            {formMode === 'edit' && !newScreenshotUrl && editingBlueprint?.screenshotUrl && !clearScreenshot ? ' The current screenshot will stay unless you upload a new one.' : ''}
+                            Explore およびブループリントの詳細ページに表示されるオプションの画像。
+                            {formMode === 'edit' && !newScreenshotUrl && editingBlueprint?.screenshotUrl && !clearScreenshot ? '新しい画像をアップロードしない限り、現在のスクリーンショットが使用されます。' : ''}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
@@ -362,7 +362,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
                               }}
                               disabled={processingScreenshot || creating}
                             >
-                              Clear
+                              クリア
                             </WorkshopButton>
                           )}
                           <WorkshopButton
@@ -371,7 +371,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
                             disabled={processingScreenshot || creating}
                           >
                             <ImageSquare size={13} weight="bold" />
-                            {processingScreenshot ? 'Processing...' : newScreenshotUrl || (formMode === 'edit' && editingBlueprint?.screenshotUrl && !clearScreenshot) ? 'Change' : 'Upload'}
+                            {processingScreenshot ? '処理中…' : newScreenshotUrl || (formMode === 'edit' && editingBlueprint?.screenshotUrl && !clearScreenshot) ? '変更' : 'アップロード'}
                           </WorkshopButton>
                         </div>
                       </div>
@@ -379,14 +379,14 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
                         <div className="mt-3 overflow-hidden rounded-lg border border-kumo-line bg-kumo-tint">
                           <img
                             src={screenshotPreviewUrl}
-                            alt="Blueprint screenshot preview"
+                            alt="ブループリントのスクリーンショットプレビュー"
                             className="max-h-[320px] w-full object-contain"
                           />
                         </div>
                       )}
                       {clearScreenshot && !newScreenshotUrl && (
                         <div className="mt-3 rounded-lg border border-dashed border-kumo-line bg-kumo-tint px-3 py-2 text-[12px] leading-4 text-kumo-subtle">
-                          Screenshot will be removed when you save.
+                          保存するとスクリーンショットは削除されます。
                         </div>
                       )}
                     </div>
@@ -394,7 +394,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
 
                   {bindingsLoading ? (
                     <div className="rounded-xl border border-kumo-line bg-kumo-base px-4 py-6 text-center text-[13px] text-kumo-subtle">
-                      Loading connections...
+                      接続を読み込み中...
                     </div>
                   ) : bindingsError ? (
                     <div className="rounded-xl border border-kumo-line bg-kumo-base px-4 py-3 text-[13px] text-kumo-subtle">
@@ -403,10 +403,10 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
                   ) : bindings.length > 0 ? (
                     <section>
                       <h3 className="m-0 mb-1 text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
-                        Connections
+                        接続
                       </h3>
                       <p className="m-0 mb-3 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                        Name each connection and add guidance for people using this blueprint.
+                        各接続に名前を付け、このブループリントを使用するユーザーへのガイダンスを追加します。
                       </p>
                       <div className="space-y-2">
                         {bindings.map((b) => (
@@ -437,7 +437,7 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
                       }}
                       disabled={creating}
                     >
-                      Back
+                      戻る
                     </WorkshopButton>
                     <WorkshopButton
                       tone="primary"
@@ -446,10 +446,10 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
                       disabled={creating || bindingsLoading || processingScreenshot}
                     >
                       {creating
-                        ? formMode === 'create' ? 'Creating...' : 'Saving...'
-                        : processingScreenshot ? 'Processing...'
-                          : bindingsLoading ? 'Loading...'
-                            : formMode === 'create' ? 'Create' : 'Save'}
+                        ? formMode === 'create' ? '作成中…' : '保存中…'
+                        : processingScreenshot ? '処理中…'
+                          : bindingsLoading ? '読み込み中…'
+                            : formMode === 'create' ? '作成' : '保存'}
                     </WorkshopButton>
                   </div>
                 </div>
@@ -471,10 +471,10 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
               >
                 <span>
                   <span className="block text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
-                    Create blueprint
+                    ブループリントの作成
                   </span>
                   <span className="mt-0.5 block text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-                    Publish this gadget as a reusable template.
+                    このガジェットを再利用可能なテンプレートとして公開します。
                   </span>
                 </span>
                 <Plus size={16} className="text-kumo-subtle" />
@@ -482,17 +482,17 @@ export default function BlueprintModal({ open, onClose, overseer, gadget, metada
 
             <section>
               <h3 className="mb-2 text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
-                Existing blueprints
+                既存の設計図
               </h3>
 
               {loading ? (
                 <div className="rounded-xl border border-kumo-line bg-kumo-base px-4 py-6 text-center text-[13px] text-kumo-subtle">
-                  Loading blueprints...
+                  ブループリントをロード中...
                 </div>
               ) : blueprints.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-kumo-line bg-kumo-base px-4 py-6 text-center">
                   <p className="text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-                    No blueprints yet.
+                    まだ設計図はありません。
                   </p>
                 </div>
               ) : (
@@ -592,10 +592,10 @@ function BlueprintRow({
         <div className="flex w-full flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="m-0 truncate text-[14px] leading-5 font-semibold tracking-[-0.3px] text-kumo-danger">
-              Delete "{bp.title}"?
+              消去 "{bp.title}"?
             </p>
             <p className="m-0 mt-0.5 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-              People who started a gadget from this blueprint won't be affected, but the link will stop working.
+              このブループリントからガジェットを開始したユーザーは影響を受けませんが、リンクは機能しなくなります。
             </p>
           </div>
           <button
@@ -604,7 +604,7 @@ function BlueprintRow({
             disabled={isDeleting}
             className="inline-flex h-7 shrink-0 cursor-pointer items-center rounded-md bg-kumo-danger px-2.5 text-[12px] leading-4 font-medium tracking-[-0.2px] text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? '削除中…' : '削除'}
           </button>
           <button
             type="button"
@@ -612,7 +612,7 @@ function BlueprintRow({
             disabled={isDeleting}
             className="inline-flex h-7 shrink-0 cursor-pointer items-center rounded-md bg-transparent px-2.5 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-subtle transition-colors hover:bg-kumo-tint hover:text-kumo-default disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Cancel
+            キャンセル
           </button>
         </div>
       </div>
@@ -634,7 +634,7 @@ function BlueprintRow({
               ? 'border-kumo-brand/25 bg-kumo-brand/10 text-kumo-brand'
               : 'border-kumo-line bg-kumo-tint text-kumo-subtle'
           }`}
-          title={bp.dirty ? 'Last publish failed' : undefined}
+          title={bp.dirty ? '前回の公開に失敗しました' : undefined}
         >
           {bp.dirty && (
             <span
@@ -653,7 +653,7 @@ function BlueprintRow({
           </p>
         ) : (
           <p className="m-0 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-inactive">
-            No description
+            説明なし
           </p>
         )}
       </div>
@@ -661,11 +661,11 @@ function BlueprintRow({
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div className="-ml-[7px] flex flex-wrap items-center gap-1">
           <GhostButton onClick={onUpdateCode} icon={<ArrowsClockwise size={13} />}>
-            Update code
+            コードを更新する
           </GhostButton>
           {bp.dirty && (
             <GhostButton onClick={onRetryPublish} icon={<ArrowsClockwise size={13} />}>
-              Retry publish
+              パブリッシュを再試行します
             </GhostButton>
           )}
           <GhostButton
@@ -680,7 +680,7 @@ function BlueprintRow({
               )
             }
           >
-            {copyState === 'copied' ? 'Copied' : copyState === 'failed' ? 'Copy failed' : 'Copy link'}
+            {copyState === 'copied' ? 'コピーしました' : copyState === 'failed' ? 'コピーに失敗しました' : 'リンクをコピー'}
           </GhostButton>
         </div>
         <div className="-mr-1.5 ml-auto flex items-center gap-0.5 opacity-60 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
@@ -688,7 +688,7 @@ function BlueprintRow({
             type="button"
             onClick={onStartEdit}
             className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-transparent text-kumo-subtle transition-colors hover:bg-kumo-tint hover:text-kumo-default"
-            aria-label="Edit blueprint"
+            aria-label="ブループリントを編集"
           >
             <Pencil size={13} />
           </button>
@@ -696,7 +696,7 @@ function BlueprintRow({
             type="button"
             onClick={onStartDelete}
             className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-transparent text-kumo-subtle transition-colors hover:bg-kumo-danger-tint hover:text-kumo-danger"
-            aria-label="Delete blueprint"
+            aria-label="ブループリントを削除"
           >
             <Trash size={13} />
           </button>

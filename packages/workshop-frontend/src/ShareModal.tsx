@@ -43,21 +43,21 @@ function formatRelativeTime(date: Date): string {
   const diffHours = Math.floor(diffMinutes / 60)
   const diffDays = Math.floor(diffHours / 24)
 
-  if (diffSeconds < 60) return 'just now'
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
+  if (diffSeconds < 60) return 'たった今'
+  if (diffMinutes < 60) return `${diffMinutes}分前`
+  if (diffHours < 24) return `${diffHours}時間前`
+  if (diffDays < 7) return `${diffDays}日前`
+  return date.toLocaleDateString('ja-JP')
 }
 
 const ROLE_LABELS: Record<CollaboratorRole, string> = {
-  build: 'Workspace',
-  use: 'Gadget only',
+  build: 'ワークスペース',
+  use: 'ガジェットのみ',
 }
 
 const ROLE_DESCRIPTIONS: Record<CollaboratorRole, string> = {
-  build: 'Edit gadgets, use chat, and manage access.',
-  use: 'Use gadgets without agent chat or editing.',
+  build: 'ガジェットの編集、チャットの利用、アクセス管理ができます。',
+  use: 'エージェントとのチャットや編集をせずにガジェットを利用できます。',
 }
 
 function roleLabel(role: CollaboratorRole | undefined): string {
@@ -170,7 +170,7 @@ function InlineConfirm({
         type="button"
         onClick={onCancel}
         disabled={busy}
-        aria-label="Cancel"
+        aria-label="キャンセル"
         className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg text-kumo-inactive transition-[background-color,color,transform] duration-150 ease-out hover:bg-kumo-tint hover:text-kumo-default active:scale-[0.96] disabled:opacity-60"
       >
         <X size={14} />
@@ -240,7 +240,7 @@ function RecipientVerification({
   if (failed) {
     body = (
       <p className="px-1 text-[12px] leading-[16px] tracking-[-0.15px] text-kumo-subtle">
-        Couldn’t check which connections recipients will be asked to verify.
+        受信者がどの接続を確認する必要があるかを確認できませんでした。
       </p>
     )
   } else if (requirements === null || requirements.length === 0) {
@@ -251,8 +251,8 @@ function RecipientVerification({
       <div className="rounded-2xl border border-kumo-line/80 bg-kumo-base px-3 py-2.5">
         <p className="text-[12px] leading-[16px] tracking-[-0.15px] text-kumo-subtle">
           {role ? (
-            <>People with <span className="font-medium text-kumo-default">{roleLabel(role)}</span> access must</>
-          ) : 'Recipients must'} prove their own account can reach:
+            <><span className="font-medium text-kumo-default">{roleLabel(role)}</span>権限を持つ人は</>
+          ) : '受信者は'}、自分のアカウントで以下へアクセスできることを確認する必要があります。
         </p>
         <ul className="mt-1.5 max-h-32 space-y-1 overflow-y-auto">
           {requirements.map(requirement => (
@@ -384,7 +384,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
       return { collaborators: collabs, shareLinks: keys }
     } catch (err) {
       console.error('Failed to load share data:', err)
-      toasts.add({ title: 'Failed to load sharing info', variant: 'error' })
+      toasts.add({ title: '共有情報の読み込みに失敗しました', variant: 'error' })
       return null
     }
   }, [overseer])
@@ -529,7 +529,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
     if (copied) {
       setNewShareLinkCopied(true)
     } else {
-      toasts.add({ title: 'Could not copy share link.', variant: 'error' })
+      toasts.add({ title: '共有リンクをコピーできませんでした。', variant: 'error' })
     }
   }
 
@@ -541,7 +541,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
     if (await copyToClipboard(workspaceUrl)) {
       setInvitedLinkCopied(true)
     } else {
-      toasts.add({ title: 'Could not copy the workspace link.', variant: 'error' })
+      toasts.add({ title: 'ワークスペースのリンクをコピーできませんでした。', variant: 'error' })
     }
   }
 
@@ -565,7 +565,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
     try {
       const result = await overseer.addCollaborator(username, addRole, undefined)
       if (result === null) {
-        toasts.add({ title: 'No account found for that username.', variant: 'error' })
+        toasts.add({ title: 'そのユーザー名のアカウントが見つかりませんでした。', variant: 'error' })
       } else {
         const landedId = result.profile.id
         setAddUsername('')
@@ -576,7 +576,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
         toasts.add({ title: `Added ${result.profile.name} as a collaborator.`, variant: 'success' })
       }
     } catch (err: any) {
-      toasts.add({ title: err.message || 'Failed to add collaborator.', variant: 'error' })
+      toasts.add({ title: err.message || '共同作業者の追加に失敗しました。', variant: 'error' })
     } finally {
       addingRef.current = false
       setAdding(false)
@@ -600,7 +600,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
       showLandedRow('shareLink', linkId)
     } catch (err: any) {
       // Keep the composer and its values open so the user can retry without re-entering them.
-      toasts.add({ title: err.message || 'Failed to create share link.', variant: 'error' })
+      toasts.add({ title: err.message || '共有リンクの作成に失敗しました。', variant: 'error' })
     } finally {
       creatingLinkRef.current = false
       setCreatingLink(false)
@@ -623,7 +623,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
       }
       const copied = await copyToClipboard(url)
       if (!copied) {
-        toasts.add({ title: 'Could not copy share link.', variant: 'error' })
+        toasts.add({ title: '共有リンクをコピーできませんでした。', variant: 'error' })
         return
       }
       setCopiedLinkId(linkId)
@@ -633,9 +633,9 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
         setCopiedLinkId(current => (current === linkId ? null : current))
         copiedTimerRef.current = null
       }, 2000)
-      toasts.add({ title: 'Link copied to clipboard.', variant: 'success' })
+      toasts.add({ title: 'リンクがクリップボードにコピーされました。', variant: 'success' })
     } catch (err: any) {
-      toasts.add({ title: err.message || 'Failed to copy share link.', variant: 'error' })
+      toasts.add({ title: err.message || '共有リンクをコピーできませんでした。', variant: 'error' })
     } finally {
       copyingLinkRef.current = false
       setCopyingLinkId(null)
@@ -651,7 +651,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
         : current)
     } catch (err: any) {
       setConfirmationTarget(current => current?.kind === 'remove' && current.profileId === profileId ? null : current)
-      toasts.add({ title: err.message || 'Failed to preview collaborator removal.', variant: 'error' })
+      toasts.add({ title: err.message || '共同編集者の削除をプレビューできませんでした。', variant: 'error' })
     }
   }
 
@@ -663,13 +663,13 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
       setConfirmationTarget(null)
       toasts.add({
         title: removed.length > 0
-          ? 'Collaborator removed.'
-          : 'Your direct grant was removed. This collaborator still has access through another source.',
+          ? '協力者が削除されました。'
+          : '直接の助成金は削除されました。この共同編集者は、別のソースを通じて引き続きアクセスできます。',
         variant: 'success',
       })
       await loadData()
     } catch (err: any) {
-      toasts.add({ title: err.message || 'Failed to remove collaborator.', variant: 'error' })
+      toasts.add({ title: err.message || '共同作業者の削除に失敗しました。', variant: 'error' })
     } finally {
       setConfirmationBusy(false)
     }
@@ -702,9 +702,9 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
       cancelRenameShareLink()
       await loadData()
       showLandedRow('shareLink', linkId)
-      toasts.add({ title: 'Share link renamed.', variant: 'success' })
+      toasts.add({ title: '共有リンクの名前が変更されました。', variant: 'success' })
     } catch (err: any) {
-      toasts.add({ title: err.message || 'Failed to rename share link.', variant: 'error' })
+      toasts.add({ title: err.message || '共有リンクの名前を変更できませんでした。', variant: 'error' })
     } finally {
       savingShareLinkNoteRef.current = false
       setSavingShareLinkNote(false)
@@ -721,7 +721,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
         : current)
     } catch (err: any) {
       setConfirmationTarget(current => current?.kind === 'revoke' && current.linkId === linkId ? null : current)
-      toasts.add({ title: err.message || 'Failed to preview share-link revocation.', variant: 'error' })
+      toasts.add({ title: err.message || '共有リンクの取り消しをプレビューできませんでした。', variant: 'error' })
     }
   }
 
@@ -737,10 +737,10 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
         setNewShareLinkCopied(false)
         setShowLinkComposer(false)
       }
-      toasts.add({ title: 'Share link revoked.', variant: 'success' })
+      toasts.add({ title: '共有リンクが取り消されました。', variant: 'success' })
       await loadData()
     } catch (err: any) {
-      toasts.add({ title: err.message || 'Failed to revoke share link.', variant: 'error' })
+      toasts.add({ title: err.message || '共有リンクを取り消すことができませんでした。', variant: 'error' })
     } finally {
       setConfirmationBusy(false)
     }
@@ -755,15 +755,15 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
         <div className="flex shrink-0 items-start justify-between gap-4 overflow-hidden px-4 pb-4 pt-5 sm:px-6 sm:pt-6">
           <div className="min-w-0">
             <Dialog.Title className="truncate text-[18px] leading-6 font-medium tracking-[-0.4px] text-kumo-default">
-              Share “{metadata.title}”
+              「{metadata.title}」を共有
             </Dialog.Title>
             <Dialog.Description className="mt-1 text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-              Invite people or share a link.
+              人を招待するか、リンクを共有します。
             </Dialog.Description>
           </div>
           <Dialog.Close
             render={(props) => (
-              <WorkshopIconButton {...props} aria-label="Close">
+              <WorkshopIconButton {...props} aria-label="閉じる">
                 <X size={18} />
               </WorkshopIconButton>
             )}
@@ -780,13 +780,13 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                 <ShieldWarning size={22} weight="duotone" />
               </div>
               <p className="mt-3 text-[14px] leading-5 font-medium tracking-[-0.3px] text-kumo-default">
-                This workspace can’t be shared
+                このワークスペースは共有できません
               </p>
               <p className="mt-1.5 max-w-[320px] text-balance text-[12px] leading-[18px] tracking-[-0.1px] text-kumo-subtle">
-                It has observed sensitive data that can only be accessed by you, the owner.
+                所有者であるあなただけがアクセスできる機密データが観察されました。
               </p>
               <p className="mt-2 max-w-[320px] text-balance text-[12px] leading-[18px] tracking-[-0.1px] text-kumo-subtle">
-                To share something similar, create a blueprint from a gadget in this workspace, then use it to create a new workspace.
+                同様のものを共有するには、このワークスペースのガジェットからブループリントを作成し、それを使用して新しいワークスペースを作成します。
               </p>
             </div>
           ) : (
@@ -804,8 +804,8 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
             </div>
             <input
               type="search"
-              placeholder="Username or email"
-              aria-label="Username or email"
+              placeholder="ユーザー名またはメールアドレス"
+              aria-label="ユーザー名またはメールアドレス"
               value={addUsername}
               onChange={(e) => setAddUsername(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAddCollaborator() }}
@@ -823,7 +823,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
               disabled={sharingProhibited}
             />
             <RoleMenu
-              ariaLabel="Access to grant"
+              ariaLabel="付与するアクセス権"
               value={addRole}
               onValueChange={setAddRole}
               disabled={sharingProhibited}
@@ -835,7 +835,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
               onClick={handleAddCollaborator}
               disabled={!addUsername.trim() || adding || sharingProhibited}
             >
-              {adding ? 'Inviting…' : 'Invite'}
+              {adding ? '招待中…' : '招待'}
             </WorkshopButton>
           </div>
 
@@ -847,20 +847,20 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
               <div className="min-w-[160px] flex-1">
                 <div className="flex items-baseline gap-1.5">
                   <p className="text-[13px] leading-[18px] font-medium text-kumo-default">
-                    Added {invitedName}
+                    追加した {invitedName}
                   </p>
                   <span className="text-[11px] leading-4 text-kumo-inactive">
-                    {invitedLinkCopied ? 'Link copied to your clipboard' : 'Send them this link to open it'}
+                    {invitedLinkCopied ? 'リンクをクリップボードにコピーしました' : 'このリンクを送って開いてもらいます'}
                   </span>
                 </div>
                 <p className="truncate font-mono text-[11px] leading-4 text-kumo-subtle">{workspaceUrl}</p>
               </div>
               <WorkshopButton tone="primary" onClick={copyWorkspaceUrl} className="gap-1.5 !rounded-xl">
                 {invitedLinkCopied ? <Check size={13} weight="bold" /> : <Copy size={13} />}
-                {invitedLinkCopied ? 'Copied' : 'Copy link'}
+                {invitedLinkCopied ? 'コピーしました' : 'リンクをコピー'}
               </WorkshopButton>
               <WorkshopIconButton
-                aria-label="Dismiss added collaborator"
+                aria-label="追加されたコラボレーターを削除する"
                 onClick={() => { setInvitedName(null); setInvitedLinkCopied(false) }}
               >
                 <X size={14} />
@@ -878,20 +878,20 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                     <div className="min-w-[160px] flex-1">
                       <div className="flex items-baseline gap-1.5">
                         <p className="text-[13px] leading-[18px] font-medium text-kumo-default">
-                          {newShareLinkCopied ? 'Link copied' : 'Link ready'}
+                          {newShareLinkCopied ? 'リンクをコピーしました' : 'リンクを作成しました'}
                         </p>
                         <span className="text-[11px] leading-4 text-kumo-inactive">
-                          You can copy it again anytime from Share links
+                          共有リンクからいつでも再度コピーできます
                         </span>
                       </div>
                       <p className="truncate font-mono text-[11px] leading-4 text-kumo-subtle">{newShareLink}</p>
                     </div>
                     <WorkshopButton tone="primary" onClick={copyNewLink} className="w-[78px] gap-1.5 !rounded-xl">
                       {newShareLinkCopied ? <Check size={13} weight="bold" /> : <Copy size={13} />}
-                      {newShareLinkCopied ? 'Copied' : 'Copy'}
+                      {newShareLinkCopied ? 'コピーしました' : 'コピー'}
                     </WorkshopButton>
                     <WorkshopIconButton
-                      aria-label="Dismiss created link"
+                      aria-label="作成したリンクを閉じる"
                       onClick={() => { setNewShareLink(null); setNewShareLinkId(null); setNewShareLinkCopied(false); setShowLinkComposer(false) }}
                     >
                       <X size={14} />
@@ -907,22 +907,22 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                       value={newLinkNote}
                       onChange={(e) => setNewLinkNote(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleCreateShareLink() }}
-                      placeholder="Name this link (optional)…"
-                      aria-label="Share link name (optional)"
+                      placeholder="このリンクに名前を付けます (オプション)…"
+                      aria-label="共有リンク名 (オプション)"
                       className="h-9 min-w-0 flex-1 border-0 bg-transparent p-0 text-[14px] leading-5 tracking-[-0.25px] text-kumo-default outline-none placeholder:text-kumo-inactive"
                       disabled={creatingLink || sharingProhibited}
                     />
                     <RoleMenu
-                      ariaLabel="Access granted by link"
+                      ariaLabel="リンクで付与するアクセス権"
                       value={newLinkRole}
                       onValueChange={setNewLinkRole}
                       disabled={creatingLink || sharingProhibited}
                       container={menuContainer}
                     />
                     <WorkshopButton tone="primary" className="shrink-0 !rounded-xl" onClick={handleCreateShareLink} disabled={creatingLink || sharingProhibited}>
-                      {creatingLink ? 'Creating…' : 'Create link'}
+                      {creatingLink ? '作成中…' : 'リンクを作成'}
                     </WorkshopButton>
-                    <WorkshopIconButton aria-label="Cancel creating link" onClick={() => setShowLinkComposer(false)}>
+                    <WorkshopIconButton aria-label="リンクの作成をキャンセルします" onClick={() => setShowLinkComposer(false)}>
                       <X size={14} />
                     </WorkshopIconButton>
                 </div>
@@ -934,7 +934,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                 disabled={sharingProhibited}
                 className="themed-compact-shadow flex h-12 w-full cursor-pointer items-center justify-center gap-1.5 rounded-2xl border border-kumo-line/80 bg-kumo-base px-3 text-[13px] font-medium text-kumo-subtle transition-[background-color,color,transform] duration-150 ease-out hover:bg-kumo-elevated/60 hover:text-kumo-default active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <Link size={14} /> Create a share link
+                <Link size={14} /> 共有リンクを作成する
               </button>
             )}
           </div>
@@ -945,7 +945,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
           <section aria-labelledby="people-heading" className="mt-4">
             <div className="mb-2 px-1">
               <h3 id="people-heading" className="text-[12px] leading-4 font-medium tracking-[-0.15px] text-kumo-subtle">
-                People with access
+                アクセスできる人
               </h3>
             </div>
             <div className="overflow-hidden rounded-2xl border border-kumo-line/80 bg-kumo-base">
@@ -962,19 +962,19 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                       <PersonAvatar api={authenticatedApi} userId={profile.id} name={profile.name} size={32} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[13px] leading-[17px] font-medium tracking-[-0.25px] text-kumo-default">
-                          {profile.name}{profile.id === currentUser?.id ? ' (you)' : ''}
+                          {profile.name}{profile.id === currentUser?.id ? '（あなた）' : ''}
                         </p>
                         <p className="truncate text-[12px] leading-[15px] tracking-[-0.15px] text-kumo-subtle">
                           {row.kind === 'owner' ? profile.id : describeAccess(row.info)}
                         </p>
                       </div>
                       {row.kind === 'owner' ? (
-                        <span className="px-2 text-[12px] text-kumo-subtle">Owner</span>
+                        <span className="px-2 text-[12px] text-kumo-subtle">所有者</span>
                       ) : isRemoving ? (
                         <InlineConfirm
-                          label="Remove"
+                          label="削除"
                           busy={removeTarget.previewing || confirmationBusy}
-                          busyLabel={removeTarget.previewing ? 'Checking…' : undefined}
+                          busyLabel={removeTarget.previewing ? '確認中…' : undefined}
                           onConfirm={handleConfirmRemoveCollaborator}
                           onCancel={() => setConfirmationTarget(null)}
                         />
@@ -985,7 +985,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                             danger
                             className="!h-7 !w-7 opacity-35 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                             onClick={() => handleStartRemoveCollaborator(row.info.profile.id)}
-                            aria-label={`Remove ${profile.name}`}
+                            aria-label={`${profile.name}さんを削除`}
                             disabled={confirmationBusy}
                           >
                             <Trash size={13} />
@@ -996,7 +996,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                     {isRemoving && downstreamDependents.length > 0 && (
                       <div className="mt-2.5 share-expand-in">
                         <p className="mb-1.5 text-[12px] leading-4 text-kumo-subtle">
-                          {downstreamDependents.length} other {downstreamDependents.length === 1 ? 'person loses' : 'people lose'} access through {profile.name}. Keep anyone?
+                          {profile.name}さんを削除すると、ほかの{downstreamDependents.length}人もアクセスできなくなります。アクセスを維持する人を選択してください。
                         </p>
                         <DependentKeepList
                           dependents={downstreamDependents}
@@ -1019,7 +1019,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
           <section aria-labelledby="links-heading" className="mt-4">
             <div className="mb-2 px-1">
               <h3 id="links-heading" className="text-[12px] leading-4 font-medium tracking-[-0.15px] text-kumo-subtle">
-                Share links
+                リンクを共有する
               </h3>
             </div>
 
@@ -1043,19 +1043,19 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                                 if (e.key === 'Enter') handleSaveShareLinkNote()
                                 if (e.key === 'Escape') cancelRenameShareLink()
                               }}
-                              placeholder="Name this link…"
-                              aria-label="Share link name"
+                              placeholder="このリンクに名前を付けます…"
+                              aria-label="共有リンク名"
                               className="block w-full border-0 bg-transparent p-0 text-[13px] leading-[17px] font-medium tracking-[-0.25px] text-kumo-default outline-none shadow-[inset_0_-1px_0_0_var(--color-kumo-line)] transition-shadow placeholder:font-normal placeholder:text-kumo-inactive focus:shadow-[inset_0_-1px_0_0_var(--color-kumo-fill)]"
                               disabled={savingShareLinkNote}
                             />
                           ) : (
-                            <p className="truncate text-[13px] leading-[17px] font-medium tracking-[-0.25px] text-kumo-default">{sk.note || 'Untitled link'}</p>
+                            <p className="truncate text-[13px] leading-[17px] font-medium tracking-[-0.25px] text-kumo-default">{sk.note || '無題のリンク'}</p>
                           )}
-                          <p className="truncate text-[12px] leading-[15px] tracking-[-0.15px] text-kumo-subtle">Created by {sk.createdBy.name} · {formatRelativeTime(sk.created)}</p>
+                          <p className="truncate text-[12px] leading-[15px] tracking-[-0.15px] text-kumo-subtle">作成者 {sk.createdBy.name} · {formatRelativeTime(sk.created)}</p>
                         </div>
                         {isRenaming ? (
                           <InlineConfirm
-                            label="Save"
+                            label="保存"
                             tone="brand"
                             busy={savingShareLinkNote}
                             onConfirm={handleSaveShareLinkNote}
@@ -1063,7 +1063,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                           />
                         ) : isRevoking ? (
                           <InlineConfirm
-                            label="Revoke"
+                            label="取り消す"
                             busy={revokeTarget.previewing || confirmationBusy}
                             busyLabel={revokeTarget.previewing ? 'Checking…' : undefined}
                             onConfirm={handleConfirmRevokeShareLink}
@@ -1075,7 +1075,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                             <WorkshopIconButton
                               className="!h-7 !w-7"
                               onClick={() => handleCopyShareLink(sk.linkId)}
-                              aria-label={`Copy ${sk.note || 'share link'}`}
+                              aria-label={`${sk.note || '共有リンク'}をコピー`}
                               disabled={confirmationBusy || copyingLinkId === sk.linkId || sharingProhibited}
                             >
                               {copiedLinkId === sk.linkId ? <Check size={13} weight="bold" /> : <Copy size={13} />}
@@ -1083,7 +1083,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                             <WorkshopIconButton
                               className="!h-7 !w-7 opacity-35 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                               onClick={() => startRenameShareLink(sk)}
-                              aria-label={`Rename ${sk.note || 'share link'}`}
+                              aria-label={`${sk.note || '共有リンク'}の名前を変更`}
                               disabled={confirmationBusy}
                             >
                               <PencilSimple size={13} />
@@ -1092,7 +1092,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                               danger
                               className="!h-7 !w-7 opacity-35 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                               onClick={() => handleStartRevokeShareLink(sk.linkId)}
-                              aria-label={`Revoke ${sk.note || 'share link'}`}
+                              aria-label={`${sk.note || '共有リンク'}を取り消す`}
                               disabled={confirmationBusy}
                             >
                               <Trash size={13} />
@@ -1103,7 +1103,7 @@ export default function ShareModal({ open, onClose, overseer, metadata, currentU
                       {isRevoking && revokeTarget.dependents.length > 0 && (
                         <div className="mt-2.5 share-expand-in">
                           <p className="mb-1.5 text-[12px] leading-4 text-kumo-subtle">
-                            {revokeTarget.dependents.length} {revokeTarget.dependents.length === 1 ? 'person loses' : 'people lose'} access through this link. Keep anyone?
+                            このリンクを取り消すと、{revokeTarget.dependents.length}人がアクセスできなくなります。アクセスを維持する人を選択してください。
                           </p>
                           <DependentKeepList
                             dependents={revokeTarget.dependents}

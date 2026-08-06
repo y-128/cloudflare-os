@@ -61,7 +61,7 @@ export default function UsageSettings() {
       const { url } = await authenticatedApi.connectAccount('cloudflare')
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch {
-      toasts.add({ title: 'Failed to start Cloudflare connection', variant: 'error' })
+      toasts.add({ title: 'Cloudflare接続の開始に失敗しました', variant: 'error' })
     } finally {
       setBusy(false)
     }
@@ -71,7 +71,7 @@ export default function UsageSettings() {
     setSelecting(accountId)
     try {
       await authenticatedApi.selectCloudflareAccount(accountId)
-      toasts.add({ title: 'Cloudflare account selected', variant: 'success' })
+      toasts.add({ title: 'Cloudflareアカウントが選択されました', variant: 'success' })
       setAccounts(null)
       refresh()
     } catch (err) {
@@ -85,23 +85,23 @@ export default function UsageSettings() {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="px-1 text-[12px] font-medium uppercase tracking-[0.08em] text-kumo-inactive">
-        Usage &amp; billing
+        使用量と請求
       </h2>
       <div className="rounded-xl border border-kumo-line bg-kumo-base p-5">
       {loading || !usage ? (
-        <p className="text-sm text-kumo-subtle">Loading usage…</p>
+        <p className="text-sm text-kumo-subtle">使用方法を読み込み中…</p>
       ) : (
         <div className="space-y-6">
           {/* Free daily allowance */}
           <div>
-            <p className="text-xs font-medium text-kumo-subtle mb-1">Free daily allowance</p>
+            <p className="text-xs font-medium text-kumo-subtle mb-1">日当無料</p>
             <p className="text-sm text-kumo-default">
-              {usage.remaining} of {usage.dailyLimit}{' '}
-              {usage.dailyLimit === 1 ? 'request' : 'requests'} remaining today
+              {usage.remaining} の {usage.dailyLimit}{' '}
+              {usage.dailyLimit === 1 ? 'リクエスト' : 'リクエスト'} 今日残っている
             </p>
             {usage.resetAt && (
               <p className="text-xs text-kumo-subtle mt-1">
-                Resets at 00:00 UTC, in{' '}
+                00:00 UTC にリセット{' '}
                 <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />.
               </p>
             )}
@@ -109,22 +109,22 @@ export default function UsageSettings() {
 
           {/* Cloudflare connection / credits */}
           <div>
-            <p className="text-xs font-medium text-kumo-subtle mb-1">Cloudflare account</p>
+            <p className="text-xs font-medium text-kumo-subtle mb-1">Cloudflareアカウント</p>
             {!usage.connected ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-kumo-subtle">
                   <CloudflareLogo size={16} />
-                  <span>Not connected</span>
+                  <span>接続されていません</span>
                 </div>
                 <p className="text-sm text-kumo-subtle">
-                  Connect your Cloudflare account to keep building once your free allowance runs
-                  out. Usage beyond the free tier is billed to your own Cloudflare AI Gateway
-                  credits.
+                  Cloudflare アカウントに接続すると、無料枠が終了した後も構築を続けることができます
+                  アウト。無料利用枠を超えた使用量は、独自のCloudflare AI Gatewayに請求されます。
+                  クレジット。
                 </p>
                 <div className="pt-1">
                   <Button variant="primary" size="sm" onClick={connect} loading={busy}>
                     <Lightning size={14} weight="bold" className="mr-1" />
-                    Connect Cloudflare
+                    Cloudflareに接続する
                   </Button>
                 </div>
               </div>
@@ -133,17 +133,17 @@ export default function UsageSettings() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-kumo-default">
                   <Warning size={18} weight="bold" className="text-kumo-warning" />
-                  <span>Choose which Cloudflare account to bill</span>
+                  <span>請求する Cloudflare アカウントを選択してください</span>
                 </div>
                 <p className="text-sm text-kumo-subtle">
-                  Your connection has access to multiple Cloudflare accounts. Select the one whose
-                  AI Gateway credits should be used.
+                  接続では複数の Cloudflare アカウントにアクセスできます。そのものを選択してください
+                  AI ゲートウェイ クレジットを使用する必要があります。
                 </p>
                 {accounts === null ? (
-                  <p className="text-sm text-kumo-subtle">Loading accounts…</p>
+                  <p className="text-sm text-kumo-subtle">アカウントを読み込み中…</p>
                 ) : accounts.length === 0 ? (
                   <p className="text-sm text-kumo-subtle">
-                    No accounts available on this connection.
+                    この接続では利用可能なアカウントがありません。
                   </p>
                 ) : (
                   <div className="flex flex-col gap-2">
@@ -168,16 +168,16 @@ export default function UsageSettings() {
                 <div className="flex items-center gap-2 text-sm text-kumo-default">
                   <CloudCheck size={18} weight="bold" className="text-kumo-success" />
                   <span>
-                    Connected
+                    接続済み
                     {usage.accountName && <> — {usage.accountName}</>}
                   </span>
                 </div>
                 <p className="text-sm text-kumo-default">
-                  Account balance:{' '}
+                  口座残高:{' '}
                   {usage.balance !== null ? (
                     <strong>${usage.balance.toFixed(2)}</strong>
                   ) : (
-                    <span className="text-kumo-subtle">unknown</span>
+                    <span className="text-kumo-subtle">未知</span>
                   )}
                 </p>
 
@@ -188,7 +188,7 @@ export default function UsageSettings() {
                     onClick={() => window.open(buildAddCreditsUrl(usage.accountId), '_blank')}
                   >
                     <Lightning size={14} weight="bold" className="mr-1" />
-                    Add credits
+                    クレジットを追加する
                   </Button>
                 </div>
               </div>
@@ -196,14 +196,14 @@ export default function UsageSettings() {
           </div>
 
           <p className="text-xs text-kumo-subtle border-t border-kumo-line pt-3">
-            Learn more about{' '}
+            詳しくはこちら{' '}
             <a
               href="https://developers.cloudflare.com/ai-gateway/features/unified-billing/"
               target="_blank"
               rel="noreferrer"
               className="underline"
             >
-              AI Gateway unified billing
+              AI ゲートウェイの統合請求
             </a>
             .
           </p>

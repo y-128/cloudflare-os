@@ -60,11 +60,11 @@ export function AccountChooser({
   return (
     <section className="overflow-hidden rounded-xl border border-kumo-line bg-kumo-base">
       <div className="border-b border-kumo-line px-3 py-2.5">
-        <p className="text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default">Account</p>
+        <p className="text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default">アカウント</p>
         <p className="mt-0.5 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
           {isEmailMailbox
-            ? 'Enable the Email receiver account, then choose the mailbox name below.'
-            : `Pick which ${vendorName} identity this ${resourceTitle ?? 'connection'} should use.`}
+            ? 'メール受信用アカウントを有効にしてから、下でメールボックス名を選択してください。'
+            : `Pick which ${vendorName} identity this ${resourceTitle ?? '接続'} should use.`}
         </p>
       </div>
       <div className="divide-y divide-kumo-line">
@@ -104,10 +104,10 @@ export function AccountChooser({
                   <p className="truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">{name}</p>
                   <p className={`truncate text-[12px] leading-4 font-normal tracking-[-0.2px] ${needsAccess ? 'text-kumo-brand' : 'text-kumo-subtle'}`}>
                     {expired
-                      ? 'Expired credentials'
+                      ? '期限切れの認証情報'
                       : needsAccess
-                      ? 'Additional permission needed'
-                      : resourceTitle ? `Connected ${vendorName} account` : 'Connected'}
+                      ? '追加の権限が必要です'
+                      : resourceTitle ? `Connected ${vendorName} account` : '接続済み'}
                   </p>
                 </div>
               </button>
@@ -118,7 +118,7 @@ export function AccountChooser({
                   disabled={reconnecting}
                   className="shrink-0 cursor-pointer rounded-md border border-kumo-line px-2 py-1 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default transition-colors hover:bg-kumo-elevated disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {reconnecting ? 'Opening...' : 'Reconnect'}
+                  {reconnecting ? '開いています…' : '再接続'}
                 </button>
               ) : needsAccess ? (
                 <button
@@ -127,7 +127,7 @@ export function AccountChooser({
                   disabled={granting}
                   className="shrink-0 cursor-pointer rounded-md border border-kumo-line px-2 py-1 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default transition-colors hover:bg-kumo-elevated disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {granting ? 'Opening...' : 'Grant access'}
+                  {granting ? '開いています…' : 'アクセスを許可'}
                 </button>
               ) : null}
               {selected && <Check size={15} weight="bold" className="shrink-0 text-kumo-brand" />}
@@ -148,7 +148,7 @@ export function AccountChooser({
               <Plus size={14} />
             )}
             {isEmailMailbox
-              ? 'Enable Email mailboxes'
+              ? 'メールボックスを有効化'
               : accounts.length === 0 ? `Connect ${vendorName}` : `Use another ${vendorName} account`}
           </button>
         )}

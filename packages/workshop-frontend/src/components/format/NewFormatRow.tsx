@@ -29,7 +29,7 @@ export default function NewFormatRow({ label = 'Start with' }: { label?: string 
               size="md"
               className={creating === format.blueprintId ? 'animate-pulse' : 'text-kumo-subtle'}
             />
-            {creating === format.blueprintId ? `Creating…` : `New ${format.output.noun}`}
+            {creating === format.blueprintId ? `作成中…` : `New ${format.output.noun}`}
           </button>
         ))}
       </div>

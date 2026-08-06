@@ -104,8 +104,8 @@ describe("announcing a compaction", () => {
   // would put the acknowledgement out of sight, so it is announced at the request instead.
   it("announces a requested compaction at the request", () => {
     const entries = buildChatDisplayEntries([
-      message(1, {type: "message", message: "summarized"}),
-      message(2, {type: "message", message: "kept"}),
+      message(1, {type: "message", message: "要約した"}),
+      message(2, {type: "message", message: "保たれた"}),
       compact(3),
     ], new Map(), [boundary(2)]);
 
@@ -116,8 +116,8 @@ describe("announcing a compaction", () => {
   // Nothing asked for it, so there is no request to announce at and the cut speaks for itself.
   it("announces an unrequested compaction at the cut", () => {
     const entries = buildChatDisplayEntries([
-      message(1, {type: "message", message: "summarized"}),
-      message(2, {type: "message", message: "kept"}),
+      message(1, {type: "message", message: "要約した"}),
+      message(2, {type: "message", message: "保たれた"}),
     ], new Map(), [boundary(2)]);
 
     expect(entries.map(entry => entry.type)).toEqual(
@@ -147,9 +147,9 @@ describe("announcing a compaction", () => {
   // has verbatim without scrolling back to find the line.
   it("reports how many rows the cut spared", () => {
     const entries = buildChatDisplayEntries([
-      message(1, {type: "message", message: "summarized"}),
-      message(2, {type: "message", message: "kept"}),
-      message(3, {type: "message", message: "kept"}),
+      message(1, {type: "message", message: "要約した"}),
+      message(2, {type: "message", message: "保たれた"}),
+      message(3, {type: "message", message: "保たれた"}),
       compact(4),
     ], new Map(), [boundary(2)]);
 

@@ -26,8 +26,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole instance access"
-        description="This binding grants access to every area, device, entity, and dashboard on the connected Home Assistant instance.">
+        label="インスタンス全体へのアクセス"
+        description="このバインディングにより、接続されたホーム アシスタント インスタンス上のすべてのエリア、デバイス、エンティティ、ダッシュボードへのアクセスが許可されます。">
       </Field>
     </Section>;
   },

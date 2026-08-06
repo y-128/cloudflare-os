@@ -37,7 +37,7 @@ class ResourceConfiguratorHostImpl extends RpcTarget implements ResourceConfigur
       maxCallsPerMinute: 120,
       maxPendingCalls: 32,
       onRateLimit: 'reject',
-      label: 'Resource configurator',
+      label: 'リソースコンフィギュレーター',
     }).capability
   }
 
@@ -389,7 +389,7 @@ export default function SandboxedResourceConfigurator({
         srcDoc={frame.iframeHtml}
         onLoad={handleIframeLoad}
         sandbox="allow-scripts"
-        title="Resource configurator"
+        title="リソースコンフィギュレーター"
         scrolling="no"
         style={{
           position: 'fixed',

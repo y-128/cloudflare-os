@@ -229,17 +229,17 @@ export function useSlashCommandPicker({
         maxHeight: layout.maxHeight,
       }}
     >
-      <p className={`m-0 shrink-0 px-3.5 pb-1 pt-2.5 ${PICKER_CAPTION}`}>Commands</p>
+      <p className={`m-0 shrink-0 px-3.5 pb-1 pt-2.5 ${PICKER_CAPTION}`}>コマンド</p>
       <div
         ref={listRef}
         id={listboxId}
         role="listbox"
-        aria-label="Slash commands"
+        aria-label="スラッシュコマンド"
         aria-busy={loading}
         className="sidebar-scroll min-h-0 flex-1 overflow-y-auto"
       >
         {loading && choices.length === 0 ? (
-          <p className={PICKER_EMPTY}>Loading commands…</p>
+          <p className={PICKER_EMPTY}>コマンドをロード中…</p>
         ) : choices.length > 0 ? (
           choices.map((choice, optionIndex) => (
             <button
@@ -274,8 +274,8 @@ export function useSlashCommandPicker({
             {error
               ? `Couldn’t load commands. ${error}`
               : query
-                ? "No commands match your search."
-                : "No commands are available."}
+                ? "検索に一致するコマンドはありません。"
+                : "利用できるコマンドはありません。"}
           </p>
         )}
       </div>

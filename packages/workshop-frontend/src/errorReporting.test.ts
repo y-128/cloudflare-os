@@ -15,7 +15,7 @@ const frameReport = {
   severity: 'error',
   handled: false,
   captureMechanism: 'react',
-  exception: { type: 'Error', message: 'boom', stack: 'Error: boom' },
+  exception: { type: 'Error', message: 'ブーム', stack: 'Error: boom' },
 } as const
 
 afterEach(() => {
@@ -61,7 +61,7 @@ describe('Workshop reporter initialization', () => {
 
     const module = await import('./errorReporting')
     expect(module.installWorkshopErrorReporting()).toBeUndefined()
-    window.dispatchEvent(new ErrorEvent('error', { message: 'Script error.' }))
+    window.dispatchEvent(new ErrorEvent('error', { message: 'スクリプトエラー。' }))
     expect(fetch).not.toHaveBeenCalled()
 
     window.dispatchEvent(new ErrorEvent('error', { error: new Error('boom') }))

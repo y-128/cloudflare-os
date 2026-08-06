@@ -113,9 +113,9 @@ function platformConnectionTypes(siteName: string): ConnectionType[] {
     id: 'ai-model',
     groupKey: 'platform:ai-model',
     groupLabel: 'AI Model',
-    title: 'AI Model',
+    title: 'AIモデル',
     vendor: siteName,
-    description: 'Expose a selected model through this connection.',
+    description: 'この接続を通じて選択したモデルを公開します。',
     icon: Sparkle,
     accent: '#f6edff',
     iconColor: '#7c3aed',
@@ -124,9 +124,9 @@ function platformConnectionTypes(siteName: string): ConnectionType[] {
     id: 'agent-spawner',
     groupKey: 'platform:agent-spawner',
     groupLabel: 'Agent',
-    title: 'Agent',
+    title: 'エージェント',
     vendor: siteName,
-    description: 'Allow this connection to start new AI agent conversations with selected tools.',
+    description: 'この接続で、選択したツールとの新しい AI エージェントの会話を開始できるようにします。',
     icon: Robot,
     accent: '#f2f0ff',
     iconColor: '#7c3aed',
@@ -384,7 +384,7 @@ export default function GatekeeperModal({
       if (cancelled) return
       console.error('Failed to load models:', err)
       reportIssue('gatekeeper.models-load', err)
-      toasts.add({ title: "Couldn't load AI models", variant: 'error' })
+      toasts.add({ title: "AI モデルを読み込めませんでした", variant: 'error' })
     })
 
     authenticatedApi.listGatekeeperVendors().then(vendors => {
@@ -394,7 +394,7 @@ export default function GatekeeperModal({
       if (cancelled) return
       console.error('Failed to load connection vendors:', err)
       reportIssue('gatekeeper.vendors-load', err)
-      toasts.add({ title: "Couldn't load connection options", variant: 'error' })
+      toasts.add({ title: "接続オプションを読み込めませんでした", variant: 'error' })
     })
 
     return () => {
@@ -607,11 +607,11 @@ export default function GatekeeperModal({
     try {
       const result = await authenticatedApi.connectAccount(vendorId, resourceUrlPatterns)
       window.open(result.url, '_blank', 'noopener,noreferrer')
-      toasts.add({ title: 'Complete the account connection in the new tab.', variant: 'success' })
+      toasts.add({ title: '新しいタブでアカウントの接続を完了します。', variant: 'success' })
     } catch (error) {
       console.error('Failed to initiate connection:', error)
       reportIssue('gatekeeper.connect-start', error, { gatekeeperVendorId: vendorId })
-      toasts.add({ title: 'Failed to start connection flow', variant: 'error' })
+      toasts.add({ title: '接続フローの開始に失敗しました', variant: 'error' })
     } finally {
       setConnectingVendor(null)
     }
@@ -629,7 +629,7 @@ export default function GatekeeperModal({
       const result = await authenticatedApi.ensureAccountResources(accountId, missing)
       if (result.url) {
         window.open(result.url, '_blank', 'noopener,noreferrer')
-        toasts.add({ title: 'Grant the additional access in the new tab.', variant: 'success' })
+        toasts.add({ title: '新しいタブで追加のアクセスを許可します。', variant: 'success' })
       }
       // The new grant arrives via subscribeConnectedAccounts(); the account's flag then clears and
       // the configurator loads automatically.
@@ -638,7 +638,7 @@ export default function GatekeeperModal({
       reportIssue('gatekeeper.resource-grant', error, {
         gatekeeperVendorId: selectedConnection?.vendorId,
       })
-      toasts.add({ title: 'Failed to request additional access', variant: 'error' })
+      toasts.add({ title: '追加アクセスのリクエストに失敗しました', variant: 'error' })
     } finally {
       setGrantingAccountId(null)
     }
@@ -649,13 +649,13 @@ export default function GatekeeperModal({
     try {
       const result = await authenticatedApi.reconnectAccount(accountId)
       window.open(result.url, '_blank', 'noopener,noreferrer')
-      toasts.add({ title: 'Complete the account reconnect in the new tab.', variant: 'success' })
+      toasts.add({ title: '新しいタブでアカウントの再接続を完了します。', variant: 'success' })
     } catch (error) {
       console.error('Failed to initiate reconnect:', error)
       reportIssue('gatekeeper.reconnect-start', error, {
         gatekeeperVendorId: selectedConnection?.vendorId,
       })
-      toasts.add({ title: 'Failed to start reconnect flow', variant: 'error' })
+      toasts.add({ title: '再接続フローの開始に失敗しました', variant: 'error' })
     } finally {
       setReconnectingAccountId(null)
     }
@@ -663,7 +663,7 @@ export default function GatekeeperModal({
 
   const handleCreateAiModel = async () => {
     if (!selectedModelId) {
-      toasts.add({ title: 'Please select an AI model', variant: 'warning' })
+      toasts.add({ title: 'AI モデルを選択してください', variant: 'warning' })
       return
     }
     setCreating(true)
@@ -677,11 +677,11 @@ export default function GatekeeperModal({
         transferred = true
         onClose()
       } else {
-        toasts.add({ title: 'Failed to create AI model connection', variant: 'error' })
+        toasts.add({ title: 'AI モデル接続の作成に失敗しました', variant: 'error' })
       }
     } catch (err) {
       console.error('Failed to create AI model gatekeeper:', err)
-      toasts.add({ title: 'Failed to create AI model connection', variant: 'error' })
+      toasts.add({ title: 'AI モデル接続の作成に失敗しました', variant: 'error' })
     } finally {
       if (gatekeeper && !transferred) gatekeeper[Symbol.dispose]()
       setCreating(false)
@@ -690,7 +690,7 @@ export default function GatekeeperModal({
 
   const handleCreateAgentSpawner = async () => {
     if (!spawnerDisplayName.trim()) {
-      toasts.add({ title: 'Please enter a display name', variant: 'warning' })
+      toasts.add({ title: '表示名を入力してください', variant: 'warning' })
       return
     }
     if (spawnerEnvError) {
@@ -714,11 +714,11 @@ export default function GatekeeperModal({
         transferred = true
         onClose()
       } else {
-        toasts.add({ title: 'Failed to create agent spawner connection', variant: 'error' })
+        toasts.add({ title: 'エージェントスポナー接続の作成に失敗しました', variant: 'error' })
       }
     } catch (err) {
       console.error('Failed to create agent spawner gatekeeper:', err)
-      toasts.add({ title: 'Failed to create agent spawner connection', variant: 'error' })
+      toasts.add({ title: 'エージェントスポナー接続の作成に失敗しました', variant: 'error' })
     } finally {
       if (gatekeeper && !transferred) gatekeeper[Symbol.dispose]()
       setCreating(false)
@@ -747,11 +747,11 @@ export default function GatekeeperModal({
         transferred = true
         onClose()
       } else {
-        toasts.add({ title: 'Failed to create connection', variant: 'error' })
+        toasts.add({ title: '接続の作成に失敗しました', variant: 'error' })
       }
     } catch (err) {
       console.error('Failed to create resource gatekeeper:', err)
-      toasts.add({ title: err instanceof Error && err.message ? err.message : 'Failed to create connection', variant: 'error' })
+      toasts.add({ title: err instanceof Error && err.message ? err.message : '接続の作成に失敗しました', variant: 'error' })
     } finally {
       if (gatekeeper && !transferred) gatekeeper[Symbol.dispose]()
       setCreating(false)
@@ -804,17 +804,17 @@ export default function GatekeeperModal({
         <div ref={headerRef} className="shrink-0 flex items-start justify-between gap-4 border-b border-kumo-line px-5 py-4">
           <div className="min-w-0">
             <Dialog.Title className="text-[17px] leading-6 font-medium tracking-[-0.35px] text-kumo-default">
-              {selectedConnection ? selectedConnection.title : 'Create New Connection'}
+              {selectedConnection ? selectedConnection.title : '新しい接続を作成'}
             </Dialog.Title>
             <Dialog.Description className="mt-1 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
               {selectedConnection
                 ? selectedConnection.description
-                : 'Choose what this gadget should be able to use.'}
+                : 'このガジェットで使用できるものを選択してください。'}
             </Dialog.Description>
           </div>
           <Dialog.Close
             render={(props) => (
-              <WorkshopIconButton {...props} aria-label="Close">
+              <WorkshopIconButton {...props} aria-label="閉じる">
                 <X size={16} />
               </WorkshopIconButton>
             )}
@@ -830,7 +830,7 @@ export default function GatekeeperModal({
                 className="mb-4 inline-flex cursor-pointer items-center gap-1.5 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-subtle transition-colors hover:text-kumo-default"
               >
                 <CaretLeft size={13} />
-                All connection types
+                すべての接続タイプ
               </button>
 
               <div className="space-y-4">
@@ -904,7 +904,7 @@ export default function GatekeeperModal({
                 <input
                   value={searchText}
                   onChange={(event) => setSearchText(event.target.value)}
-                  placeholder="Search services, apps, data sources..."
+                  placeholder="検索サービス、アプリ、データ ソース..."
                   autoFocus
                   className="h-10 w-full rounded-xl border border-kumo-line bg-kumo-base pl-9 pr-3 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-default placeholder:text-kumo-inactive shadow-none outline-none transition-[border-color,box-shadow] focus:border-kumo-ring focus:ring-2 focus:ring-kumo-ring/10"
                 />
@@ -916,7 +916,7 @@ export default function GatekeeperModal({
                 {isSearching ? (
                   filteredConnections.length === 0 ? (
                     <div className="px-4 py-8 text-center text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-                      No matching connection types.
+                      一致する接続タイプがありません。
                     </div>
                   ) : filteredConnections.map((connection, index) => (
                     <ConnectionTypeRow
@@ -929,7 +929,7 @@ export default function GatekeeperModal({
                 ) : (
                   groupedConnections.length === 0 ? (
                     <div className="px-4 py-8 text-center text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-                      No connection types available.
+                      使用可能な接続タイプがありません。
                     </div>
                   ) : groupedConnections.map((group, index) => (
                     <ConnectionGroupRow
@@ -954,14 +954,14 @@ export default function GatekeeperModal({
             <div />
             <div className="flex shrink-0 items-center gap-2">
               <WorkshopButton onClick={() => setSelectedConnectionId(null)} disabled={creating} className="!h-9">
-                Back
+                戻る
               </WorkshopButton>
               <WorkshopButton
                 tone="primary"
                 onClick={handleCreate}
                 disabled={!canCreate || creating}
               >
-                {creating ? 'Creating...' : createLabel}
+                {creating ? '作成中…' : createLabel}
               </WorkshopButton>
             </div>
           </div>

@@ -78,7 +78,7 @@ export default function AdminFormatsPanel({
       await onChanged()
     } catch (err) {
       console.error('Format update failed:', err)
-      toasts.add({ title: "Couldn't update standard formats", variant: 'error' })
+      toasts.add({ title: "標準形式を更新できませんでした", variant: 'error' })
     } finally {
       setBusy(false)
     }
@@ -94,10 +94,10 @@ export default function AdminFormatsPanel({
 
   return (
     <div className="rounded-xl border border-kumo-line bg-kumo-elevated p-6">
-      <h2 className="mb-1 text-lg font-semibold text-kumo-strong">Standard formats</h2>
+      <h2 className="mb-1 text-lg font-semibold text-kumo-strong">標準フォーマット</h2>
       <p className="mb-5 text-sm text-kumo-subtle">
-        A promoted blueprint is offered by name (“New Doc”, “New Slides”) wherever people start
-        something, and the agent is told to prefer it over building the same thing from scratch.
+        昇格されたブループリントは、ユーザーが開始するときに名前 (「新しいドキュメント」、「新しいスライド」) で提供されます。
+        エージェントは、同じものを最初から構築するよりも、それを好むように言われます。
       </p>
 
       <PreviewStrip formats={offered} />
@@ -130,13 +130,13 @@ export default function AdminFormatsPanel({
           render={
             <Button variant="secondary" disabled={busy || available.length === 0}>
               <Plus size={14} className="mr-1.5" />
-              Promote a blueprint
+              ブループリントを推進する
             </Button>
           }
         />
         <DropdownMenu.Content className={MENU_CONTENT}>
           <p className="px-2 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-            Offer as a standard format
+            標準フォーマットとして提供
           </p>
           {available.map((candidate) => (
             <DropdownMenu.Item
@@ -147,12 +147,12 @@ export default function AdminFormatsPanel({
               <FormatGlyph output={candidate.declared} size="lg" className="shrink-0 text-kumo-subtle" />
               <span className="min-w-0">
                 <span className="block truncate text-[13px] text-kumo-default">
-                  {candidate.title || 'Untitled blueprint'}
+                  {candidate.title || '無題のブループリント'}
                 </span>
                 <span className="block truncate text-[11px] text-kumo-inactive">
                   {candidate.declared
                     ? `Produces ${candidate.declared.plural}`
-                    : 'No declared format. You’ll name it.'}
+                    : 'フォーマットが未定義です。名前を設定してください。'}
                 </span>
               </span>
             </DropdownMenu.Item>
@@ -168,11 +168,11 @@ function PreviewStrip({ formats }: { formats: AdminFormat[] }) {
   return (
     <div className="mb-5 rounded-lg border border-dashed border-kumo-line bg-kumo-tint/40 p-4">
       <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-        What people will see
+        人々が見るもの
       </p>
       {formats.length === 0 ? (
         <p className="text-[13px] italic text-kumo-inactive">
-          Nothing yet. People will only see “New workspace”.
+          まだ何もありません。ユーザーには「新しいワークスペース」のみが表示されます。
         </p>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
@@ -182,13 +182,13 @@ function PreviewStrip({ formats }: { formats: AdminFormat[] }) {
               className="flex items-center gap-2 rounded-full border border-kumo-line bg-kumo-base px-3.5 py-2 text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-default"
             >
               <FormatGlyph output={format.output} size="md" className="text-kumo-subtle" />
-              New {format.output!.noun}
+              新しい {format.output!.noun}
             </span>
           ))}
         </div>
       )}
       <p className="mt-2.5 text-[12px] leading-4 text-kumo-subtle">
-        In the composer’s + menu, the command palette, and on an empty Outputs page, in this order.
+        コンポーザーの + メニュー、コマンド パレット、空の出力ページの順に。
       </p>
     </div>
   )
@@ -197,10 +197,10 @@ function PreviewStrip({ formats }: { formats: AdminFormat[] }) {
 function EmptyState() {
   return (
     <div className="mb-5 rounded-lg border border-kumo-line bg-kumo-base px-4 py-5 text-center">
-      <p className="text-sm font-medium text-kumo-default">No standard formats yet</p>
+      <p className="text-sm font-medium text-kumo-default">標準フォーマットはまだありません</p>
       <p className="mx-auto mt-1 max-w-md text-[13px] leading-[18px] text-kumo-subtle">
-        Promote a blueprint to offer it by name wherever people start something, and to have the
-        agent prefer it over building the same thing from scratch.
+        人々が何かを始めるときにはいつでもその青写真を名前で提供し、
+        エージェントは同じものを最初から構築するよりもそれを好みます。
       </p>
     </div>
   )
@@ -241,7 +241,7 @@ function FormatRow({
           {format.missing ? (
             <span
               className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-kumo-tint text-kumo-danger"
-              title="This blueprint no longer exists"
+              title="この設計図はもう存在しません"
             >
               <Warning size={16} />
             </span>
@@ -256,15 +256,15 @@ function FormatRow({
               <span className="truncate text-sm font-medium text-kumo-default">
                 {format.output ? `New ${format.output.noun}` : format.blueprintTitle || format.blueprintId}
               </span>
-              {format.bundled && <Badge>Bundled</Badge>}
-              {!format.enabled && !format.missing && <Badge>Off</Badge>}
-              {needsNaming && <Badge tone="warn">Needs a name</Badge>}
+              {format.bundled && <Badge>同梱</Badge>}
+              {!format.enabled && !format.missing && <Badge>オフ</Badge>}
+              {needsNaming && <Badge tone="warn">名前が必要です</Badge>}
             </span>
             <span className="mt-0.5 block truncate text-xs text-kumo-subtle">
               {format.missing
-                ? 'Blueprint deleted. Remove this entry.'
+                ? 'ブループリントは削除されています。この項目を削除してください。'
                 : needsNaming
-                ? 'This blueprint doesn’t declare what it produces. Give it a name to offer it.'
+                ? 'このブループリントには出力の定義がありません。提供するには名前を設定してください。'
                 : `${format.blueprintTitle} · shown under ${format.output!.plural} on Outputs`}
             </span>
           </span>
@@ -281,10 +281,10 @@ function FormatRow({
             open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'
           }`}
         >
-          <IconButton label="Move up" disabled={busy || isFirst} onClick={() => onMove(-1)}>
+          <IconButton label="上に移動" disabled={busy || isFirst} onClick={() => onMove(-1)}>
             <ArrowUp size={13} />
           </IconButton>
-          <IconButton label="Move down" disabled={busy || isLast} onClick={() => onMove(1)}>
+          <IconButton label="下に移動" disabled={busy || isLast} onClick={() => onMove(1)}>
             <ArrowDown size={13} />
           </IconButton>
         </div>
@@ -300,13 +300,13 @@ function FormatRow({
         <div className="flex flex-col gap-4 border-t border-kumo-line px-3 py-4">
           {format.missing ? (
             <p className="text-[13px] text-kumo-subtle">
-              The blueprint behind this format was deleted, so nobody is offered it. Remove the
-              entry.
+              この形式の背後にある青写真は削除されたため、誰も提供されません。を削除します。
+              エントリー。
             </p>
           ) : (
             <>
               <Fieldset
-                title="How it’s presented"
+                title="提示方法"
                 detail={
                   'Leave a field empty to use the name the blueprint declares. ' +
                   (format.bundled
@@ -331,14 +331,14 @@ function FormatRow({
                       onPick={(icon) => onPatch({ overrides: { icon } })}
                     />
                     <OverrideField
-                      label="Name"
+                      label="名前"
                       value={format.output?.noun ?? format.overrides?.noun ?? ''}
                       declared={format.declared?.noun}
                       disabled={busy}
                       onCommit={(noun) => onPatch({ overrides: { noun } })}
                     />
                     <OverrideField
-                      label="Plural"
+                      label="複数"
                       value={format.output?.plural ?? format.overrides?.plural ?? ''}
                       declared={format.declared?.plural}
                       disabled={busy}
@@ -352,19 +352,19 @@ function FormatRow({
                   <figure className="hidden shrink-0 flex-col items-center gap-1.5 sm:flex">
                     <FormatPreview output={format.output} width={112} />
                     <figcaption className="text-[10px] uppercase tracking-[0.06em] text-kumo-inactive">
-                      On Outputs
+                      出力時
                     </figcaption>
                   </figure>
                 </div>
               </Fieldset>
 
               <Fieldset
-                title="How the agent picks it"
+                title="エージェントがどのように選択するか"
                 detail="Standard formats are listed first in the agent’s catalog, as the entry below — the blueprint’s own description does most of the work. Add a hint only if the agent needs to know when to prefer this format over another one."
               >
                 <OverrideField
-                  label="Hint"
-                  placeholder="e.g. prefer for customer-facing decks"
+                  label="ヒント"
+                  placeholder="例えば顧客向けのデッキを好む"
                   value={format.agentHint}
                   disabled={busy}
                   onCommit={(agentHint) => onPatch({ agentHint: agentHint ?? '' })}
@@ -377,7 +377,7 @@ function FormatRow({
                     <Sparkle size={12} className="mt-0.5 shrink-0" />
                     <span className="min-w-0">
                       <span className="block">
-                        “{format.output.noun}” — a standard format on this deployment
+                        “{format.output.noun}” - この展開の標準形式
                         {format.agentHint ? ` -- ${format.agentHint}` : ''}
                       </span>
                       {format.blueprintDescription && (
@@ -397,16 +397,16 @@ function FormatRow({
               <div className="flex items-end justify-between gap-4 border-t border-kumo-line pt-3">
                 <p className="text-[12px] leading-4 text-kumo-subtle">
                   {(format.enabled
-                    ? 'Turning this off removes it from the menus above and from the agent’s catalog. Outputs already made from it keep working. '
-                    : 'Currently hidden from the menus above and from the agent’s catalog. ') +
+                    ? 'オフにすると上のメニューとエージェントのカタログから削除されます。作成済みの出力は引き続き利用できます。'
+                    : '現在、上のメニューとエージェントのカタログには表示されていません。') +
                     (format.bundled
-                      ? 'It ships with the deployment, so it stays in this list either way.'
+                      ? 'デプロイに同梱されているため、設定にかかわらず一覧に残ります。'
                       : '')}
                 </p>
                 {!format.bundled && (
                   <Button variant="secondary" disabled={busy} onClick={onRemove}>
                     <Trash size={13} className="mr-1.5" />
-                    Stop offering
+                    提供を停止する
                   </Button>
                 )}
               </div>
@@ -417,7 +417,7 @@ function FormatRow({
             <div className="flex justify-end">
               <Button variant="secondary" disabled={busy} onClick={onRemove}>
                 <Trash size={13} className="mr-1.5" />
-                Remove
+                削除
               </Button>
             </div>
           )}
@@ -491,7 +491,7 @@ function OverrideField({
       <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
         {label}
         {overridden && (
-          <span className="ml-1 normal-case tracking-normal text-kumo-subtle">(overridden)</span>
+          <span className="ml-1 normal-case tracking-normal text-kumo-subtle">(オーバーライド)</span>
         )}
       </span>
       <Input
@@ -525,7 +525,7 @@ function IconPicker({
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-        Icon
+        アイコン
       </span>
       <DropdownMenu>
         <DropdownMenu.Trigger
@@ -533,7 +533,7 @@ function IconPicker({
             <button
               type="button"
               disabled={disabled}
-              aria-label="Choose icon"
+              aria-label="アイコンを選択"
               className="grid h-9 w-9 cursor-pointer place-items-center rounded-lg border border-kumo-line bg-kumo-base text-kumo-subtle transition-colors hover:text-kumo-default disabled:cursor-default"
             >
               <FormatGlyph output={selected && { ...GENERIC_OUTPUT, icon: selected }} size="lg" />

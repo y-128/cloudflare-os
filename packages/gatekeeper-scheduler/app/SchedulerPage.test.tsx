@@ -100,7 +100,7 @@ describe("SchedulerPage", () => {
     await render(<SchedulerPage api={{ list }} {...host} />);
 
     expect(container!.textContent).toContain("Morning brief");
-    expect(container!.textContent).toContain("Needs attention");
+    expect(container!.textContent).toContain("注意が必要です");
     expect(container!.querySelector('[role="switch"]')).toBeNull();
     // Rows carry cadence, target and timing only — never the schedule's description.
     expect(container!.textContent).not.toContain(active.description);
@@ -195,13 +195,13 @@ describe("SchedulerPage", () => {
     const list = vi.fn<ScheduleManagementClient["list"]>(() => result.promise);
     await render(<SchedulerPage api={{ list }} {...hostProps()} />);
 
-    expect(container!.textContent).toContain("Loading scheduled tasks");
+    expect(container!.textContent).toContain("スケジュールされたタスクを読み込んでいます…");
     await act(async () => result.resolve({ schedules: [] }));
 
     expect(container!.querySelector('input[type="search"]')).toBeNull();
     expect(container!.querySelector('[data-filter="all"]')).toBeNull();
     expect(container!.querySelector('[data-action="create-schedule"]')).not.toBeNull();
-    expect(container!.textContent).toContain("Get started");
+    expect(container!.textContent).toContain("始めましょう");
   });
 
   it("shows a bounded error and retries the first page", async () => {
@@ -211,9 +211,9 @@ describe("SchedulerPage", () => {
       .mockResolvedValueOnce({ schedules: [active] });
     await render(<SchedulerPage api={{ list }} {...hostProps()} />);
 
-    expect(container!.textContent).toContain("Couldn’t load scheduled tasks");
+    expect(container!.textContent).toContain("スケジュールされたタスクを読み込めませんでした。");
     expect(container!.textContent).not.toContain("private backend detail");
-    await click("button", "Try again");
+    await click("button", "再試行");
     expect(container!.textContent).toContain("Morning brief");
   });
 
@@ -227,7 +227,7 @@ describe("SchedulerPage", () => {
     expect(list).toHaveBeenCalledTimes(1);
     await act(async () => new Promise((resolve) => setTimeout(resolve, 220)));
     expect(list).toHaveBeenLastCalledWith({ query: "weekly roundup", statuses: undefined });
-    expect(container!.textContent).toContain("No scheduled tasks match these filters");
+    expect(container!.textContent).toContain("これらのフィルターに一致するスケジュールされたタスクはありません。");
     // The search and tabs must survive an empty result, or the filter can't be cleared.
     expect(container!.querySelector('input[type="search"]')).not.toBeNull();
     expect(container!.querySelector('[data-filter="all"]')).not.toBeNull();

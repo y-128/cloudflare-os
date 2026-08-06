@@ -25,11 +25,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Team" description="Search the teams in your workspace.">
+      <Field label="チーム" description="ワークスペース内のチームを検索します。">
         <Autocomplete
           name="teamKey"
           value={values.teamKey}
-          placeholder="Search teams..."
+          placeholder="チームを検索…"
           loadOptions={query => ui.listTeams(query)}
           onChange={teamKey => setValues({ teamKey })}
         />

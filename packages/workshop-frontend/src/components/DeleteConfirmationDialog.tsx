@@ -52,7 +52,7 @@ export default function DeleteConfirmationDialog({
                 {...props}
                 className="!h-7 !w-7"
                 disabled={isDeleting}
-                aria-label="Close"
+                aria-label="閉じる"
               >
                 <X size={16} />
               </WorkshopIconButton>
@@ -68,7 +68,7 @@ export default function DeleteConfirmationDialog({
                 className="!h-9"
                 disabled={isDeleting}
               >
-                Cancel
+                キャンセル
               </WorkshopButton>
             )}
           />

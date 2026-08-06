@@ -17,19 +17,19 @@ export default {
   render({ values, setValues, ui }) {
     const availabilityMode = values.availabilityMode === "allVisible" ? "allVisible" : "thisCalendar";
     return <Section>
-      <Field label="Calendar" description="Choose the calendar this connection can read and manage.">
+      <Field label="カレンダー" description="この接続が読み取りおよび管理できるカレンダーを選択します。">
         <Autocomplete
           name="calendarId"
           value={values.calendarId}
-          placeholder="Search calendars..."
+          placeholder="カレンダーを検索…"
           loadOptions={query => ui.listCalendars(query)}
           onChange={calendarId => setValues({ calendarId })}
         />
       </Field>
 
       <Field
-        label="Availability lookup"
-        description="Free/busy checks show only busy/free blocks, never event details."
+        label="空き状況の検索"
+        description="空き時間チェックでは、ビジー/空きブロックのみが表示され、イベントの詳細は表示されません。"
       >
         <RadioCards
           value={availabilityMode}

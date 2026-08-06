@@ -22,11 +22,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Workspace" description="The Linear workspace this account is connected to.">
+      <Field label="ワークスペース" description="このアカウントが接続されているリニア ワークスペース。">
         <Autocomplete
           name="workspaceUrlKey"
           value={values.workspaceUrlKey}
-          placeholder="Select your workspace..."
+          placeholder="ワークスペースを選択…"
           loadOptions={() => ui.listWorkspaces()}
           onChange={workspaceUrlKey => setValues({ workspaceUrlKey })}
         />

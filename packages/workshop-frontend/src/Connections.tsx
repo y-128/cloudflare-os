@@ -72,7 +72,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
     } catch (err) {
       console.error('Failed to load gatekeepers:', err)
       reportIssue('connections.load', err)
-      toasts.add({ title: 'Failed to load connections', variant: 'error' })
+      toasts.add({ title: '接続のロードに失敗しました', variant: 'error' })
     } finally {
       setLoading(false)
     }
@@ -91,7 +91,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       await loadGatekeepers()
     } catch (err) {
       console.error('Failed to toggle hook:', err)
-      toasts.add({ title: `Failed to ${enabled ? 'enable' : 'disable'} hook`, variant: 'error' })
+      toasts.add({ title: `Failed to ${enabled ? '有効にする' : '無効にする'} hook`, variant: 'error' })
       // Revert optimistic update.
       setHooks((prev) => prev.map((h) => (h.id === id ? { ...h, enabled: !enabled } : h)))
     } finally {
@@ -110,7 +110,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       await loadGatekeepers()
     } catch (err) {
       console.error('Failed to delete hook:', err)
-      toasts.add({ title: 'Failed to delete hook', variant: 'error' })
+      toasts.add({ title: 'フックの削除に失敗しました', variant: 'error' })
     } finally {
       setDeleteHookTarget(null)
     }
@@ -151,7 +151,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
   const handleEditSave = async (name: string) => {
     const newName = editValue.trim()
     if (!newName) {
-      toasts.add({ title: 'Binding name cannot be empty', variant: 'error' })
+      toasts.add({ title: 'バインディング名を空にすることはできません', variant: 'error' })
       return
     }
     if (newName === name) {
@@ -165,7 +165,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       onConnectionsChange?.()
     } catch (err) {
       console.error('Failed to rename binding:', err)
-      toasts.add({ title: 'Failed to update binding name', variant: 'error' })
+      toasts.add({ title: 'バインディング名の更新に失敗しました', variant: 'error' })
     } finally {
       setEditingBinding(null)
     }
@@ -184,7 +184,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       onConnectionsChange?.()
     } catch (err) {
       console.error('Failed to remove binding:', err)
-      toasts.add({ title: 'Failed to remove connection', variant: 'error' })
+      toasts.add({ title: '接続の削除に失敗しました', variant: 'error' })
     } finally {
       setDeleteTarget(null)
     }
@@ -197,10 +197,10 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h2 className="m-0 text-[17px] leading-6 font-medium tracking-[-0.35px] text-kumo-default">
-                Connections
+                接続
               </h2>
               <p className="mt-1 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-                External resources this gadget can use.
+                このガジェットが使用できる外部リソース。
               </p>
             </div>
             <WorkshopButton
@@ -208,18 +208,18 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
               onClick={() => setIsNewConnectionModalVisible(true)}
               className="self-start"
             >
-              Connect resource
+              リソースを接続する
             </WorkshopButton>
           </div>
 
           {loading ? (
             <div className="rounded-xl border border-kumo-line bg-kumo-base px-4 py-6 text-center text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-              Loading connections...
+              接続を読み込み中...
             </div>
           ) : bindings.length === 0 ? (
             <EmptyState
-              title="No connected resources"
-              description="Connect Google Docs, GitHub, Google Sheets, and other services so this gadget can safely use external data."
+              title="接続されたリソースがありません"
+              description="Google ドキュメント、GitHub、Google スプレッドシート、その他のサービスに接続すると、このガジェットが外部データを安全に使用できるようになります。"
               actionLabel="Connect resource"
               onAction={() => setIsNewConnectionModalVisible(true)}
             />
@@ -241,10 +241,10 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-danger">
-                            Delete {gk.resourceTitle}?
+                            削除 {gk.resourceTitle}?
                           </p>
                           <p className="truncate text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                            The binding <span className="font-mono">{gk.name}</span> will be removed from this gadget.
+                            バインディング <span className="font-mono">{gk.name}</span> このガジェットから削除されます。
                           </p>
                         </div>
                         <WorkshopButton
@@ -252,12 +252,12 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                           className="min-w-[68px]"
                           onClick={handleDeleteConfirm}
                         >
-                          Delete
+                          削除
                         </WorkshopButton>
                         <WorkshopButton
                           onClick={() => setDeleteTarget(null)}
                         >
-                          Cancel
+                          キャンセル
                         </WorkshopButton>
                       </div>
                     ) : isEditing ? (
@@ -269,8 +269,8 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                             if (e.key === 'Enter') handleEditSave(gk.name)
                             if (e.key === 'Escape') handleEditCancel()
                           }}
-                          placeholder="Binding name"
-                          aria-label="Binding name"
+                          placeholder="バインディング名"
+                          aria-label="バインディング名"
                           autoFocus
                           className="min-w-0 flex-1 font-mono"
                         />
@@ -280,12 +280,12 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                           onClick={() => handleEditSave(gk.name)}
                           disabled={!editValue.trim()}
                         >
-                          Save
+                          保存
                         </WorkshopButton>
                         <WorkshopButton
                           onClick={handleEditCancel}
                         >
-                          Cancel
+                          キャンセル
                         </WorkshopButton>
                       </div>
                     ) : (
@@ -301,20 +301,20 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                             {isPending && (
                               <Tooltip content="Added in this chat; kept when you accept the chat's changes" asChild>
                                 <span className="flex-shrink-0 rounded-full bg-kumo-fill px-1.5 py-0.5 text-[10px] leading-none font-medium text-kumo-subtle">
-                                  Draft
+                                  下書き
                                 </span>
                               </Tooltip>
                             )}
                           </p>
                           <p className="mt-0.5 truncate text-[11px] leading-4 tracking-[-0.1px] text-kumo-inactive">
-                            Referenced in code as: <span className="font-mono text-kumo-subtle">{gk.name}</span>
+                            コード内では次のように参照されます。 <span className="font-mono text-kumo-subtle">{gk.name}</span>
                           </p>
                         </div>
                         <div className="ml-auto flex shrink-0 items-center gap-1">
                           <Tooltip content="Edit name used in code" asChild>
                             <WorkshopIconButton
                               onClick={() => handleEditStart(gk.name)}
-                              aria-label="Edit name used in code"
+                              aria-label="コード内で使用される名前を編集する"
                             >
                               <Pencil size={14} />
                             </WorkshopIconButton>
@@ -323,7 +323,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                             <Tooltip content="Edit blueprint settings" asChild>
                               <WorkshopIconButton
                                 onClick={() => setAnnotationTarget(gk)}
-                                aria-label="Edit blueprint settings"
+                                aria-label="ブループリント設定を編集する"
                               >
                                 <Blueprint size={14} />
                               </WorkshopIconButton>
@@ -333,7 +333,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                             <WorkshopIconButton
                               danger
                               onClick={() => setDeleteTarget({ name: gk.name, resourceTitle: gk.resourceTitle })}
-                              aria-label="Delete connection"
+                              aria-label="接続の削除"
                             >
                               <Trash size={14} />
                             </WorkshopIconButton>
@@ -352,10 +352,10 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
           <section className="mt-8">
             <div className="mb-3">
               <h2 className="m-0 text-[17px] leading-6 font-medium tracking-[-0.35px] text-kumo-default">
-                Hooks
+                フック
               </h2>
               <p className="mt-1 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-                Callbacks that let connected resources wake up this gadget when events happen.
+                イベントが発生したときに、接続されているリソースがこのガジェットを起動できるようにするコールバック。
               </p>
             </div>
 
@@ -373,10 +373,10 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-danger">
-                            Delete hook "{hook.description.title}"?
+                            フックの削除 "{hook.description.title}"?
                           </p>
                           <p className="truncate text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                            This permanently removes the hook. Future events will stop being delivered.
+                            これにより、フックが完全に削除されます。今後のイベントの配信は停止されます。
                           </p>
                         </div>
                         <WorkshopButton
@@ -384,12 +384,12 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                           className="min-w-[68px]"
                           onClick={handleDeleteHookConfirm}
                         >
-                          Delete
+                          削除
                         </WorkshopButton>
                         <WorkshopButton
                           onClick={() => setDeleteHookTarget(null)}
                         >
-                          Cancel
+                          キャンセル
                         </WorkshopButton>
                       </div>
                     ) : (
@@ -424,7 +424,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                             <WorkshopIconButton
                               danger
                               onClick={() => setDeleteHookTarget({ id: hook.id, title: hook.description.title })}
-                              aria-label="Delete hook"
+                              aria-label="フックの削除"
                             >
                               <Trash size={14} />
                             </WorkshopIconButton>
@@ -548,15 +548,15 @@ function BlueprintAnnotationModal({
           <div className="flex items-start justify-between gap-4 border-b border-kumo-line px-4 py-4 sm:px-5">
             <div className="min-w-0">
               <Dialog.Title className="text-[15px] leading-5 font-medium tracking-[-0.3px] text-kumo-default">
-                Blueprint settings
+                ブループリントの設定
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                How this connection appears in blueprints.
+                この接続がブループリントでどのように表示されるか。
               </Dialog.Description>
             </div>
             <Dialog.Close
               render={(props) => (
-                <WorkshopIconButton {...props} aria-label="Close">
+                <WorkshopIconButton {...props} aria-label="閉じる">
                   <X size={16} />
                 </WorkshopIconButton>
               )}
@@ -567,7 +567,7 @@ function BlueprintAnnotationModal({
             {loadError ? (
               <div className="text-[13px] text-kumo-subtle">{loadError}</div>
             ) : !data ? (
-              <div className="py-2 text-center text-[13px] text-kumo-subtle">Loading...</div>
+              <div className="py-2 text-center text-[13px] text-kumo-subtle">読み込み中…</div>
             ) : (
               <>
                 <BlueprintBindingCard
@@ -592,14 +592,14 @@ function BlueprintAnnotationModal({
                 onClick={onClose}
                 disabled={saving}
               >
-                Cancel
+                キャンセル
               </WorkshopButton>
               <WorkshopButton
                 tone="primary"
                 onClick={handleSave}
                 disabled={saving || !data}
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? '保存中…' : '保存'}
               </WorkshopButton>
             </div>
           </div>

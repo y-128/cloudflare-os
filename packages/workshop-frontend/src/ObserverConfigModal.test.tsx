@@ -28,7 +28,7 @@ vi.mock('@cloudflare/kumo', () => {
   )
   return {
     Dialog,
-    Loader: () => <span>Loading</span>,
+    Loader: () => <span>読み込み中</span>,
     Select,
     Text: ({ children }: { children: ReactNode }) => <p>{children}</p>,
     useKumoToastManager: () => ({ add: vi.fn<(toast: unknown) => void>() }),

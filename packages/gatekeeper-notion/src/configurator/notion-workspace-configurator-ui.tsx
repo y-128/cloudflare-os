@@ -19,8 +19,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole workspace"
-        description="Grants access to every page and database you have shared with this Notion connection. To limit access, connect a single page or database instead."
+        label="ワークスペース全体"
+        description="この Notion 接続で共有したすべてのページとデータベースへのアクセスを許可します。アクセスを制限するには、代わりに単一のページまたはデータベースに接続します。"
       >
       </Field>
     </Section>;

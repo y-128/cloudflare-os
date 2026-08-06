@@ -23,8 +23,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole-account access"
-        description="This binding grants access to the connected ZoomInfo account: lookup, company/contact/intent/scoop/news search, record enrichment (which consumes credits), recommendations, and account intelligence — all subject to the account's ZoomInfo entitlements.">
+        label="アカウント全体のアクセス"
+        description="このバインディングにより、接続された ZoomInfo アカウントへのアクセスが許可されます: ルックアップ、会社/連絡先/インテント/スクープ/ニュース検索、レコードの強化 (クレジットを消費します)、推奨事項、およびアカウント インテリジェンスはすべて、アカウントの ZoomInfo 資格に依存します。">
       </Field>
     </Section>;
   },

@@ -20,33 +20,33 @@ export const CREATE_SCHEDULE_PROMPT =
 
 const STARTERS = [
   {
-    title: "Daily brief",
+    title: "日々の概要",
     cadence: "Weekdays at 8:00 AM",
-    description: "Your calendar for the day plus the unread mail that needs a reply",
+    description: "その日のカレンダーと返信が必要な未読メール",
     prompt:
       "Every weekday at 8:00 AM, send me a short brief of my calendar for the day and the unread email that needs a reply. Ask me which calendar and mailbox to use and which timezone to use, then set up the schedule.",
     icon: CalendarBlank,
   },
   {
-    title: "Weekly roundup",
+    title: "毎週のまとめ",
     cadence: "Fridays at 4:00 PM",
-    description: "Turn the week’s Linear issues and GitHub pull requests into a status update",
+    description: "今週の Linear 問題と GitHub プル リクエストをステータス更新に変換します",
     prompt:
       "Every Friday at 4:00 PM, turn this week’s Linear issues and GitHub pull requests into a status update. Ask me which Linear team, GitHub repositories, and timezone to use, then set up the schedule.",
     icon: CalendarBlank,
   },
   {
-    title: "Follow-up monitor",
+    title: "経過観察モニター",
     cadence: "Weekdays at 9:00 AM",
-    description: "Flag the Gmail threads that are waiting on your reply",
+    description: "あなたの返信を待っている Gmail スレッドにフラグを立てます",
     prompt:
       "Every weekday at 9:00 AM, flag the Gmail threads that are waiting on my reply. Ask me which mailbox, destination, and timezone to use, then set up the schedule.",
     icon: WarningCircle,
   },
   {
-    title: "Metrics snapshot",
+    title: "メトリクスのスナップショット",
     cadence: "Mondays at 8:00 AM",
-    description: "Refresh a spreadsheet or query and call out what moved",
+    description: "スプレッドシートまたはクエリを更新して、移動した内容を呼び出します",
     prompt:
       "Every Monday at 8:00 AM, refresh a spreadsheet or query and call out what moved. Ask me which data source, destination, and timezone to use, then set up the schedule.",
     icon: Clock,
@@ -178,10 +178,10 @@ export default function SchedulerPage({
       <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-kumo-default">
-            Scheduled tasks
+            スケジュールされたタスク
           </h1>
           <p className="mt-1 text-sm text-kumo-subtle">
-            Wake a workspace and run its code on a schedule you choose.
+            ワークスペースを起動し、選択したスケジュールでコードを実行します。
           </p>
         </div>
         <button
@@ -190,7 +190,7 @@ export default function SchedulerPage({
           className="press inline-flex h-9 items-center justify-center gap-2 self-start rounded-lg bg-kumo-brand px-3.5 text-sm font-medium text-white hover:bg-kumo-brand-hover"
           onClick={() => void runHostAction(() => openPrompt(CREATE_SCHEDULE_PROMPT))}
         >
-          <Plus size={16} weight="bold" /> Create schedule
+          <Plus size={16} weight="bold" /> スケジュールの作成
         </button>
       </header>
 
@@ -198,18 +198,18 @@ export default function SchedulerPage({
         <>
           <label className="mt-4 flex h-9 items-center gap-2 rounded-lg border border-kumo-line bg-kumo-control px-3 text-kumo-inactive focus-within:ring-2 focus-within:ring-kumo-ring">
             <MagnifyingGlass size={15} />
-            <span className="sr-only">Search scheduled tasks</span>
+            <span className="sr-only">スケジュール済みタスクを検索</span>
             <input
               className="min-w-0 flex-1 bg-transparent text-sm text-kumo-default outline-none placeholder:text-kumo-inactive"
               type="search"
               value={query}
               maxLength={200}
-              placeholder="Search scheduled tasks…"
+              placeholder="スケジュール済みタスクを検索…"
               onChange={(event) => setQuery(event.currentTarget.value)}
             />
           </label>
 
-          <nav className="mt-4 flex gap-5 border-b border-kumo-line" aria-label="Schedule status">
+          <nav className="mt-4 flex gap-5 border-b border-kumo-line" aria-label="スケジュールのステータス">
             {FILTERS.map((item) => (
               <button
                 key={item.value}
@@ -231,20 +231,20 @@ export default function SchedulerPage({
 
       <section aria-live="polite" aria-busy={loading} className={isEmpty ? undefined : "min-h-32"}>
         {loading ? (
-          <p className="py-12 text-center text-sm text-kumo-subtle">Loading scheduled tasks…</p>
+          <p className="py-12 text-center text-sm text-kumo-subtle">スケジュールされたタスクを読み込んでいます…</p>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-sm text-kumo-danger">Couldn’t load scheduled tasks.</p>
+            <p className="text-sm text-kumo-danger">スケジュールされたタスクを読み込めませんでした。</p>
             <button
               className="text-sm font-medium text-kumo-link hover:text-kumo-brand-hover"
               onClick={() => void load()}
             >
-              Try again
+              再試行
             </button>
           </div>
         ) : isEmpty ? null : schedules.length === 0 ? (
           <p className="py-12 text-center text-sm text-kumo-subtle">
-            No scheduled tasks match these filters.
+            これらのフィルターに一致するスケジュールされたタスクはありません。
           </p>
         ) : (
           <div className="divide-y divide-kumo-line">
@@ -284,7 +284,7 @@ export default function SchedulerPage({
               className="rounded-lg border border-kumo-line bg-kumo-control px-4 py-2 text-sm font-medium text-kumo-default hover:bg-kumo-tint disabled:opacity-50"
               onClick={() => void load(cursor)}
             >
-              {loadingMore ? "Loading…" : "Load more"}
+              {loadingMore ? "読み込み中…" : "さらに読み込む"}
             </button>
           </div>
         )}
@@ -295,7 +295,7 @@ export default function SchedulerPage({
           id="get-started-heading"
           className="text-xs font-medium uppercase tracking-[0.12em] text-kumo-inactive"
         >
-          Get started
+          始めましょう
         </h2>
         <div className="mt-3 grid gap-1">
           {STARTERS.map((starter) => {
@@ -394,7 +394,7 @@ function ScheduleRow({
             type="button"
             data-action="toggle-diagnostic"
             aria-expanded={expanded}
-            aria-label={`${expanded ? "Hide" : "Show"} why ${schedule.title} needs attention`}
+            aria-label={`${expanded ? "隠れる" : "見せる"} why ${schedule.title} needs attention`}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-kumo-inactive hover:bg-kumo-fill hover:text-kumo-default"
             onClick={onToggle}
           >
@@ -415,10 +415,10 @@ function ScheduleRow({
 }
 
 const FILTERS: ReadonlyArray<{ value: Filter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "dead", label: "Needs attention" },
-  { value: "finished", label: "Finished" },
+  { value: "all", label: "全て" },
+  { value: "active", label: "アクティブ" },
+  { value: "dead", label: "注意が必要です" },
+  { value: "finished", label: "終了した" },
 ];
 
 function statusesForFilter(filter: Filter): ScheduleStatus[] | undefined {

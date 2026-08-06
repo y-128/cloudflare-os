@@ -17,11 +17,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Organization" description="Search the organizations in your connected Supabase account.">
+      <Field label="組織" description="接続されている Supabase アカウント内の組織を検索します。">
         <Autocomplete
           name="slug"
           value={values.slug}
-          placeholder="Search organizations..."
+          placeholder="組織を検索…"
           loadOptions={query => ui.listOrganizations(query)}
           onChange={slug => setValues({ slug })}
         />

@@ -38,7 +38,7 @@ function HomePage() {
 }
 
 export function HomePageContent({ prompt }: HomeSearch) {
-  useDocumentTitle("Home");
+  useDocumentTitle("ホーム");
 
   const { authenticatedApi } = useAuthenticatedApi();
   const navigate = useNavigate();
@@ -66,7 +66,7 @@ export function HomePageContent({ prompt }: HomeSearch) {
       })
       .catch((err) => {
         console.error("Failed to fetch models:", err);
-        toasts.add({ title: "Couldn't load AI models", variant: "error" });
+        toasts.add({ title: "AI モデルを読み込めませんでした", variant: "error" });
       });
     return () => {
       cancelled = true;
@@ -123,7 +123,7 @@ export function HomePageContent({ prompt }: HomeSearch) {
           provisionalOverseerRef.current?.stub[Symbol.dispose]();
           provisionalOverseerRef.current = null;
         }
-        toasts.add({ title: "Failed to create workspace", variant: "error" });
+        toasts.add({ title: "ワークスペースの作成に失敗しました", variant: "error" });
         throw err;
       }
     },
@@ -165,10 +165,10 @@ export function HomePageContent({ prompt }: HomeSearch) {
         {/* Hero */}
         <header className="text-center">
           <h1 className="text-3xl font-semibold tracking-tight leading-tight text-kumo-default sm:text-4xl">
-            What are we working on?
+            私たちは何に取り組んでいますか?
           </h1>
           <p className="mx-auto mt-3 max-w-md text-[14px] leading-5 tracking-[-0.25px] text-kumo-subtle">
-            Ask a question, create an output, or create an app that works with your tools and data.
+            質問したり、出力を作成したり、ツールやデータで動作するアプリを作成したりできます。
           </p>
         </header>
 

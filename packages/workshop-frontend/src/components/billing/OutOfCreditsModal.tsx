@@ -90,7 +90,7 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
       <Dialog className="p-6 sm:w-[560px]" size="base">
         <Dialog.Title className="text-lg font-semibold mb-2 flex items-center gap-2">
           <CloudWarning size={22} weight="bold" className="text-kumo-warning" />
-          You've reached your free usage limit
+          無料使用制限に達しました
         </Dialog.Title>
 
         {usage === null ? (
@@ -99,33 +99,33 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
           <div className="space-y-4">
             {!connected ? (
               <p className="text-sm text-kumo-subtle">
-                You've used all {usage.dailyLimit} of your free {usage.dailyLimit === 1 ? 'request' : 'requests'} for
-                today. Connect your Cloudflare account to keep building now — usage beyond the free
-                tier is billed to your own Cloudflare AI Gateway credits
+                全部使いましたね {usage.dailyLimit} あなたの自由の {usage.dailyLimit === 1 ? 'リクエスト' : 'リクエスト'} のために
+                今日。 Cloudflare アカウントに接続して、今すぐ構築を続けてください — 無料を超えた使用量
+                レベルは独自の Cloudflare AI Gateway クレジットに請求されます
                 {usage.resetAt ? (
                   <>
-                    {' '}— or wait: your free {usage.dailyLimit === 1 ? 'request resets' : 'requests reset'} at
-                    00:00 UTC, in <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />.
+                    {' '}— あるいは待ってください: あなたは無料です {usage.dailyLimit === 1 ? 'リクエストがリセットされます' : 'リクエストがリセットされます'} で
+                    00:00 UTC、インチ <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />.
                   </>
                 ) : '.'}
               </p>
             ) : needsSelection ? (
               <p className="text-sm text-kumo-subtle">
-                Your Cloudflare connection has access to multiple accounts. Choose which one's AI
-                Gateway credits should be billed for usage beyond the free tier.
+                Cloudflare 接続は複数のアカウントにアクセスできます。どちらの AI かを選択してください
+                ゲートウェイ クレジットは、無料利用枠を超えた使用に対して請求される必要があります。
               </p>
             ) : (
               <p className="text-sm text-kumo-subtle">
-                Your Cloudflare account is connected
+                Cloudflare アカウントが接続されています
                 {usage.balance !== null && (
-                  <> with a balance of <strong>${usage.balance.toFixed(2)}</strong></>
+                  <> のバランスで <strong>${usage.balance.toFixed(2)}</strong></>
                 )}
-                , but it's below the minimum needed to continue. Add credits to your AI Gateway to
-                keep building now
+                , ただし、継続するために必要な最低値を下回っています。 AI ゲートウェイにクレジットを追加すると、
+                今すぐ構築し続ける
                 {usage.resetAt ? (
                   <>
-                    {' '}or wait — your free {usage.dailyLimit === 1 ? 'request resets' : 'requests reset'} at
-                    00:00 UTC, in <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />.
+                    {' '}それとも待ってください - あなたは自由です {usage.dailyLimit === 1 ? 'リクエストがリセットされます' : 'リクエストがリセットされます'} で
+                    00:00 UTC、インチ <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />.
                   </>
                 ) : '.'}
               </p>
@@ -134,9 +134,9 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
             {needsSelection && (
               <div className="flex flex-col gap-2">
                 {accounts === null ? (
-                  <p className="text-sm text-kumo-subtle">Loading accounts…</p>
+                  <p className="text-sm text-kumo-subtle">アカウントを読み込み中…</p>
                 ) : accounts.length === 0 ? (
-                  <p className="text-sm text-kumo-subtle">No accounts available on this connection.</p>
+                  <p className="text-sm text-kumo-subtle">この接続では利用可能なアカウントがありません。</p>
                 ) : (
                   accounts.map((a) => (
                     <Button
@@ -155,14 +155,14 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
             )}
 
             <p className="text-sm text-kumo-subtle">
-              Learn more about{' '}
+              詳しくはこちら{' '}
               <a
                 href="https://developers.cloudflare.com/ai-gateway/features/unified-billing/"
                 target="_blank"
                 rel="noreferrer"
                 className="underline"
               >
-                AI Gateway unified billing
+                AI ゲートウェイの統合請求
               </a>
               .
             </p>
@@ -170,22 +170,22 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
             <div className="flex items-center justify-end gap-2 pt-2">
               {!connected ? (
                 <>
-                  <Button variant="secondary" onClick={onClose}>Maybe later</Button>
+                  <Button variant="secondary" onClick={onClose}>たぶん後で</Button>
                   <Button variant="primary" onClick={connect} loading={connecting}>
                     <Lightning size={16} weight="bold" />
-                    Connect Cloudflare
+                    Cloudflareに接続する
                   </Button>
                 </>
               ) : needsSelection ? (
-                <Button variant="secondary" onClick={onClose}>Close</Button>
+                <Button variant="secondary" onClick={onClose}>閉じる</Button>
               ) : (
                 <>
-                  <Button variant="secondary" onClick={onClose}>Close</Button>
+                  <Button variant="secondary" onClick={onClose}>閉じる</Button>
                   <Button
                     variant="primary"
                     onClick={() => window.open(buildAddCreditsUrl(usage.accountId), '_blank')}
                   >
-                    Add credits in Cloudflare
+                    Cloudflareにクレジットを追加する
                   </Button>
                 </>
               )}
