@@ -1,3 +1,4 @@
+import { initFrameI18n } from "@gadgets/i18n";
 import { createRoot } from "react-dom/client";
 import { RpcTarget, newMessagePortRpcSession, type RpcStub } from "capnweb";
 import type {
@@ -10,6 +11,7 @@ import { installErrorReporting, reportIssue } from "./error-reporting";
 import { applyAppTheme } from "./theme";
 import "./styles.css";
 
+initFrameI18n("gatekeeper-scheduler.SchedulerPage.scheduled_tasks");
 installErrorReporting();
 
 class AppIframe extends RpcTarget implements GatekeeperAppThemeReceiver {

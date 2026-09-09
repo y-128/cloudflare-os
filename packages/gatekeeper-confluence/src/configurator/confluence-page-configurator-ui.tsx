@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   ConfluencePageConfiguratorRpc,
@@ -22,13 +23,13 @@ export default {
   render({ values, setValues, ui }) {
     return <Section>
       <Field
-        label="Page or blog post"
-        description="Search the pages and blog posts shared with this connection, or paste a Confluence URL."
+        label={t("gatekeeper-confluence.confluence-page-configurator-ui.page_or_blog_post")}
+        description={t("gatekeeper-confluence.confluence-page-configurator-ui.search_the_pages_and_blog_posts_shared_with_this_connection_or_p")}
       >
         <Autocomplete
           name="pageUrl"
           value={values.pageUrl}
-          placeholder="Search Confluence..."
+          placeholder={t("gatekeeper-confluence.confluence-page-configurator-ui.search_confluence")}
           loadOptions={query => ui.listPages(query)}
           onChange={pageUrl => setValues({ pageUrl })}
         />

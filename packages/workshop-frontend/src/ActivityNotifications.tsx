@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useState } from 'react'
 import { Popover } from '@cloudflare/kumo'
 import { ArrowRight, Pulse } from '@phosphor-icons/react'
@@ -25,6 +26,7 @@ export default function ActivityNotifications({
   overseer,
   onViewActivity,
 }: ActivityNotificationsProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false)
   const [processing, setProcessing] = useState<Set<number>>(new Set())
   const resolveAction = useResolveAction(overseer, setProcessing)
@@ -42,8 +44,8 @@ export default function ActivityNotifications({
           <button
             type="button"
             aria-label={pending.length > 0
-              ? `Activity — ${pending.length} ${pending.length === 1 ? 'request needs' : 'requests need'} review`
-              : 'Activity'}
+              ? t("workshop-frontend.ActivityNotifications.activity_requests_need_review", { n: pending.length })
+              : t("workshop-frontend.ActivityNotifications.activity")}
             className={`relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors duration-150 hover:bg-kumo-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring ${
               pending.length > 0 ? 'text-kumo-strong' : 'text-kumo-subtle hover:text-kumo-default'
             }`}
@@ -63,16 +65,15 @@ export default function ActivityNotifications({
       >
         <div className="flex items-center justify-between gap-2 px-3.5 pb-1 pt-2.5">
           <Popover.Title className="text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-            Needs review
-          </Popover.Title>
+            {t("workshop-frontend.ActivityNotifications.needs_review")}</Popover.Title>
           <CountBadge count={pending.length} />
         </div>
 
         {pending.length === 0 ? (
           <p className="m-0 px-3.5 pb-3 pt-1 text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-            {status === 'error' ? PENDING_ERROR_COPY
-              : status === 'checking' ? PENDING_CHECKING_COPY
-              : 'Nothing is waiting on you.'}
+            {status === 'error' ? PENDING_ERROR_COPY()
+              : status === 'checking' ? PENDING_CHECKING_COPY()
+              : t("workshop-frontend.ActivityNotifications.nothing_is_waiting_on_you")}
           </p>
         ) : (
           <div className="max-h-[min(58vh,420px)] overflow-y-auto pb-1">
@@ -128,8 +129,8 @@ export default function ActivityNotifications({
           >
             <span>
               {pending.length > PREVIEW_LIMIT
-                ? `View all ${pending.length} requests`
-                : 'View all activity'}
+                ? t("workshop-frontend.ActivityNotifications.view_all_requests", { value1: pending.length })
+                : t("workshop-frontend.ActivityNotifications.view_all_activity")}
             </span>
             <ArrowRight size={13} className="text-kumo-inactive" />
           </button>

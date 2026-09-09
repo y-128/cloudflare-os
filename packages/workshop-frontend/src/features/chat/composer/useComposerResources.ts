@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useEffect, useRef, useState } from "react";
 import type { RpcStub } from "capnweb";
 import type { GatekeeperClient } from "@gadgets/workshop-shared/api";
@@ -97,6 +98,7 @@ export const useComposerResources = ({
   onSelectionRequest,
   onError,
 }: UseComposerResourcesOptions) => {
+  const { t } = useTranslation();
   const [activeUrl, setActiveUrl] = useState<ActiveResourceUrl | null>(null);
   const [attachModalOpen, setAttachModalOpen] = useState(false);
   const [isCreatingResource, setIsCreatingResource] = useState(false);
@@ -170,7 +172,7 @@ export const useComposerResources = ({
       );
       if (!gatekeeper) {
         if (operationRef.current !== operation) return;
-        onError("Failed to create resource connection");
+        onError(t("workshop-frontend.useComposerResources.failed_to_create_resource_connection"));
         return;
       }
       let inserted = false;
@@ -190,7 +192,7 @@ export const useComposerResources = ({
           );
         }, { allowPresentationChanges: true });
         if (!result) {
-          onError("The prompt changed before the resource could be added");
+          onError(t("workshop-frontend.useComposerResources.the_prompt_changed_before_the_resource_could_be_added"));
           dismissUrl();
           return;
         }
@@ -205,7 +207,7 @@ export const useComposerResources = ({
     } catch (error) {
       if (operationRef.current !== operation) return;
       console.error("Failed to create capsule:", error);
-      onError("Failed to add resource");
+      onError(t("workshop-frontend.useComposerResources.failed_to_add_resource"));
     } finally {
       if (operationRef.current === operation) setIsCreatingResource(false);
     }
@@ -271,7 +273,7 @@ export const useComposerResources = ({
       }, { allowPresentationChanges: true });
       closeAttachModal();
       if (!result) {
-        onError("The prompt changed before the resource could be added");
+        onError(t("workshop-frontend.useComposerResources.the_prompt_changed_before_the_resource_could_be_added"));
         return;
       }
       inserted = true;

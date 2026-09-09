@@ -1,0 +1,33 @@
+{
+  "name": "@gadgets/i18n",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./core": {
+      "types": "./src/core.ts",
+      "import": "./src/core.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test:run": "vitest run"
+  },
+  "peerDependencies": {
+    "react": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "@gadgets/scripts": "workspace:*",
+    "@types/react": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

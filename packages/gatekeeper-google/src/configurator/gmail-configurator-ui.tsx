@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, RadioCards, Section, TextInput, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { GmailConfiguratorRpc, GmailConfiguratorValues } from "./gmail-configurator-types";
 
@@ -43,13 +44,13 @@ export default {
   render({ values, setValues, clearFields }) {
     const mode = values.mode ?? "all";
     return <Section>
-      <Field label="Mailbox scope" description="Choose whether this connection can access all Gmail messages or a narrower native Gmail view.">
+      <Field label={t("gatekeeper-google.gmail-configurator-ui.mailbox_scope")} description={t("gatekeeper-google.gmail-configurator-ui.choose_whether_this_connection_can_access_all_gmail_messages_or")}>
         <RadioCards
           value={mode}
           options={[
-            { value: "all", title: "All Gmail", description: "Allow access to the whole mailbox." },
-            { value: "search", title: "Search", description: "Allow messages matching a Gmail search query." },
-            { value: "label", title: "Label", description: "Allow messages with a specific Gmail label." },
+            { value: "all", title: t("gatekeeper-google.gmail-configurator-ui.all_gmail"), description: t("gatekeeper-google.gmail-configurator-ui.allow_access_to_the_whole_mailbox") },
+            { value: "search", title: t("gatekeeper-google.gmail-configurator-ui.search"), description: t("gatekeeper-google.gmail-configurator-ui.allow_messages_matching_a_gmail_search_query") },
+            { value: "label", title: t("gatekeeper-google.gmail-configurator-ui.label"), description: t("gatekeeper-google.gmail-configurator-ui.allow_messages_with_a_specific_gmail_label") },
           ]}
           onChange={nextMode => {
             if (nextMode !== "all" && nextMode !== "search" && nextMode !== "label") return;
@@ -59,20 +60,20 @@ export default {
         />
       </Field>
 
-      {mode === "search" && <Field label="Search query" description="Use the same query syntax as Gmail search.">
+      {mode === "search" && <Field label={t("gatekeeper-google.gmail-configurator-ui.search_query")} description={t("gatekeeper-google.gmail-configurator-ui.use_the_same_query_syntax_as_gmail_search")}>
         <TextInput
           name="query"
           value={values.query}
-          placeholder="from:alerts@example.com newer_than:30d"
+          placeholder={t("gatekeeper-google.gmail-configurator-ui.from_alerts_example_com_newer_than_30d")}
           onChange={query => setValues({ query })}
         />
       </Field>}
 
-      {mode === "label" && <Field label="Label" description="Use the Gmail label name exactly as it appears in Gmail.">
+      {mode === "label" && <Field label={t("gatekeeper-google.gmail-configurator-ui.label")} description={t("gatekeeper-google.gmail-configurator-ui.use_the_gmail_label_name_exactly_as_it_appears_in_gmail")}>
         <TextInput
           name="label"
           value={values.label}
-          placeholder="Receipts"
+          placeholder={t("gatekeeper-google.gmail-configurator-ui.receipts")}
           onChange={label => setValues({ label })}
         />
       </Field>}

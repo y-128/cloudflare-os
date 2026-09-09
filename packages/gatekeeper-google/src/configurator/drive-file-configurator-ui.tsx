@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { DriveFileConfiguratorRpc, DriveFileConfiguratorValues } from "./drive-file-configurator-types";
 
@@ -11,11 +12,11 @@ export default {
     `https://drive.google.com/file/d/${encodeURIComponent(values.fileId ?? "")}/view`,
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="File" description="Search recent non-folder files. A selected native Google Doc or Sheet also provides read-only content.">
+      <Field label={t("gatekeeper-google.drive-file-configurator-ui.file")} description={t("gatekeeper-google.drive-file-configurator-ui.search_recent_non_folder_files_a_selected_native_google_doc_or_sh")}>
         <Autocomplete
           name="fileId"
           value={values.fileId}
-          placeholder="Search Drive files..."
+          placeholder={t("gatekeeper-google.drive-file-configurator-ui.search_drive_files")}
           loadOptions={query => ui.listDriveFiles(query)}
           onChange={fileId => setValues({ fileId })}
         />

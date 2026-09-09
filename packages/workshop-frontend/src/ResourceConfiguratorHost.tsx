@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { ResourceConfiguratorFrame } from '@gadgets/workshop-shared/gatekeeper'
 import SandboxedResourceConfigurator from './SandboxedResourceConfigurator'
 
@@ -25,8 +26,9 @@ export default function ResourceConfiguratorHost({
   initialResourceUrl?: string
   resourceUrlPattern?: string
 }) {
-  if (disabled) return <Placeholder>Choose an account before selecting a resource.</Placeholder>
-  if (loading) return <Placeholder>Loading configurator...</Placeholder>
+  const { t } = useTranslation();
+  if (disabled) return <Placeholder>{t("workshop-frontend.ResourceConfiguratorHost.choose_an_account_before_selecting_a_resource")}</Placeholder>
+  if (loading) return <Placeholder>{t("workshop-frontend.ResourceConfiguratorHost.loading_configurator")}</Placeholder>
   if (error) return <Placeholder>{error}</Placeholder>
   if (!frame) return null
 
@@ -42,6 +44,7 @@ export default function ResourceConfiguratorHost({
 }
 
 function Placeholder({ children }: { children: React.ReactNode }) {
+  useTranslation();
   return (
     <section className="rounded-xl border border-kumo-line bg-kumo-elevated px-3 py-3 text-[12px] leading-4 text-kumo-subtle">
       {children}

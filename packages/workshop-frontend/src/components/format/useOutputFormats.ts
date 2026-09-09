@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 // Loading and instantiating the deployment's standard output formats. Shared by every surface that
 // offers them, so "what happens when you pick a format" is decided once.
 
@@ -70,7 +71,7 @@ export async function createFromFormat(
     navigate({ to: '/workspace/$id', params: { id } })
   } catch (err) {
     console.error('Failed to create from format:', err)
-    toasts.add({ title: `Couldn't create a new ${format.output.noun}`, variant: 'error' })
+    toasts.add({ title: t("workshop-frontend.useOutputFormats.couldn_t_create_a_new", { value1: format.output.noun }), variant: 'error' })
     throw err
   } finally {
     overseer?.[Symbol.dispose]()
@@ -78,6 +79,7 @@ export async function createFromFormat(
 }
 
 export function useOutputFormats(): OutputFormats {
+  useTranslation();
   const { authenticatedApi } = useAuthenticatedApi()
   const navigate = useNavigate()
   const toasts = useKumoToastManager()

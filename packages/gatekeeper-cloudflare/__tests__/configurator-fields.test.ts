@@ -7,9 +7,11 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@gadgets/configurator-ui", () => {
+vi.mock("@gadgets/configurator-ui", async () => {
+  const { translate } = await import("../../i18n/src/core.ts");
   const runtimeComponent = (name: string) => Object.assign(() => undefined, { componentName: name });
   return {
+    t: translate.bind(null, "ja"),
     h: (component: unknown, props: unknown, ...children: unknown[]) =>
       ({ component, props: props ?? {}, children: children.flat() }),
     Fragment: runtimeComponent("Fragment"),

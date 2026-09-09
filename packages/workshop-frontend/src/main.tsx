@@ -1,4 +1,6 @@
+import { initI18n, useTranslation } from "@gadgets/i18n";
 import { StrictMode, useState, useEffect } from 'react'
+
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
 import { RpcPromise, RpcStub, newWebSocketRpcSession } from 'capnweb'
@@ -182,10 +184,12 @@ window.addEventListener('online', () => void probeOnWake());
 installWorkshopErrorReporting()
 let currentStub = startConnection();
 
+initI18n()
 const router = createRouter()
 applyStoredThemeMode()
 
 function AppWithConnection() {
+  useTranslation();
   const [rpcState, setRpcState] = useState<{stub: RpcStub<PublicApi>; connectionLost: boolean}>({
     stub: currentStub,
     connectionLost: isConnectionLost,

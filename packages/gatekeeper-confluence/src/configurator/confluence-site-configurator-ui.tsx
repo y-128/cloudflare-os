@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   ConfluenceSiteConfiguratorRpc,
@@ -21,11 +22,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Confluence site" description="Choose the Confluence site to connect.">
+      <Field label={t("gatekeeper-confluence.confluence-site-configurator-ui.confluence_site")} description={t("gatekeeper-confluence.confluence-site-configurator-ui.choose_the_confluence_site_to_connect")}>
         <Autocomplete
           name="siteUrl"
           value={values.siteUrl}
-          placeholder="Search sites..."
+          placeholder={t("gatekeeper-confluence.confluence-site-configurator-ui.search_sites")}
           loadOptions={query => ui.listSites(query)}
           onChange={siteUrl => setValues({ siteUrl })}
         />

@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import { createFileRoute } from '@tanstack/react-router'
 import { BookOpen, Sparkle, type Icon as PhosphorIcon } from '@phosphor-icons/react'
 import { useDocumentTitle } from '../useDocumentTitle'
@@ -24,20 +25,21 @@ interface ContextItem {
 }
 
 const TYPE_META: Record<Kind, { label: string; Icon: PhosphorIcon }> = {
-  collection: { label: 'Collection', Icon: BookOpen },
-  skill: { label: 'Skill', Icon: Sparkle },
+  collection: { get label() { return t("workshop-frontend.context.collection"); }, Icon: BookOpen },
+  skill: { get label() { return t("workshop-frontend.context.skill"); }, Icon: Sparkle },
 }
 
 const MOCK_ITEMS: ContextItem[] = [
   { id: '1', name: 'Company Handbook', kind: 'collection', detail: '12 documents', updated: '2d ago' },
   { id: '2', name: 'Brand Voice & Style', kind: 'collection', detail: '5 documents', updated: '1w ago' },
   { id: '3', name: 'API Reference', kind: 'collection', detail: '28 documents', updated: '1w ago' },
-  { id: '4', name: 'Summarize meeting notes', kind: 'skill', detail: 'Reusable skill', updated: '3d ago' },
+  { id: '4', name: 'Summarize meeting notes', kind: 'skill', get detail() { return t("workshop-frontend.context.reusable_skill"); }, updated: '3d ago' },
   { id: '5', name: 'Sales Playbook', kind: 'collection', detail: '9 documents', updated: '2w ago' },
-  { id: '6', name: 'Draft a customer email', kind: 'skill', detail: 'Reusable skill', updated: '2w ago' },
+  { id: '6', name: 'Draft a customer email', kind: 'skill', get detail() { return t("workshop-frontend.context.reusable_skill"); }, updated: '2w ago' },
 ]
 
 function ContextRow({ item }: { item: ContextItem }) {
+  useTranslation();
   const { label, Icon } = TYPE_META[item.kind]
   return (
     <div className="flex items-center gap-3 rounded-lg px-3 py-2.5">
@@ -58,21 +60,21 @@ function ContextRow({ item }: { item: ContextItem }) {
 }
 
 function ContextPage() {
-  useDocumentTitle('Context & Skills')
+  const { t } = useTranslation();
+  useDocumentTitle(t("workshop-frontend.context.context_skills"))
   const siteName = useSiteName()
   return (
     <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-3 sm:px-10">
       <header className="px-3 pb-4 pt-6 sm:pt-10">
-        <h1 className="text-2xl font-semibold tracking-tight text-kumo-default">Context &amp; Skills</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-kumo-default">{t("workshop-frontend.context.context_skills")}</h1>
         <p className="mt-1 text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-          Curated collections of knowledge your agents read, plus reusable skills they can apply.
-        </p>
+          {t("workshop-frontend.context.curated_collections_of_knowledge_your_agents_read_plus_reusable")}</p>
       </header>
 
       <ComingSoonPreview
         icon={BookOpen}
-        title={`Context & Skills are coming soon to ${siteName}`}
-        description="A preview of how you'll author knowledge collections and skills for your agents to draw on."
+        title={t("workshop-frontend.context.context_skills_are_coming_soon_to", { value1: siteName })}
+        description={t("workshop-frontend.context.a_preview_of_how_you_ll_author_knowledge_collections_and_skills")}
       >
         <div className="chat-panel min-h-0 flex-1 overflow-y-auto pb-8 pt-1">
           <div className="flex flex-col gap-0.5">

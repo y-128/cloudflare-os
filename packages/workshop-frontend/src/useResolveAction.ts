@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react'
 import { useKumoToastManager } from '@cloudflare/kumo'
 import type { RpcStub } from 'capnweb'
@@ -10,6 +11,7 @@ export function useResolveAction(
   setProcessing: Dispatch<SetStateAction<Set<number>>>,
   onResolved?: (actionId: number, state: Extract<ActionState, 'approved' | 'rejected'>) => void,
 ) {
+  const { t } = useTranslation();
   const toasts = useKumoToastManager()
   const onResolvedRef = useRef(onResolved)
   onResolvedRef.current = onResolved
@@ -22,7 +24,7 @@ export function useResolveAction(
       onResolvedRef.current?.(actionId, decision === 'approve' ? 'approved' : 'rejected')
     } catch (error) {
       console.error(`Failed to ${decision} action:`, error)
-      toasts.add({ title: `Failed to ${decision} action`, variant: 'error' })
+      toasts.add({ title: (decision === 'approve' ? t("workshop-frontend.useResolveAction.failed_to_approve_action") : t("workshop-frontend.useResolveAction.failed_to_reject_action")), variant: 'error' })
     } finally {
       setProcessing(previous => {
         const next = new Set(previous)

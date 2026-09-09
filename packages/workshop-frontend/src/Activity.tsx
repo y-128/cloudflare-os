@@ -1,3 +1,4 @@
+import { t, useTranslation, renderTranslation, getLocale } from "@gadgets/i18n";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Switch, useKumoToastManager } from '@cloudflare/kumo'
 import { CaretRight, Check, Eye, Lightning, ShieldCheck } from '@phosphor-icons/react'
@@ -35,23 +36,27 @@ interface ActivityProps {
 }
 
 /** Pending-status copy while the pending set is still being gathered (also in the popover). */
-export const PENDING_CHECKING_COPY = 'Checking for requests…'
+export const PENDING_CHECKING_COPY = () => {
+  return t("workshop-frontend.Activity.checking_for_requests");
+}
 /** Pending-status copy when gathering the pending set failed (also in the popover). */
-export const PENDING_ERROR_COPY = 'Could not check for requests — reload the page to try again.'
+export const PENDING_ERROR_COPY = () => {
+  return t("workshop-frontend.Activity.could_not_check_for_requests_reload_the_page_to_try_again");
+}
 
 const HISTORY_FILTERS: { value: HistoryViewFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'action', label: 'Actions' },
-  { value: 'observation', label: 'Observations' },
-  { value: 'bindHook', label: 'Hooks' },
+  { value: 'all', get label() { return t("workshop-frontend.Activity.all"); } },
+  { value: 'action', get label() { return t("workshop-frontend.Activity.actions"); } },
+  { value: 'observation', get label() { return t("workshop-frontend.Activity.observations"); } },
+  { value: 'bindHook', get label() { return t("workshop-frontend.Activity.hooks"); } },
 ]
 
 function formatClockTime(date: Date): string {
-  return new Date(date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return new Date(date).toLocaleTimeString(getLocale(), { hour: 'numeric', minute: '2-digit' })
 }
 
 function formatFullDate(date: Date): string {
-  return new Date(date).toLocaleString([], {
+  return new Date(date).toLocaleString(getLocale(), {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
@@ -61,11 +66,11 @@ function formatFullDate(date: Date): string {
 
 export function formatRelativeTime(date: Date): string {
   const minutes = Math.floor(Math.max(0, Date.now() - new Date(date).getTime()) / 60_000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 1) return t("workshop-frontend.ShareModal.just_now")
+  if (minutes < 60) return t("gatekeeper-context.ContextLibraryPage.m_ago", { n: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  return `${Math.floor(hours / 24)}d ago`
+  if (hours < 24) return t("gatekeeper-context.ContextLibraryPage.h_ago", { n: hours })
+  return t("gatekeeper-context.ContextLibraryPage.d_ago", { n: Math.floor(hours / 24) })
 }
 
 function startOfDay(date: Date): number {
@@ -75,50 +80,52 @@ function startOfDay(date: Date): number {
 function dayLabel(date: Date): string {
   const value = new Date(date)
   const days = Math.round((startOfDay(new Date()) - startOfDay(value)) / 86_400_000)
-  if (days === 0) return 'Today'
-  if (days === 1) return 'Yesterday'
-  return value.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })
+  if (days === 0) return t("workshop-frontend.ChatInterface.today")
+  if (days === 1) return t("workshop-frontend.ChatInterface.yesterday")
+  return value.toLocaleDateString(getLocale(), { month: 'long', day: 'numeric', year: 'numeric' })
 }
 
 function activityStatus(
   record: ActionLogEntry,
 ): { label: string; dotClass: string; textClass: string } {
   if (record.type === 'observation') {
-    return { label: 'Observed', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
+    return { label: t("workshop-frontend.Activity.observed"), dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
   }
   if (record.type === 'bindHook') {
     if (record.hookId === undefined) {
-      return { label: 'Deleted', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
+      return { label: t("workshop-frontend.Activity.deleted"), dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
     }
     return record.enabled
-      ? { label: 'Enabled', dotClass: 'bg-kumo-success', textClass: 'text-kumo-subtle' }
-      : { label: 'Disabled', dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
+      ? { label: t("workshop-frontend.Activity.enabled"), dotClass: 'bg-kumo-success', textClass: 'text-kumo-subtle' }
+      : { label: t("workshop-frontend.Activity.disabled"), dotClass: 'bg-kumo-inactive', textClass: 'text-kumo-subtle' }
   }
   if (record.state === 'pending') {
-    return { label: 'Pending', dotClass: 'bg-kumo-brand', textClass: 'text-kumo-strong' }
+    return { label: t("workshop-frontend.Activity.pending"), dotClass: 'bg-kumo-brand', textClass: 'text-kumo-strong' }
   }
   if (record.state === 'rejected') {
-    return { label: 'Denied', dotClass: 'bg-kumo-danger', textClass: 'text-kumo-danger' }
+    return { label: t("workshop-frontend.Activity.denied"), dotClass: 'bg-kumo-danger', textClass: 'text-kumo-danger' }
   }
-  return { label: 'Approved', dotClass: 'bg-kumo-success', textClass: 'text-kumo-subtle' }
+  return { label: t("workshop-frontend.Activity.approved"), dotClass: 'bg-kumo-success', textClass: 'text-kumo-subtle' }
 }
 
 function TypeIcon({ record, className }: { record: ActionLogEntry; className?: string }) {
+  useTranslation();
   const props = { size: 13, weight: 'bold' as const, className }
   if (record.type === 'observation') return <Eye {...props} />
   if (record.type === 'bindHook') return <Lightning {...props} />
   return <ShieldCheck {...props} />
 }
 
-function LoadOlderButton({ history, className, label = 'Load older' }: {
+function LoadOlderButton({ history, className, label = t("workshop-frontend.Activity.load_older") }: {
   history: { loadMore: () => void; isLoadingMore: boolean }
   className?: string
   label?: string
 }) {
+  const { t } = useTranslation();
   return (
     <WorkshopButton className={className} onClick={history.loadMore}
         disabled={history.isLoadingMore}>
-      {history.isLoadingMore ? 'Loading…' : label}
+      {history.isLoadingMore ? t("workshop-frontend.Inbox.loading") : label}
     </WorkshopButton>
   )
 }
@@ -130,6 +137,7 @@ function ActivityNotice({ icon, title, description, children }: {
   description?: string
   children?: ReactNode
 }) {
+  useTranslation();
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
       {icon && (
@@ -157,6 +165,7 @@ export default function Activity({
   onAutoApproveChange,
   autoApproveReloadTrigger,
 }: ActivityProps) {
+  const { t } = useTranslation();
   const { status: pendingStatus, pending: pendingActions } = useActions(overseer)
   const [historyFilter, setHistoryFilter] = useState<HistoryViewFilter>('all')
   const [processingActions, setProcessingActions] = useState<Set<number>>(new Set())
@@ -184,7 +193,7 @@ export default function Activity({
       else groups.push({ label, records: [record] })
     }
     return groups
-  }, [history.entries])
+  }, [history.entries, getLocale()])
 
   const resolveAction = useResolveAction(overseer, setProcessingActions)
 
@@ -195,7 +204,7 @@ export default function Activity({
       else await overseer.disableHook(hookId)
     } catch (error) {
       console.error('Failed to toggle hook:', error)
-      toasts.add({ title: `Failed to ${enabled ? 'enable' : 'disable'} hook`, variant: 'error' })
+      toasts.add({ title: (enabled ? t("workshop-frontend.Activity.failed_to_enable_hook") : t("workshop-frontend.Activity.failed_to_disable_hook")), variant: 'error' })
     } finally {
       setTogglingHooks(previous => {
         const next = new Set(previous)
@@ -218,9 +227,8 @@ export default function Activity({
         <>
           <div className={`${PANE_BAR} gap-2 px-5`}>
             <span className="text-[12.5px] font-medium leading-[17px] tracking-[-0.15px] text-kumo-default">
-              {pendingActions.length} {pendingActions.length === 1 ? 'request' : 'requests'} waiting
-            </span>
-            <span className="ml-auto text-[11.5px] leading-[17px] text-kumo-inactive">Oldest first</span>
+              {renderTranslation(t("workshop-frontend.Activity.requests_waiting"), { n: pendingActions.length })}</span>
+            <span className="ml-auto text-[11.5px] leading-[17px] text-kumo-inactive">{t("workshop-frontend.Activity.oldest_first")}</span>
           </div>
           <div className="min-h-0 flex-1 overflow-auto">
             {pendingActions.map(record => {
@@ -256,13 +264,11 @@ export default function Activity({
             })}
             {pendingStatus === 'checking' && (
               <p className="m-0 px-5 py-3 text-center text-[12px] leading-4 text-kumo-inactive">
-                Still checking older activity…
-              </p>
+                {t("workshop-frontend.Activity.still_checking_older_activity")}</p>
             )}
             {pendingStatus === 'error' && (
               <p className="m-0 px-5 py-3 text-center text-[12px] leading-4 text-kumo-inactive">
-                Could not finish checking for requests — reload the page to try again.
-              </p>
+                {t("workshop-frontend.Activity.could_not_finish_checking_for_requests_reload_the_page_to_try_aga")}</p>
             )}
           </div>
         </>
@@ -272,7 +278,7 @@ export default function Activity({
     if (pendingStatus === 'checking') {
       return (
         <div className="flex flex-1 items-center justify-center text-[13px] text-kumo-subtle">
-          {PENDING_CHECKING_COPY}
+          {PENDING_CHECKING_COPY()}
         </div>
       )
     }
@@ -280,8 +286,8 @@ export default function Activity({
     if (pendingStatus === 'error') {
       return (
         <ActivityNotice
-          title="Could not check for requests"
-          description="Reload the page to try again."
+          title={t("workshop-frontend.Activity.could_not_check_for_requests")}
+          description={t("workshop-frontend.Activity.reload_the_page_to_try_again")}
         />
       )
     }
@@ -289,12 +295,11 @@ export default function Activity({
     return (
       <ActivityNotice
         icon={<Check size={17} weight="bold" />}
-        title="Nothing to review"
-        description="Requests that need your approval show up here and in the workspace header."
+        title={t("workshop-frontend.Activity.nothing_to_review")}
+        description={t("workshop-frontend.Activity.requests_that_need_your_approval_show_up_here_and_in_the_workspa")}
       >
         <WorkshopButton className="mt-4" onClick={() => onViewChange('history')}>
-          View history
-        </WorkshopButton>
+          {t("workshop-frontend.Activity.view_history")}</WorkshopButton>
       </ActivityNotice>
     )
   }
@@ -304,9 +309,9 @@ export default function Activity({
       return (
         <div className="min-h-0 flex-1 overflow-auto">
           <div className="grid grid-cols-[54px_minmax(0,1fr)_auto_16px] items-center gap-3 border-b border-kumo-line bg-kumo-elevated/50 px-5 py-1.5 text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-            <span>Time</span>
-            <span>Event</span>
-            <span>Status</span>
+            <span>{t("workshop-frontend.Activity.time")}</span>
+            <span>{t("workshop-frontend.Activity.event_2")}</span>
+            <span>{t("workshop-frontend.Activity.status")}</span>
             <span />
           </div>
           {historyGroups.map(group => (
@@ -334,9 +339,8 @@ export default function Activity({
           {history.loadMoreFailed ? (
             <div className="flex items-center justify-center gap-3 py-3">
               <span className="text-[12px] leading-4 text-kumo-inactive">
-                Couldn't load older activity
-              </span>
-              <LoadOlderButton history={history} label="Retry" />
+                {t("workshop-frontend.Activity.couldn_t_load_older_activity")}</span>
+              <LoadOlderButton history={history} label={t("workshop-frontend.Activity.retry")} />
             </div>
           ) : history.hasMore && (
             <div className="flex justify-center py-3">
@@ -349,8 +353,8 @@ export default function Activity({
 
     if (history.status === 'error') {
       return (
-        <ActivityNotice title="Could not load activity">
-          <LoadOlderButton className="mt-4" history={history} label="Retry" />
+        <ActivityNotice title={t("workshop-frontend.Activity.could_not_load_activity")}>
+          <LoadOlderButton className="mt-4" history={history} label={t("workshop-frontend.Activity.retry")} />
         </ActivityNotice>
       )
     }
@@ -358,14 +362,13 @@ export default function Activity({
     if (history.status === 'loading') {
       return (
         <div className="flex flex-1 items-center justify-center text-[13px] text-kumo-subtle">
-          Loading activity…
-        </div>
+          {t("workshop-frontend.Activity.loading_activity")}</div>
       )
     }
 
     if (history.hasMore) {
       return (
-        <ActivityNotice title="Nothing in the most recent activity">
+        <ActivityNotice title={t("workshop-frontend.Activity.nothing_in_the_most_recent_activity")}>
           <LoadOlderButton className="mt-4" history={history} />
         </ActivityNotice>
       )
@@ -374,21 +377,20 @@ export default function Activity({
     if (historyFilter === 'all') {
       return (
         <ActivityNotice
-          title="No activity yet"
-          description="Every resource an agent reads or changes is recorded here."
+          title={t("workshop-frontend.Activity.no_activity_yet")}
+          description={t("workshop-frontend.Activity.every_resource_an_agent_reads_or_changes_is_recorded_here")}
         />
       )
     }
 
     return (
-      <ActivityNotice title="No matching events">
+      <ActivityNotice title={t("workshop-frontend.Activity.no_matching_events")}>
         <button
           type="button"
           onClick={() => setHistoryFilter('all')}
           className="mt-1.5 cursor-pointer text-[12px] font-medium text-kumo-subtle hover:text-kumo-default"
         >
-          Show all activity
-        </button>
+          {t("workshop-frontend.Activity.show_all_activity")}</button>
       </ActivityNotice>
     )
   }
@@ -416,8 +418,7 @@ export default function Activity({
                 </button>
               ))}
               <span className="ml-auto pr-2 text-[11.5px] leading-[17px] tabular-nums text-kumo-inactive">
-                {history.entries.length} loaded
-              </span>
+                {renderTranslation(t("workshop-frontend.Activity.loaded"), { length: history.entries.length })}</span>
             </div>
             {renderHistoryBody()}
           </>
@@ -457,6 +458,7 @@ function AutoApprovalPanel({
   overseer: RpcStub<Overseer>
   reloadTrigger?: number
 }) {
+  const { t } = useTranslation();
   const { entries, isLoading, loadError, pending, refresh, setEnabled } = useAutoApproval(overseer)
   const { authenticatedApi } = useAuthenticatedApi()
   const vendorBranding = useVendorBranding(authenticatedApi)
@@ -486,18 +488,17 @@ function AutoApprovalPanel({
       }
     }
     for (const group of byConnection.values()) {
-      group.title ||= 'Unavailable connection'
+      group.title ||= t("workshop-frontend.Activity.unavailable_connection")
       group.entries = group.entries.toSorted((a, b) =>
         a.actionKind.label.localeCompare(b.actionKind.label))
     }
     return [...byConnection.values()].toSorted((a, b) => a.title.localeCompare(b.title))
-  }, [entries])
+  }, [entries, getLocale()])
 
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center text-[13px] text-kumo-subtle">
-        Loading auto-approval…
-      </div>
+        {t("workshop-frontend.Activity.loading_auto_approval")}</div>
     )
   }
 
@@ -505,17 +506,16 @@ function AutoApprovalPanel({
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
         <p className="m-0 text-[13px] font-medium leading-[18px] tracking-[-0.25px] text-kumo-default">
-          {loadError ? 'Could not load auto-approval' : 'Nothing can run automatically'}
+          {loadError ? t("workshop-frontend.Activity.could_not_load_auto_approval") : t("workshop-frontend.Activity.nothing_can_run_automatically")}
         </p>
         <p className="mt-1 max-w-xs text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
           {loadError
-            ? 'The current rules may be incomplete. Try loading them again.'
-            : 'Action types appear here once a connected resource offers one its author marked safe to apply without review.'}
+            ? t("workshop-frontend.Activity.the_current_rules_may_be_incomplete_try_loading_them_again")
+            : t("workshop-frontend.Activity.action_types_appear_here_once_a_connected_resource_offers_one_it")}
         </p>
         {loadError && (
           <WorkshopButton className="mt-4" onClick={() => void refresh()}>
-            Retry
-          </WorkshopButton>
+            {t("workshop-frontend.Activity.retry")}</WorkshopButton>
         )}
       </div>
     )
@@ -526,8 +526,8 @@ function AutoApprovalPanel({
       <div className={`${PANE_BAR} gap-3 px-5`}>
         <p className="m-0 min-w-0 flex-1 truncate text-[12.5px] leading-[17px] tracking-[-0.2px] text-kumo-subtle">
           {loadError
-            ? 'Some auto-approval options could not be loaded.'
-            : 'Actions agents may take without asking. Everything else waits for your review.'}
+            ? t("workshop-frontend.Activity.some_auto_approval_options_could_not_be_loaded")
+            : t("workshop-frontend.Activity.actions_agents_may_take_without_asking_everything_else_waits_for")}
         </p>
         {loadError && (
           <button
@@ -535,8 +535,7 @@ function AutoApprovalPanel({
             onClick={() => void refresh()}
             className="cursor-pointer text-[12px] font-medium text-kumo-default hover:text-kumo-default-hover"
           >
-            Retry
-          </button>
+            {t("workshop-frontend.Activity.retry")}</button>
         )}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
@@ -568,17 +567,17 @@ function AutoApprovalPanel({
                     </span>
                     <span className="mt-0.5 block text-[12px] leading-4 tracking-[-0.2px] text-kumo-inactive">
                       {entry.orphaned
-                        ? 'This connection no longer offers this action; the rule still applies.'
+                        ? t("workshop-frontend.Activity.this_connection_no_longer_offers_this_action_the_rule_still_appl")
                         : entry.enabled
-                          ? 'Applied without asking'
-                          : 'Waits for your approval'}
+                          ? t("workshop-frontend.Activity.applied_without_asking")
+                          : t("workshop-frontend.Activity.waits_for_your_approval")}
                     </span>
                   </span>
                   <Switch
                     size="sm"
                     checked={entry.enabled}
                     disabled={busy}
-                    aria-label={`${entry.enabled ? 'Disable' : 'Enable'} auto-approval for ${entry.actionKind.label}`}
+                    aria-label={(entry.enabled ? t("workshop-frontend.Activity.disable_auto_approval_for", { name: entry.actionKind.label }) : t("workshop-frontend.Activity.enable_auto_approval_for", { name: entry.actionKind.label }))}
                     onCheckedChange={enabled => void setEnabled(entry, enabled)}
                   />
                 </div>
@@ -608,6 +607,7 @@ function ReviewRequest({
   onReject: () => void
   onAlwaysApprove?: () => void
 }) {
+  useTranslation();
   const resourceUrl = safeExternalUrl(record.resourceUrl)
   return (
     <article className="border-b border-kumo-line px-5 py-3 transition-colors hover:bg-kumo-elevated/50">
@@ -673,6 +673,7 @@ function HistoryRow({
   togglingHook: boolean
   onToggleHook: (hookId: number, enabled: boolean) => void
 }) {
+  const { t } = useTranslation();
   const resourceUrl = safeExternalUrl(record.resourceUrl)
   const resolvedBy = record.type === 'action' ? record.resolvedBy : undefined
   const autoApproved = record.type === 'action' && record.autoApproved === true
@@ -721,7 +722,7 @@ function HistoryRow({
             <span className="text-kumo-subtle">{record.resourceTitle}</span>
             {resolvedBy && (
               <ResolverBadge profileId={resolvedBy.id}>
-                {autoApproved ? `Auto-approved (${resolvedBy.name}'s rule)` : `By ${resolvedBy.name}`}
+                {autoApproved ? t("workshop-frontend.Activity.auto_approved_s_rule", { value1: resolvedBy.name }) : t("workshop-frontend.Activity.by", { value1: resolvedBy.name })}
               </ResolverBadge>
             )}
             {resourceUrl && (
@@ -731,8 +732,7 @@ function HistoryRow({
                 rel="noopener noreferrer"
                 className="text-kumo-subtle hover:text-kumo-default hover:underline"
               >
-                Open resource
-              </a>
+                {t("workshop-frontend.Activity.open_resource")}</a>
             )}
             {record.type === 'bindHook' && record.hookId !== undefined && (
               <HookToggle
@@ -749,6 +749,7 @@ function HistoryRow({
 }
 
 function ResolverBadge({ profileId, children }: { profileId: string; children: ReactNode }) {
+  useTranslation();
   const { authenticatedApi } = useAuthenticatedApi()
   const avatarUrl = useAvatar(authenticatedApi, profileId)
   return (

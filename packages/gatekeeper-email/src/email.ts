@@ -1,3 +1,5 @@
+import { translate } from "@gadgets/i18n/core";
+import { bufferEmail, type BufferedEmail, type EmailDeliveryResult, type GadgetEmailReceiver } from "@gadgets/backend-utils/email-delivery";
 import { WorkerEntrypoint, DurableObject, RpcTarget, RpcStub } from "cloudflare:workers";
 import { skipRpcValidation, validateRpc } from "capnweb-validate";
 import {
@@ -30,13 +32,6 @@ import TYPES_CODE from "./types.txt";
 import EMAIL_CONFIGURATOR_HTML from "./generated/email-configurator-ui.txt";
 import type { EmailMailboxConfiguratorRpc } from "./configurator/email-configurator-types";
 import EMAIL_LOGO_SVG from "./email-logo.svg";
-import { obsContext } from "./observability.js";
-
-const VENDOR_ID = "email";
-
-const logger = obsContext.createLogger({
-  component: "gatekeeper.email", vendorId: VENDOR_ID,
-});
 
 const NONCE_BYTES = 32;
 const NONCE_LIFETIME_MS = 10 * 60 * 1000;  // 10 minutes
@@ -132,25 +127,25 @@ class EmailMailboxConfiguratorUI extends RpcTarget implements EmailMailboxConfig
 // =======================================================================================
 
 const SELF_CLOSING_HTML = `<!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
   <body>
     <script type="text/javascript">window.close();</script>
-    <p>Authorization complete. You may close this tab and return to Cloudflare OS.
+    <p>認証が完了しました。このタブを閉じてCloudflare OSに戻ってください。</p>
   </body>
 </html>`;
 
 const INVALID_LINK_HTML = `<!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authorization Link Expired</title>
+    <title>認証リンクの有効期限切れ</title>
   </head>
   <body style="font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f5f5f5;">
     <div style="max-width: 520px; padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center;">
-      <h1 style="color: #d97706; font-size: 1.5rem; margin: 0 0 1rem 0;">Authorization Link Expired</h1>
-      <p style="color: #555; line-height: 1.6; margin: 0 0 1.5rem 0;">This authorization link is invalid or has expired. Please return to Cloudflare OS and try again.</p>
-      <button onclick="window.close()" style="padding: 0.5rem 1.5rem; background: #d97706; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer;">Close</button>
+      <h1 style="color: #d97706; font-size: 1.5rem; margin: 0 0 1rem 0;">認証リンクの有効期限切れ</h1>
+      <p style="color: #555; line-height: 1.6; margin: 0 0 1.5rem 0;">この認証リンクは無効か、有効期限が切れています。Cloudflare OSに戻ってやり直してください。</p>
+      <button onclick="window.close()" style="padding: 0.5rem 1.5rem; background: #d97706; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer;">${translate("ja", "workshop-frontend.GatekeeperModal.close")}</button>
     </div>
   </body>
 </html>`;
@@ -158,93 +153,126 @@ const INVALID_LINK_HTML = `<!DOCTYPE html>
 // =======================================================================================
 // Default export: fetch handler (for connectAccount flow) and email handler (for inbound).
 
-export default {
-  async fetch(req: Request, env: Env, ctx: ExecutionContext) {
-    let url = new URL(req.url);
-    let basePath = getBasePath(env);
-    if (!url.pathname.startsWith(basePath + "/") && url.pathname !== basePath) {
-      throw new Error(`Request path ${url.pathname} does not match BASE_URL path ${basePath}`);
-    }
-    let relPath = url.pathname.slice(basePath.length);
-    let path = relPath.slice(1).split("/");
-
-    if (path.length === 2 && path[0].length === 64 && path[1].length === NONCE_BYTES * 2) {
-      // This is a connectAccount completion URL. Route to the UserAccount DO.
-      let userObjectId = ctx.exports.UserAccount.idFromString(path[0]);
-      let stub: DurableObjectStub<UserAccount> = ctx.exports.UserAccount.get(userObjectId);
-      if (!await stub.complete(path[1])) {
-        return new Response(INVALID_LINK_HTML, {
-          headers: { "Content-Type": "text/html; charset=utf-8" }
-        });
-      }
-      return new Response(SELF_CLOSING_HTML, {
-        headers: {
-          "Content-Type": "text/html; charset=utf-8"
-        }
-      });
-    } else {
-      return new Response("Not Found", { status: 404 });
-    }
-  },
-
-  async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext) {
-    // Parse the recipient address to extract the local part (username).
-    let toAddress = message.to;
-    let atIndex = toAddress.indexOf("@");
-    if (atIndex < 0) {
-      message.setReject("Invalid recipient address");
-      return;
-    }
-    let name = toAddress.slice(0, atIndex);
-
-    // Route to the EmailAddress DO for this username.
-    let stub: DurableObjectStub<EmailAddress> =
-        ctx.exports.EmailAddress.getByName(name);
-
-    // Parse the email using postal-mime.
-    let parsed: Email = await PostalMime.parse(message.raw);
-
-    // Build the structured IncomingEmail.
-    let from: EmailAddressType = parsed.from
-        ? { name: parsed.from.name || "", address: parsed.from.address || "" }
-        : { name: "", address: message.from };
-
-    let to: EmailAddressType[] = (parsed.to || []).map(addr => ({
-      name: addr.name || "",
-      address: addr.address || "",
-    }));
-
-    let cc: EmailAddressType[] = (parsed.cc || []).map(addr => ({
-      name: addr.name || "",
-      address: addr.address || "",
-    }));
-
-    let attachments: EmailAttachment[] = (parsed.attachments || []).map(att => ({
-      filename: att.filename || null,
-      mimeType: att.mimeType,
-      disposition: att.disposition || null,
-      content: att.content as ArrayBuffer,
-    }));
-
-    let incomingEmail: IncomingEmail = {
-      from,
-      to,
-      cc,
-      subject: parsed.subject || "",
-      date: parsed.date || new Date().toISOString(),
-      text: parsed.text || null,
-      html: parsed.html || null,
-      attachments,
-    };
-
+/** Handle connection callbacks and inbound mail on the default service entrypoint. */
+@validateRpc()
+export default class EmailWorker extends WorkerEntrypoint<Env> implements GadgetEmailReceiver {
+  /** Complete an email account connection through the existing HTTP callback. */
+  @skipRpcValidation()
+  async fetch(req: Request): Promise<Response> {
+    const env = this.env;
+    const ctx = this.ctx;
     try {
-      await stub.receiveEmail(incomingEmail);
+      let url = new URL(req.url);
+      let basePath = getBasePath(env);
+      if (!url.pathname.startsWith(basePath + "/") && url.pathname !== basePath) {
+        throw new Error(`Request path ${url.pathname} does not match BASE_URL path ${basePath}`);
+      }
+      let relPath = url.pathname.slice(basePath.length);
+      let path = relPath.slice(1).split("/");
+
+      if (path.length === 2 && path[0].length === 64 && path[1].length === NONCE_BYTES * 2) {
+        // This is a connectAccount completion URL. Route to the UserAccount DO.
+        let userObjectId = ctx.exports.UserAccount.idFromString(path[0]);
+        let stub: DurableObjectStub<UserAccount> = ctx.exports.UserAccount.get(userObjectId);
+        if (!await stub.complete(path[1])) {
+          return new Response(INVALID_LINK_HTML, {
+            headers: { "Content-Type": "text/html; charset=utf-8" }
+          });
+        }
+        return new Response(SELF_CLOSING_HTML, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8"
+          }
+        });
+      } else {
+        return new Response("Not Found", { status: 404 });
+      }
     } catch (err) {
-      logger.error("email delivery failed", {
-        event: "email.delivery.failed", error: err,
-      });
-      // If no hook is configured or delivery fails, reject the email.
-      message.setReject("Delivery failed: " + err);
+      console.error("[EmailWorker.fetch] failed", { method: req.method, err });
+      throw err;
+    }
+  }
+
+  /** Buffer direct Email Routing events and apply the shared delivery decision. */
+  @skipRpcValidation()
+  async email(message: ForwardableEmailMessage): Promise<void> {
+    try {
+      const result = await this.deliverEmail(await bufferEmail(message));
+      if (!result.accepted) message.setReject(result.reason);
+    } catch (err) {
+      console.error("[EmailWorker.email] failed", { rawSize: message.rawSize, err });
+      throw err;
+    }
+  }
+
+  /** Query the authoritative address DO without parsing or consuming MIME bytes. */
+  async hasEmailHook(recipient: string): Promise<boolean> {
+    try {
+      const atIndex = recipient.indexOf("@");
+      if (atIndex < 0) return false;
+      return await this.ctx.exports.EmailAddress.getByName(recipient.slice(0, atIndex)).hasEmailHook();
+    } catch (err) {
+      console.error("[EmailWorker.hasEmailHook] failed", { err });
+      throw err;
+    }
+  }
+
+  /** Parse buffered MIME and deliver it through the address's current Gadget hook. */
+  async deliverEmail(message: BufferedEmail): Promise<EmailDeliveryResult> {
+    try {
+      // Parse the recipient address to extract the local part (username).
+      let toAddress = message.to;
+      let atIndex = toAddress.indexOf("@");
+      if (atIndex < 0) {
+        return { accepted: false, reason: "Invalid recipient address" };
+      }
+      let name = toAddress.slice(0, atIndex);
+
+      // Route to the EmailAddress DO for this username.
+      let stub: DurableObjectStub<EmailAddress> =
+          this.ctx.exports.EmailAddress.getByName(name);
+
+      // Parse the email using postal-mime.
+      let parsed: Email = await PostalMime.parse(message.rawBytes);
+
+      // Build the structured IncomingEmail.
+      let from: EmailAddressType = parsed.from
+          ? { name: parsed.from.name || "", address: parsed.from.address || "" }
+          : { name: "", address: message.from };
+
+      let to: EmailAddressType[] = (parsed.to || []).map(addr => ({
+        name: addr.name || "",
+        address: addr.address || "",
+      }));
+
+      let cc: EmailAddressType[] = (parsed.cc || []).map(addr => ({
+        name: addr.name || "",
+        address: addr.address || "",
+      }));
+
+      let attachments: EmailAttachment[] = (parsed.attachments || []).map(att => ({
+        filename: att.filename || null,
+        mimeType: att.mimeType,
+        disposition: att.disposition || null,
+        content: att.content as ArrayBuffer,
+      }));
+
+      let incomingEmail: IncomingEmail = {
+        from,
+        to,
+        cc,
+        subject: parsed.subject || "",
+        date: parsed.date || new Date().toISOString(),
+        text: parsed.text || null,
+        html: parsed.html || null,
+        attachments,
+      };
+
+      await stub.receiveEmail(incomingEmail);
+      return { accepted: true };
+    } catch (err) {
+      console.error("[EmailWorker.deliverEmail] failed", { rawSize: message.rawBytes.byteLength, err });
+      return { accepted: false, reason: "Delivery failed: " + err };
     }
   }
 };
@@ -619,6 +647,16 @@ export class EmailHookControllerImpl extends WorkerEntrypoint<Env, EmailGatekeep
 // Stores the hook Fetcher and dispatches inbound emails to it.
 
 export class EmailAddress extends DurableObject<Env> {
+  /** Report a claimed address with an enabled hook; ownership alone does not enable delivery. */
+  async hasEmailHook(): Promise<boolean> {
+    try {
+      return !!this.ctx.storage.kv.get<string>("owner") && this.ctx.storage.kv.get("hook") !== undefined;
+    } catch (err) {
+      console.error("[EmailAddress.hasEmailHook] failed", { err });
+      throw err;
+    }
+  }
+
   /**
    * Claim this email address for a user account. The first caller to claim an address becomes
    * its permanent owner. Subsequent calls from the same owner are idempotent. Calls from a

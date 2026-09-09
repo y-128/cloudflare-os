@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 import { formatAttachmentSize } from "../../attachmentFormatting";
 
 export const MAX_CHAT_ATTACHMENT_BYTES = 1024 * 1024;
@@ -8,7 +9,7 @@ const CHAT_ATTACHMENT_IMAGE_MAX_EDGE = 1568;
 const canvasToBlob = (canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> =>
   new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => blob ? resolve(blob) : reject(new Error("Failed to encode image.")),
+      (blob) => blob ? resolve(blob) : reject(new Error(t("workshop-frontend.prepareChatAttachment.failed_to_encode_image"))),
       type,
       quality,
     );
@@ -20,14 +21,14 @@ export const prepareChatAttachment = async (
   if (!file.type.startsWith("image/")) {
     if (file.size > MAX_CHAT_ATTACHMENT_BYTES) {
       throw new Error(
-        `Attachments must be ${formatAttachmentSize(MAX_CHAT_ATTACHMENT_BYTES)} or smaller.`,
+        t("workshop-frontend.prepareChatAttachment.attachments_must_be_or_smaller", { size: formatAttachmentSize(MAX_CHAT_ATTACHMENT_BYTES) ?? "" }),
       );
     }
     return { blob: file, mimeType: file.type || "application/octet-stream" };
   }
   if (file.size > MAX_CHAT_ATTACHMENT_SOURCE_IMAGE_BYTES) {
     throw new Error(
-      `Images must be ${formatAttachmentSize(MAX_CHAT_ATTACHMENT_SOURCE_IMAGE_BYTES)} or smaller before resizing.`,
+      t("workshop-frontend.prepareChatAttachment.images_must_be_or_smaller_before_resizing", { size: formatAttachmentSize(MAX_CHAT_ATTACHMENT_SOURCE_IMAGE_BYTES) ?? "" }),
     );
   }
 
@@ -57,7 +58,7 @@ export const prepareChatAttachment = async (
     const blob = await canvasToBlob(canvas, outputMimeType, quality);
     if (blob.size > MAX_CHAT_ATTACHMENT_BYTES) {
       throw new Error(
-        `Attachments must be ${formatAttachmentSize(MAX_CHAT_ATTACHMENT_BYTES)} or smaller.`,
+        t("workshop-frontend.prepareChatAttachment.attachments_must_be_or_smaller", { size: formatAttachmentSize(MAX_CHAT_ATTACHMENT_BYTES) ?? "" }),
       );
     }
     return { blob, mimeType: outputMimeType };

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, RadioCards, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { DriveAccountConfiguratorRpc, DriveAccountConfiguratorValues } from "./drive-account-configurator-types";
 
@@ -11,14 +12,14 @@ export default {
   render({ setValues }) {
     return <Section>
       <Field
-        label="Google Drive account"
-        description="Find files and folders anywhere this Google account can read in Drive, including shared drives. Full-text search examines indexed file content, descriptions, and OCR text; search results contain metadata only, while native Google Docs and Sheets can be opened read-only."
+        label={t("gatekeeper-google.drive-account-configurator-ui.google_drive_account")}
+        description={t("gatekeeper-google.drive-account-configurator-ui.find_files_and_folders_anywhere_this_google_account_can_read_in_d")}
       >
         <RadioCards
           value="account"
           options={[{
-            value: "account", title: "Everything this account can read in Drive",
-            description: "Includes direct lookup by file ID. Search results contain metadata only; native Google Docs and Sheets can be opened in read-only content sessions.",
+            value: "account", title: t("gatekeeper-google.drive-account-configurator-ui.everything_this_account_can_read_in_drive"),
+            description: t("gatekeeper-google.drive-account-configurator-ui.includes_direct_lookup_by_file_id_search_results_contain_metadata"),
           }]}
           onChange={() => setValues({ scope: "account" })}
         />

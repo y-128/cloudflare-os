@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { GoogleDocConfiguratorRpc, GoogleDocConfiguratorValues } from "./google-doc-configurator-types";
 
@@ -14,11 +15,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Document" description="Search recent documents from Drive.">
+      <Field label={t("gatekeeper-google.google-doc-configurator-ui.document")} description={t("gatekeeper-google.google-doc-configurator-ui.search_recent_documents_from_drive")}>
         <Autocomplete
           name="docId"
           value={values.docId}
-          placeholder="Search recent docs..."
+          placeholder={t("gatekeeper-google.google-doc-configurator-ui.search_recent_docs")}
           loadOptions={query => ui.listDocs(query)}
           onChange={docId => setValues({ docId })}
         />

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -155,7 +156,7 @@ describe("ChatComposer", () => {
     });
 
     expect(textarea.value).toBe("Keep this draft");
-    expect(container.textContent?.includes("Connection hiccup")).toBe(transient);
+    expect(container.textContent?.includes(t("workshop-frontend.ChatComposer.connection_hiccup_your_message_may_not_have_been_sent_check_the_t"))).toBe(transient);
     expect(consoleError).toHaveBeenCalledTimes(transient ? 0 : 1);
     consoleError.mockRestore();
   });
@@ -193,7 +194,7 @@ describe("ChatComposer", () => {
       textarea.dispatchEvent(new Event("input", { bubbles: true }));
     });
     textarea.setSelectionRange(7, 7);
-    const add = container.querySelector<HTMLButtonElement>('[aria-label="Add to conversation"]')!;
+    const add = container.querySelector<HTMLButtonElement>(`[aria-label="${t("workshop-frontend.ComposerAddMenu.add_to_conversation")}"]`)!;
     await act(async () => add.click());
     await act(async () => vi.waitFor(() => expect(
       Array.from(document.querySelectorAll<HTMLButtonElement>('[role="option"]'))
@@ -208,17 +209,17 @@ describe("ChatComposer", () => {
 
     expect(textarea.value).toBe("before /review after");
     expect(document.body.textContent)
-      .toContain("Slash command /review from Projects is ready to send");
+      .toContain(t("workshop-frontend.ChatComposer.slash_command_from_is_ready_to_send", { value1: "review", value2: "Projects" }));
     expect(document.activeElement).toBe(textarea);
 
     await act(async () => add.click());
     const actions = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="option"]'));
     expect(actions).toHaveLength(2);
     expect(actions.every((action) => !action.disabled)).toBe(true);
-    expect(document.querySelector('[aria-label="Search skills"]')).toBeNull();
+    expect(document.querySelector(`[aria-label="${t("workshop-frontend.ComposerAddMenu.search_skills")}"]`)).toBeNull();
     expect(container.textContent).not.toContain("Add resource");
     expect(container.textContent).not.toContain("Legacy resource");
-    const connection = actions.find((action) => action.textContent?.includes("Add a new connection"))!;
+    const connection = actions.find((action) => action.textContent?.includes(t("workshop-frontend.ComposerAddMenu.add_a_new_connection")))!;
     await act(async () => connection.click());
     expect(testState.gatekeeperModalProps?.open).toBe(true);
     expect(listSlashCommands).toHaveBeenCalledTimes(1);
@@ -340,11 +341,11 @@ describe("ChatComposer", () => {
       />,
     ));
 
-    const add = container.querySelector<HTMLButtonElement>('[aria-label="Add to conversation"]')!;
+    const add = container.querySelector<HTMLButtonElement>(`[aria-label="${t("workshop-frontend.ComposerAddMenu.add_to_conversation")}"]`)!;
     await act(async () => add.click());
     await act(async () => vi.waitFor(() => expect(document.body.textContent).toContain("first skill")));
     const connect = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="option"]'))
-      .find((option) => option.textContent?.includes("Add a new connection"))!;
+      .find((option) => option.textContent?.includes(t("workshop-frontend.ComposerAddMenu.add_a_new_connection")))!;
     await act(async () => connect.click());
     expect(testState.gatekeeperModalProps?.open).toBe(true);
 

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -170,7 +171,7 @@ describe("useComposerResources", () => {
     expect(harness.onConnectionCreated).not.toHaveBeenCalled();
     expect(harness.onSelectionRequest).not.toHaveBeenCalled();
     expect(harness.onError).toHaveBeenCalledWith(
-      "The prompt changed before the resource could be added",
+      t("workshop-frontend.useComposerResources.the_prompt_changed_before_the_resource_could_be_added"),
     );
   });
 

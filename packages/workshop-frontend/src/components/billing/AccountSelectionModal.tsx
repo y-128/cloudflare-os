@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useCallback, useEffect, useState } from 'react'
 import { CloudflareUsageInfo, CloudflareAccountOption } from '@gadgets/workshop-shared/api'
 import { Dialog, Button, Loader, Radio, useKumoToastManager } from '@cloudflare/kumo'
@@ -11,6 +12,7 @@ import { useCloudflareLimitsEnabled } from '../../ServerConfigContext'
  * the selection is pending, so it can't be missed after connecting. Mounted once in the app shell.
  */
 export default function AccountSelectionModal() {
+  const { t } = useTranslation();
   const limitsEnabled = useCloudflareLimitsEnabled()
   const auth = useOptionalAuthenticatedApi()
   const toasts = useKumoToastManager()
@@ -55,11 +57,11 @@ export default function AccountSelectionModal() {
     setSaving(true)
     try {
       await auth.authenticatedApi.selectCloudflareAccount(chosen)
-      toasts.add({ title: 'Cloudflare account selected', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AccountSelectionModal.cloudflare_account_selected"), variant: 'success' })
       setNeedsSelection(false)
       setAccounts(null)
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to select account'
+      const msg = err instanceof Error ? err.message : t("workshop-frontend.UsageSettings.failed_to_select_account")
       toasts.add({ title: msg, variant: 'error' })
     } finally {
       setSaving(false)
@@ -72,20 +74,16 @@ export default function AccountSelectionModal() {
     <Dialog.Root open role="alertdialog">
       <Dialog className="responsive-dialog overflow-y-auto p-6 sm:w-[480px]" size="base">
         <Dialog.Title className="text-lg font-semibold mb-2 flex items-center gap-2">
-          <Warning size={22} weight="bold" className="text-kumo-warning" />
-          Choose a Cloudflare account
-        </Dialog.Title>
+          <Warning size={22} weight="bold" className="text-kumo-warning" />{t("workshop-frontend.AccountSelectionModal.choose_a_cloudflare_account")}</Dialog.Title>
 
         <div className="space-y-4">
           <p className="text-sm text-kumo-subtle">
-            Your Cloudflare connection has access to multiple accounts. Select the one whose credits
-            should be billed for usage beyond the free tier.
-          </p>
+            {t("workshop-frontend.AccountSelectionModal.your_cloudflare_connection_has_access_to_multiple_accounts_select")}</p>
 
           {accounts === null ? (
             <div className="flex justify-center py-6"><Loader size="base" /></div>
           ) : accounts.length === 0 ? (
-            <p className="text-sm text-kumo-subtle">No accounts available on this connection.</p>
+            <p className="text-sm text-kumo-subtle">{t("workshop-frontend.AccountSelectionModal.no_accounts_available_on_this_connection")}</p>
           ) : (
             <Radio.Group
               appearance="card"
@@ -93,7 +91,7 @@ export default function AccountSelectionModal() {
               onValueChange={setChosen}
               disabled={saving}
             >
-              <Radio.Legend className="sr-only">Cloudflare account</Radio.Legend>
+              <Radio.Legend className="sr-only">{t("workshop-frontend.AccountSelectionModal.cloudflare_account")}</Radio.Legend>
               {accounts.map((a) => (
                 <Radio.Item key={a.accountId} value={a.accountId} label={a.accountName} />
               ))}
@@ -107,11 +105,9 @@ export default function AccountSelectionModal() {
               // un-actionable modal — let them retry or dismiss (it re-checks on focus).
               <>
                 <Button variant="ghost" onClick={() => setNeedsSelection(false)}>
-                  Dismiss
-                </Button>
+                  {t("workshop-frontend.AccountSelectionModal.dismiss")}</Button>
                 <Button variant="secondary" onClick={() => setAccounts(null)}>
-                  Try again
-                </Button>
+                  {t("workshop-frontend.AccountSelectionModal.try_again")}</Button>
               </>
             ) : (
               <Button
@@ -120,8 +116,7 @@ export default function AccountSelectionModal() {
                 loading={saving}
                 disabled={!chosen || saving}
               >
-                Save
-              </Button>
+                {t("workshop-frontend.AccountSelectionModal.save")}</Button>
             )}
           </div>
         </div>

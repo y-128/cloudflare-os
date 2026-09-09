@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useState, useEffect, useRef } from 'react'
 import { Text, Loader, Banner } from '@cloudflare/kumo'
 import { Sparkle } from '@phosphor-icons/react'
@@ -133,10 +134,12 @@ const UI_BUNDLE_LOAD_TIMEOUT_MS = 20_000
 const RECONNECT_TIMEOUT_MS = 5_000
 
 export default function GadgetUI(props: GadgetUIProps) {
+  useTranslation();
   return <GadgetUISession key={props.chatId} {...props} />
 }
 
 function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chatId, onConsoleLog, onIframeEscape }: GadgetUIProps) {
+  const { t } = useTranslation();
   const [sandboxedHtml, setSandboxedHtml] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -283,7 +286,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
       if (!isCurrent()) return
       loadGenerationRef.current++      // so a late reply can no longer write state
       setLoading(false)
-      setError('Timed out loading this view.')
+      setError(t("workshop-frontend.GadgetUI.timed_out_loading_this_view"))
     }, UI_BUNDLE_LOAD_TIMEOUT_MS)
 
     const loadUiBundle = async () => {
@@ -304,7 +307,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
       } catch (err) {
         if (!isCurrent()) return
         console.error('Failed to load UI bundle:', err)
-        setError('Failed to load UI bundle')
+        setError(t("workshop-frontend.GadgetUI.failed_to_load_ui_bundle"))
       } finally {
         if (isCurrent()) setLoading(false)
         clearTimeout(giveUp)
@@ -373,7 +376,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
           port.close()
           if (!isCurrent()) return
           console.error('Failed to establish RPC connection:', caught)
-          setError('Failed to connect gadget to server')
+          setError(t("workshop-frontend.GadgetUI.failed_to_connect_gadget_to_server"))
         } finally {
           if (handshakePendingRef.current === generation) handshakePendingRef.current = null
         }
@@ -404,8 +407,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
         style={{ height }}
       >
         <Text variant="secondary">
-          Switch to this tab to load the Gadget UI
-        </Text>
+          {t("workshop-frontend.GadgetUI.switch_to_this_tab_to_load_the_gadget_ui")}</Text>
       </div>
     )
   }
@@ -434,7 +436,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
       }}>
         <Banner
           variant="error"
-          title="Error"
+          title={t("workshop-frontend.GadgetUI.error")}
           description={error}
           action={
             <Banner.Action
@@ -445,8 +447,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
                 setRetryNonce(n => n + 1)
               }}
             >
-              Try again
-            </Banner.Action>
+              {t("gatekeeper-scheduler.SchedulerPage.try_again")}</Banner.Action>
           }
         />
       </div>
@@ -477,11 +478,9 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
           </div>
           <div className="space-y-1">
             <h2 className="text-[20px] leading-7 font-normal tracking-[-0.45px] text-kumo-default">
-              No gadget UI yet
-            </h2>
+              {t("workshop-frontend.GadgetUI.no_gadget_ui_yet")}</h2>
             <p className="text-[15px] leading-5 font-normal tracking-[-0.3px] text-kumo-subtle">
-              When the gadget builds one, it will appear here.
-            </p>
+              {t("workshop-frontend.GadgetUI.when_the_gadget_builds_one_it_will_appear_here")}</p>
           </div>
         </div>
       </div>
@@ -501,7 +500,7 @@ function GadgetUISession({ gadget, height, reloadTrigger, isVisible = true, chat
           border: 'none'
         }}
         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-        title="Gadget UI"
+        title={t("workshop-frontend.GadgetUI.gadget_ui")}
       />
     </div>
   )

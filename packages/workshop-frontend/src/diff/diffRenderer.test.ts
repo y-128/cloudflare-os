@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 import { EditorState } from '@codemirror/state'
@@ -148,7 +149,7 @@ describe('diffRenderExtension (modified side)', () => {
     })
     const dom = widgets(collapsed)[0].widget.toDOM(null as unknown as EditorView) as HTMLElement
     const button = dom.querySelector('button')!
-    expect(button.textContent).toBe('Show 34 hidden deleted lines') // 130 - 2*48
+    expect(button.textContent).toBe(t("workshop-frontend.diffRenderer.show_hidden_deleted_lines", { n: "34" })) // 130 - 2*48
     expect(dom.children.length).toBe(97) // 48 + button + 48
     button.dispatchEvent(new MouseEvent('click'))
     expect(expanded).toBe(diffModel.changes[0].key)

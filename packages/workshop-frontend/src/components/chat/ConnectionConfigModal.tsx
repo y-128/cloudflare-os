@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useState } from 'react'
 import { Dialog, Button, Input } from '@cloudflare/kumo'
 import { X } from '@phosphor-icons/react'
@@ -16,6 +17,7 @@ export default function ConnectionConfigModal({
   onOpenChange: (open: boolean) => void
   onSave?: (resources: ConnectionResource[]) => void
 }) {
+  const { t } = useTranslation();
   const [resources, setResources] = useState<ConnectionResource[]>(
     connection.resources ?? []
   )
@@ -94,8 +96,7 @@ export default function ConnectionConfigModal({
                 onClick={handleAdd}
                 disabled={!inputValue.trim()}
               >
-                Add
-              </Button>
+                {t("workshop-frontend.ConnectionConfigModal.add")}</Button>
             </div>
           </div>
         )}
@@ -104,8 +105,7 @@ export default function ConnectionConfigModal({
         <div className="max-h-56 overflow-y-auto px-5 pb-4">
           {resources.length === 0 ? (
             <p className="text-sm text-kumo-inactive text-center py-4">
-              No resources added yet
-            </p>
+              {t("workshop-frontend.ConnectionConfigModal.no_resources_added_yet")}</p>
           ) : (
             <div className="space-y-1">
               {resources.map((r) => (
@@ -133,7 +133,7 @@ export default function ConnectionConfigModal({
           <Dialog.Close
             render={(props) => (
               <Button {...props} variant="outline" size="sm">
-                Cancel
+                {t("workshop-frontend.Inbox.cancel")}
               </Button>
             )}
           />
@@ -145,8 +145,7 @@ export default function ConnectionConfigModal({
               onOpenChange(false)
             }}
           >
-            Save
-          </Button>
+            {t("workshop-frontend.ConnectionConfigModal.save")}</Button>
         </div>
       </Dialog>
     </Dialog.Root>

@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import {
   CalendarBlank,
   CaretDown,
@@ -16,39 +17,37 @@ import type { ScheduleStatus } from "../src/types";
 import { formatCadence, formatOccurrences, formatTiming } from "./format";
 
 export const CREATE_SCHEDULE_PROMPT =
-  "Help me create a scheduled task. Ask me what it should do, which workspace and resources it should use, when it should run, and which timezone to use. Then set up the schedule.";
+  () => {
+  return t("gatekeeper-scheduler.SchedulerPage.help_me_create_a_scheduled_task_ask_me_what_it_should_do_which_wo");
+};
 
 const STARTERS = [
   {
-    title: "Daily brief",
-    cadence: "Weekdays at 8:00 AM",
-    description: "Your calendar for the day plus the unread mail that needs a reply",
-    prompt:
-      "Every weekday at 8:00 AM, send me a short brief of my calendar for the day and the unread email that needs a reply. Ask me which calendar and mailbox to use and which timezone to use, then set up the schedule.",
+    get title() { return t("gatekeeper-scheduler.SchedulerPage.daily_brief"); },
+    get cadence() { return t("gatekeeper-scheduler.SchedulerPage.weekdays_at_8_00_am"); },
+    get description() { return t("gatekeeper-scheduler.SchedulerPage.your_calendar_for_the_day_plus_the_unread_mail_that_needs_a_repl"); },
+    get prompt() { return t("gatekeeper-scheduler.SchedulerPage.every_weekday_at_8_00_am_send_me_a_short_brief_of_my_calendar_for"); },
     icon: CalendarBlank,
   },
   {
-    title: "Weekly roundup",
-    cadence: "Fridays at 4:00 PM",
-    description: "Turn the week’s Linear issues and GitHub pull requests into a status update",
-    prompt:
-      "Every Friday at 4:00 PM, turn this week’s Linear issues and GitHub pull requests into a status update. Ask me which Linear team, GitHub repositories, and timezone to use, then set up the schedule.",
+    get title() { return t("gatekeeper-scheduler.SchedulerPage.weekly_roundup"); },
+    get cadence() { return t("gatekeeper-scheduler.SchedulerPage.fridays_at_4_00_pm"); },
+    get description() { return t("gatekeeper-scheduler.SchedulerPage.turn_the_week_s_linear_issues_and_github_pull_requests_into_a_st"); },
+    get prompt() { return t("gatekeeper-scheduler.SchedulerPage.every_friday_at_4_00_pm_turn_this_week_s_linear_issues_and_github"); },
     icon: CalendarBlank,
   },
   {
-    title: "Follow-up monitor",
-    cadence: "Weekdays at 9:00 AM",
-    description: "Flag the Gmail threads that are waiting on your reply",
-    prompt:
-      "Every weekday at 9:00 AM, flag the Gmail threads that are waiting on my reply. Ask me which mailbox, destination, and timezone to use, then set up the schedule.",
+    get title() { return t("gatekeeper-scheduler.SchedulerPage.follow_up_monitor"); },
+    get cadence() { return t("gatekeeper-scheduler.SchedulerPage.weekdays_at_9_00_am"); },
+    get description() { return t("gatekeeper-scheduler.SchedulerPage.flag_the_gmail_threads_that_are_waiting_on_your_reply"); },
+    get prompt() { return t("gatekeeper-scheduler.SchedulerPage.every_weekday_at_9_00_am_flag_the_gmail_threads_that_are_waiting_"); },
     icon: WarningCircle,
   },
   {
-    title: "Metrics snapshot",
-    cadence: "Mondays at 8:00 AM",
-    description: "Refresh a spreadsheet or query and call out what moved",
-    prompt:
-      "Every Monday at 8:00 AM, refresh a spreadsheet or query and call out what moved. Ask me which data source, destination, and timezone to use, then set up the schedule.",
+    get title() { return t("gatekeeper-scheduler.SchedulerPage.metrics_snapshot"); },
+    get cadence() { return t("gatekeeper-scheduler.SchedulerPage.mondays_at_8_00_am"); },
+    get description() { return t("gatekeeper-scheduler.SchedulerPage.refresh_a_spreadsheet_or_query_and_call_out_what_moved"); },
+    get prompt() { return t("gatekeeper-scheduler.SchedulerPage.every_monday_at_8_00_am_refresh_a_spreadsheet_or_query_and_call_o"); },
     icon: Clock,
   },
 ] as const;
@@ -77,6 +76,7 @@ export default function SchedulerPage({
   openPrompt,
   resolveWorkspaceTitles,
 }: Props) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -178,38 +178,35 @@ export default function SchedulerPage({
       <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-kumo-default">
-            Scheduled tasks
-          </h1>
+            {t("gatekeeper-scheduler.SchedulerPage.scheduled_tasks")}</h1>
           <p className="mt-1 text-sm text-kumo-subtle">
-            Wake a workspace and run its code on a schedule you choose.
-          </p>
+            {t("gatekeeper-scheduler.SchedulerPage.wake_a_workspace_and_run_its_code_on_a_schedule_you_choose")}</p>
         </div>
         <button
           type="button"
           data-action="create-schedule"
           className="press inline-flex h-9 items-center justify-center gap-2 self-start rounded-lg bg-kumo-brand px-3.5 text-sm font-medium text-white hover:bg-kumo-brand-hover"
-          onClick={() => void runHostAction(() => openPrompt(CREATE_SCHEDULE_PROMPT))}
+          onClick={() => void runHostAction(() => openPrompt(CREATE_SCHEDULE_PROMPT()))}
         >
-          <Plus size={16} weight="bold" /> Create schedule
-        </button>
+          <Plus size={16} weight="bold" />{t("gatekeeper-scheduler.SchedulerPage.create_schedule")}</button>
       </header>
 
       {!isEmpty && (
         <>
           <label className="mt-4 flex h-9 items-center gap-2 rounded-lg border border-kumo-line bg-kumo-control px-3 text-kumo-inactive focus-within:ring-2 focus-within:ring-kumo-ring">
             <MagnifyingGlass size={15} />
-            <span className="sr-only">Search scheduled tasks</span>
+            <span className="sr-only">{t("gatekeeper-scheduler.SchedulerPage.search_scheduled_tasks")}</span>
             <input
               className="min-w-0 flex-1 bg-transparent text-sm text-kumo-default outline-none placeholder:text-kumo-inactive"
               type="search"
               value={query}
               maxLength={200}
-              placeholder="Search scheduled tasks…"
+              placeholder={t("gatekeeper-scheduler.SchedulerPage.search_scheduled_tasks_2")}
               onChange={(event) => setQuery(event.currentTarget.value)}
             />
           </label>
 
-          <nav className="mt-4 flex gap-5 border-b border-kumo-line" aria-label="Schedule status">
+          <nav className="mt-4 flex gap-5 border-b border-kumo-line" aria-label={t("gatekeeper-scheduler.SchedulerPage.schedule_status")}>
             {FILTERS.map((item) => (
               <button
                 key={item.value}
@@ -231,21 +228,19 @@ export default function SchedulerPage({
 
       <section aria-live="polite" aria-busy={loading} className={isEmpty ? undefined : "min-h-32"}>
         {loading ? (
-          <p className="py-12 text-center text-sm text-kumo-subtle">Loading scheduled tasks…</p>
+          <p className="py-12 text-center text-sm text-kumo-subtle">{t("gatekeeper-scheduler.SchedulerPage.loading_scheduled_tasks")}</p>
         ) : error ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <p className="text-sm text-kumo-danger">Couldn’t load scheduled tasks.</p>
+            <p className="text-sm text-kumo-danger">{t("gatekeeper-scheduler.SchedulerPage.couldn_t_load_scheduled_tasks")}</p>
             <button
               className="text-sm font-medium text-kumo-link hover:text-kumo-brand-hover"
               onClick={() => void load()}
             >
-              Try again
-            </button>
+              {t("gatekeeper-scheduler.SchedulerPage.try_again")}</button>
           </div>
         ) : isEmpty ? null : schedules.length === 0 ? (
           <p className="py-12 text-center text-sm text-kumo-subtle">
-            No scheduled tasks match these filters.
-          </p>
+            {t("gatekeeper-scheduler.SchedulerPage.no_scheduled_tasks_match_these_filters")}</p>
         ) : (
           <div className="divide-y divide-kumo-line">
             {schedules.map((schedule) => {
@@ -284,7 +279,7 @@ export default function SchedulerPage({
               className="rounded-lg border border-kumo-line bg-kumo-control px-4 py-2 text-sm font-medium text-kumo-default hover:bg-kumo-tint disabled:opacity-50"
               onClick={() => void load(cursor)}
             >
-              {loadingMore ? "Loading…" : "Load more"}
+              {loadingMore ? t("gatekeeper-scheduler.SchedulerPage.loading") : t("gatekeeper-scheduler.SchedulerPage.load_more")}
             </button>
           </div>
         )}
@@ -295,8 +290,7 @@ export default function SchedulerPage({
           id="get-started-heading"
           className="text-xs font-medium uppercase tracking-[0.12em] text-kumo-inactive"
         >
-          Get started
-        </h2>
+          {t("gatekeeper-scheduler.SchedulerPage.get_started")}</h2>
         <div className="mt-3 grid gap-1">
           {STARTERS.map((starter) => {
             const Icon = starter.icon;
@@ -345,8 +339,9 @@ function ScheduleRow({
   onToggle: () => void;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation();
   const timing = formatTiming(schedule, now);
-  const target = targetTitle ?? "Unavailable workspace";
+  const target = targetTitle ?? t("gatekeeper-scheduler.SchedulerPage.unavailable_workspace");
   // A workspace the user can no longer see has nothing to open.
   const unavailable = targetTitle === null;
   // Only failed schedules have something to expand: why they need attention. The caret is a sibling
@@ -394,7 +389,7 @@ function ScheduleRow({
             type="button"
             data-action="toggle-diagnostic"
             aria-expanded={expanded}
-            aria-label={`${expanded ? "Hide" : "Show"} why ${schedule.title} needs attention`}
+            aria-label={(expanded ? t("gatekeeper-scheduler.SchedulerPage.hide_why_needs_attention", { name: schedule.title }) : t("gatekeeper-scheduler.SchedulerPage.show_why_needs_attention", { name: schedule.title }))}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-kumo-inactive hover:bg-kumo-fill hover:text-kumo-default"
             onClick={onToggle}
           >
@@ -415,10 +410,10 @@ function ScheduleRow({
 }
 
 const FILTERS: ReadonlyArray<{ value: Filter; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "dead", label: "Needs attention" },
-  { value: "finished", label: "Finished" },
+  { value: "all", get label() { return t("gatekeeper-scheduler.SchedulerPage.all"); } },
+  { value: "active", get label() { return t("gatekeeper-scheduler.SchedulerPage.active"); } },
+  { value: "dead", get label() { return t("gatekeeper-scheduler.SchedulerPage.needs_attention"); } },
+  { value: "finished", get label() { return t("gatekeeper-scheduler.SchedulerPage.finished"); } },
 ];
 
 function statusesForFilter(filter: Filter): ScheduleStatus[] | undefined {

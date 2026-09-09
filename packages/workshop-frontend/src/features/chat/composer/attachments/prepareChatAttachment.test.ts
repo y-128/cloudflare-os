@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
@@ -24,7 +25,7 @@ describe("prepareChatAttachment", () => {
     );
 
     await expect(prepareChatAttachment(file)).rejects.toThrow(
-      "Attachments must be 1.0 MB or smaller.",
+      t("workshop-frontend.prepareChatAttachment.attachments_must_be_or_smaller", { size: "1.0 MB" }),
     );
   });
 });

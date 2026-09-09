@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   ConfluenceSpaceConfiguratorRpc,
@@ -21,11 +22,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Space" description="Search the spaces shared with this connection.">
+      <Field label={t("gatekeeper-confluence.confluence-space-configurator-ui.space")} description={t("gatekeeper-confluence.confluence-space-configurator-ui.search_the_spaces_shared_with_this_connection")}>
         <Autocomplete
           name="spaceUrl"
           value={values.spaceUrl}
-          placeholder="Search spaces..."
+          placeholder={t("gatekeeper-confluence.confluence-space-configurator-ui.search_spaces")}
           loadOptions={query => ui.listSpaces(query)}
           onChange={spaceUrl => setValues({ spaceUrl })}
         />

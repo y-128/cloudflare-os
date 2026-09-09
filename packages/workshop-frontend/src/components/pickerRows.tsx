@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 // Shared look for the pickers that float over the chat composer: one surface, rows that carry their
 // own padding, and a selection that reads as the thing Tab will act on.
 
@@ -16,12 +17,12 @@ export const PICKER_EMPTY =
 
 /** Names the key that acts on the selected row. Visual only: the row itself carries the semantics. */
 export function TabHint() {
+  const { t } = useTranslation();
   return (
     <kbd
       aria-hidden="true"
       className="flex-shrink-0 rounded border border-kumo-line bg-kumo-base px-1 py-px font-sans text-[10px] font-medium leading-4 tracking-[0.02em] text-kumo-subtle"
     >
-      Tab
-    </kbd>
+      {t("workshop-frontend.pickerRows.tab")}</kbd>
   )
 }

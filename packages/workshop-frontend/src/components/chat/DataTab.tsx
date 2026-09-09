@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation, getLocale } from "@gadgets/i18n";
 import { useState } from 'react'
 import { Table } from '@cloudflare/kumo'
 import { Badge } from '@cloudflare/kumo'
@@ -5,6 +6,7 @@ import { Button } from '@cloudflare/kumo'
 import { sampleDataRows } from '../../data/chat'
 
 export default function DataTab() {
+  const { t } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   function toggleRow(id: string) {
@@ -29,17 +31,16 @@ export default function DataTab() {
       {/* Toolbar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-kumo-fill bg-kumo-elevated">
         <div className="flex items-center gap-3">
-          <span className="font-mono text-sm text-kumo-default">channels</span>
-          <Badge variant="secondary">{sampleDataRows.length} rows</Badge>
+          <span className="font-mono text-sm text-kumo-default">{t("workshop-frontend.DataTab.channels")}</span>
+          <Badge variant="secondary">{renderTranslation(t("workshop-frontend.DataTab.rows_2"), { length: sampleDataRows.length })}</Badge>
         </div>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <span className="text-xs text-kumo-subtle">
-              {selectedIds.size} selected
-            </span>
+              {renderTranslation(t("workshop-frontend.DataTab.selected_2"), { size: selectedIds.size })}</span>
           )}
-          <Button variant="ghost" size="xs">Filter</Button>
-          <Button variant="ghost" size="xs">Sort</Button>
+          <Button variant="ghost" size="xs">{t("workshop-frontend.DataTab.filter")}</Button>
+          <Button variant="ghost" size="xs">{t("workshop-frontend.DataTab.sort")}</Button>
         </div>
       </div>
 
@@ -52,12 +53,12 @@ export default function DataTab() {
                 checked={selectedIds.size === sampleDataRows.length}
                 indeterminate={selectedIds.size > 0 && selectedIds.size < sampleDataRows.length}
                 onValueChange={toggleAll}
-                aria-label="Select all rows"
+                aria-label={t("workshop-frontend.DataTab.select_all_rows")}
               />
-              <Table.Head>Channel</Table.Head>
-              <Table.Head>Messages</Table.Head>
-              <Table.Head>Last Active</Table.Head>
-              <Table.Head>Status</Table.Head>
+              <Table.Head>{t("workshop-frontend.DataTab.channel")}</Table.Head>
+              <Table.Head>{t("workshop-frontend.DataTab.messages")}</Table.Head>
+              <Table.Head>{t("workshop-frontend.DataTab.last_active")}</Table.Head>
+              <Table.Head>{t("workshop-frontend.DataTab.status")}</Table.Head>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -66,14 +67,14 @@ export default function DataTab() {
                 <Table.CheckCell
                   checked={selectedIds.has(row.id)}
                   onValueChange={() => toggleRow(row.id)}
-                  aria-label={`Select ${row.channel}`}
+                  aria-label={t("workshop-frontend.DataTab.select", { value1: row.channel })}
                 />
                 <Table.Cell>
                   <span className="font-mono text-sm text-kumo-default">{row.channel}</span>
                 </Table.Cell>
                 <Table.Cell>
                   <span className="text-sm text-kumo-subtle tabular-nums">
-                    {row.messages.toLocaleString()}
+                    {row.messages.toLocaleString(getLocale())}
                   </span>
                 </Table.Cell>
                 <Table.Cell>
@@ -81,9 +82,9 @@ export default function DataTab() {
                 </Table.Cell>
                 <Table.Cell>
                   {row.unread ? (
-                    <Badge variant="primary">Unread</Badge>
+                    <Badge variant="primary">{t("workshop-frontend.DataTab.unread")}</Badge>
                   ) : (
-                    <Badge variant="secondary">Read</Badge>
+                    <Badge variant="secondary">{t("workshop-frontend.DataTab.read")}</Badge>
                   )}
                 </Table.Cell>
               </Table.Row>
@@ -95,11 +96,9 @@ export default function DataTab() {
       {/* Footer */}
       <div className="px-4 py-2 border-t border-kumo-fill bg-kumo-elevated flex items-center justify-between">
         <span className="font-mono text-xs text-kumo-subtle">
-          {sampleDataRows.length} rows in channels
-        </span>
+          {renderTranslation(t("workshop-frontend.DataTab.rows_in_channels_2"), { length: sampleDataRows.length })}</span>
         <span className="font-mono text-xs text-kumo-subtle">
-          {sampleDataRows.reduce((sum, r) => sum + r.messages, 0).toLocaleString()} total messages
-        </span>
+          {renderTranslation(t("workshop-frontend.DataTab.total_messages_2"), { value: sampleDataRows.reduce((sum, r) => sum + r.messages, 0).toLocaleString(getLocale()) })}</span>
       </div>
     </div>
   )

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 
 import { act, createElement } from "react";
@@ -51,9 +52,9 @@ describe("MarkdownMessage line breaks", () => {
     await render("```ts\nconst answer = 42;\n```");
 
     const button = container.querySelector<HTMLButtonElement>(
-      'button[aria-label="Copy code"]',
+      `button[aria-label="${t("workshop-frontend.ChatInterface.copy_code")}"]`,
     );
-    expect(button?.title).toBe("Copy code");
+    expect(button?.title).toBe(t("workshop-frontend.ChatInterface.copy_code"));
 
     await act(async () => button?.click());
 

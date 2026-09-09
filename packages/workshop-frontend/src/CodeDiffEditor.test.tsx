@@ -1,3 +1,4 @@
+import { t, setLocale } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -7,6 +8,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { EditorView } from '@codemirror/view'
 import type { FileChange } from '@gadgets/workshop-shared/code-change'
 import CodeDiffEditor from './CodeDiffEditor'
+import { MAX_DELETED_ROWS } from './diff/diffModel'
 import type { EditSession } from './CodeEditor'
 import { ThemeProvider } from './ThemeContext'
 
@@ -95,6 +97,7 @@ describe('CodeDiffEditor', () => {
   afterEach(async () => {
     await act(async () => root.unmount())
     container.remove()
+    setLocale("ja")
   })
 
   async function mount(session: FakeSession, original: string | null) {
@@ -114,6 +117,21 @@ describe('CodeDiffEditor', () => {
     await flushFrames()
   }
 
+  it('updates deletion expansion controls on language changes without replacing the editor', async () => {
+    const original = Array.from({ length: MAX_DELETED_ROWS + 10 }, (_, i) => 'old line ' + i).join('\n')
+    await mount(new FakeSession('replacement'), original)
+    const editor = container.querySelector('.cm-editor')
+    const button = () => container.querySelector('button.gadgets-deleted-omitted-row')
+    expect(button()).not.toBeNull()
+    const japanese = button()!.textContent
+    await act(async () => setLocale('en'))
+    expect(button()!.textContent).not.toBe(japanese)
+    expect(button()!.textContent).not.toContain('[missing:')
+    expect(container.querySelector('.cm-editor')).toBe(editor)
+    await act(async () => setLocale('ja'))
+    expect(button()!.textContent).toBe(japanese)
+  })
+
   it('shows the document, the pill, and a deletion zone for a replacement', async () => {
     const session = new FakeSession('hello\nthere')
     await mount(session, 'hello\nworld')
@@ -126,7 +144,7 @@ describe('CodeDiffEditor', () => {
   it('re-diffs after locally-authored edits (StrictMode remount must not wedge the rAF)', async () => {
     const session = new FakeSession('hello\nworld')
     await mount(session, 'hello\nworld')
-    expect(container.textContent).toContain('Unchanged')
+    expect(container.textContent).toContain(t("workshop-frontend.CodeDiffEditor.unchanged"))
 
     const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement)
     expect(view).not.toBeNull()
@@ -158,13 +176,13 @@ describe('CodeDiffEditor', () => {
     await flushFrames()
     expect(container.querySelector('.cm-content')?.textContent).toContain('world')
     expect(container.querySelector('.gadgets-deleted-code-zone')).toBeNull()
-    expect(container.textContent).toContain('Unchanged')
+    expect(container.textContent).toContain(t("workshop-frontend.CodeDiffEditor.unchanged"))
   })
 
   it('reports an added file with no deletion zones', async () => {
     const session = new FakeSession('brand\nnew')
     await mount(session, null)
-    expect(container.textContent).toContain('Added')
+    expect(container.textContent).toContain(t("workshop-frontend.ShareModal.added"))
     expect(container.textContent).toContain('+2')
     expect(container.querySelector('.gadgets-deleted-code-zone')).toBeNull()
   })
@@ -176,7 +194,7 @@ describe('CodeDiffEditor', () => {
       session.emitRemote({ remove: true })
     })
     await flushFrames()
-    expect(container.textContent).toContain('Deleted')
+    expect(container.textContent).toContain(t("workshop-frontend.Activity.deleted"))
     expect(container.querySelector('.gadgets-deleted-code-zone')?.textContent)
       .toBe('helloworld')
   })
@@ -189,6 +207,6 @@ describe('CodeDiffEditor', () => {
         </ThemeProvider>,
       )
     })
-    expect(container.textContent).toContain('Select a file to view changes')
+    expect(container.textContent).toContain(t("workshop-frontend.CodeDiffEditor.select_a_file_to_view_changes"))
   })
 })

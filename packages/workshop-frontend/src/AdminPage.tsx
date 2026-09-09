@@ -1,3 +1,4 @@
+import { t, useTranslation, renderTranslation, getLocale } from "@gadgets/i18n";
 import { useState, useEffect, useRef, type ChangeEvent } from 'react'
 import { RpcStub } from 'capnweb'
 import { Switch, Textarea, Input, Button, Tabs, useKumoToastManager } from '@cloudflare/kumo'
@@ -12,12 +13,12 @@ import AdminFormatsPanel from './components/format/AdminFormatsPanel'
 
 // Preset accent colors offered in the Theme section ('' = default brand).
 const ACCENT_PRESETS: { label: string; value: string }[] = [
-  { label: 'Default', value: '' },
-  { label: 'Blue', value: '#3b82f6' },
-  { label: 'Green', value: '#16a34a' },
-  { label: 'Purple', value: '#7c3aed' },
-  { label: 'Pink', value: '#db2777' },
-  { label: 'Teal', value: '#0d9488' },
+  { get label() { return t("workshop-frontend.AdminPage.default"); }, value: '' },
+  { get label() { return t("workshop-frontend.AdminPage.blue"); }, value: '#3b82f6' },
+  { get label() { return t("workshop-frontend.AdminPage.green"); }, value: '#16a34a' },
+  { get label() { return t("workshop-frontend.AdminPage.purple"); }, value: '#7c3aed' },
+  { get label() { return t("workshop-frontend.AdminPage.pink"); }, value: '#db2777' },
+  { get label() { return t("workshop-frontend.AdminPage.teal"); }, value: '#0d9488' },
 ]
 
 // Swatch background per banner color, matching AnnouncementBanner's accent styles.
@@ -31,9 +32,10 @@ const BANNER_SWATCH: Record<BannerColor, string> = {
 }
 
 export default function AdminPage() {
+  const { t } = useTranslation();
   const { authenticatedApi, isAdmin } = useAuthenticatedApi()
   const toasts = useKumoToastManager()
-  useDocumentTitle('Admin')
+  useDocumentTitle(t("workshop-frontend.AdminPage.admin"))
 
   // The admin capability (minted once via getAdminApi; null until loaded / for non-admins). Wrapped
   // in an object so useState doesn't treat the (callable) RPC stub as a state updater function.
@@ -173,7 +175,7 @@ export default function AdminPage() {
     try {
       await admin.api.setResourceEnabled(vendorId, urlPattern, enabled)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Update failed'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.update_failed")
       toasts.add({ title: message, variant: 'error' })
       await reloadResources().catch(() => {})
     } finally {
@@ -195,7 +197,7 @@ export default function AdminPage() {
     try {
       await admin.api.setGatekeeperMode(vendorId, enabled ? 'enabled' : 'disabled')
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Update failed'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.update_failed")
       toasts.add({ title: message, variant: 'error' })
       await reloadResources().catch(() => {})
     } finally {
@@ -217,7 +219,7 @@ export default function AdminPage() {
     try {
       await admin.api.setGatekeeperMode(vendorId, mode)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Update failed'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.update_failed")
       toasts.add({ title: message, variant: 'error' })
       await reloadResources().catch(() => {})
     } finally {
@@ -235,9 +237,9 @@ export default function AdminPage() {
     try {
       await admin.api.setAnnouncement(announcementDraft)
       setSavedAnnouncement(announcementDraft)
-      toasts.add({ title: 'Announcement saved', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AdminPage.announcement_saved"), variant: 'success' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save announcement'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.failed_to_save_announcement")
       toasts.add({ title: message, variant: 'error' })
     } finally {
       setSavingAnnouncement(false)
@@ -253,9 +255,9 @@ export default function AdminPage() {
     try {
       await admin.api.setBanner(bannerTextDraft, bannerColorDraft)
       setSavedBanner({ text: bannerTextDraft, color: bannerColorDraft })
-      toasts.add({ title: 'Banner saved', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AdminPage.banner_saved"), variant: 'success' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save banner'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.failed_to_save_banner")
       toasts.add({ title: message, variant: 'error' })
     } finally {
       setSavingBanner(false)
@@ -270,9 +272,9 @@ export default function AdminPage() {
     try {
       await admin.api.setAccentColor(accentDraft)
       setSavedAccent(accentDraft)
-      toasts.add({ title: 'Accent color saved', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AdminPage.accent_color_saved"), variant: 'success' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save accent color'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.failed_to_save_accent_color")
       toasts.add({ title: message, variant: 'error' })
     } finally {
       setSavingAccent(false)
@@ -287,7 +289,7 @@ export default function AdminPage() {
       await admin.api.setSignupsEnabled(enabled)
     } catch (err) {
       setSignupsEnabled(!enabled) // revert
-      const message = err instanceof Error ? err.message : 'Update failed'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.update_failed")
       toasts.add({ title: message, variant: 'error' })
     } finally {
       setSavingSignups(false)
@@ -300,9 +302,9 @@ export default function AdminPage() {
     try {
       await admin.api.setSiteName(siteNameDraft)
       setSavedSiteName(siteNameDraft)
-      toasts.add({ title: 'Site name saved', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AdminPage.site_name_saved"), variant: 'success' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save site name'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.failed_to_save_site_name")
       toasts.add({ title: message, variant: 'error' })
     } finally {
       setSavingSiteName(false)
@@ -319,9 +321,9 @@ export default function AdminPage() {
       const data = await prepareSiteLogo(file)
       const logo = await admin.api.setSiteLogo(data)
       setSiteLogoUrl(logo ? cacheBustSiteLogoUrl(logo.url) : null)
-      toasts.add({ title: 'Logo saved', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AdminPage.logo_saved"), variant: 'success' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save logo'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.failed_to_save_logo")
       toasts.add({ title: message, variant: 'error' })
     } finally {
       setSavingSiteLogo(false)
@@ -334,9 +336,9 @@ export default function AdminPage() {
     try {
       await admin.api.setSiteLogo(null)
       setSiteLogoUrl(null)
-      toasts.add({ title: 'Default logo restored', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AdminPage.default_logo_restored"), variant: 'success' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to remove logo'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.failed_to_remove_logo")
       toasts.add({ title: message, variant: 'error' })
     } finally {
       setSavingSiteLogo(false)
@@ -349,9 +351,9 @@ export default function AdminPage() {
     try {
       await admin.api.setInstanceInstructions(instructionsDraft)
       setSavedInstructions(instructionsDraft)
-      toasts.add({ title: 'System prompt instructions saved', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AdminPage.system_prompt_instructions_saved"), variant: 'success' })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save instructions'
+      const message = err instanceof Error ? err.message : t("workshop-frontend.AdminPage.failed_to_save_instructions")
       toasts.add({ title: message, variant: 'error' })
     } finally {
       setSavingInstructions(false)
@@ -362,7 +364,7 @@ export default function AdminPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-16 text-center">
         <ShieldWarning size={32} className="mx-auto text-kumo-subtle mb-3" />
-        <p className="text-sm text-kumo-default">You don't have access to this page.</p>
+        <p className="text-sm text-kumo-default">{t("workshop-frontend.AdminPage.you_don_t_have_access_to_this_page")}</p>
       </div>
     )
   }
@@ -370,7 +372,7 @@ export default function AdminPage() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-        <p className="text-kumo-subtle">Loading admin settings...</p>
+        <p className="text-kumo-subtle">{t("workshop-frontend.AdminPage.loading_admin_settings")}</p>
       </div>
     )
   }
@@ -378,10 +380,9 @@ export default function AdminPage() {
   if (loadError || !admin) {
     return (
       <div className="mx-auto w-full max-w-[1040px] px-4 sm:px-8 py-16 text-center">
-        <p className="text-sm text-kumo-danger">Something went wrong loading admin settings.</p>
+        <p className="text-sm text-kumo-danger">{t("workshop-frontend.AdminPage.something_went_wrong_loading_admin_settings")}</p>
         <button onClick={() => window.location.reload()} className="text-kumo-brand mt-2 text-sm underline">
-          Try again
-        </button>
+          {t("workshop-frontend.AdminPage.try_again")}</button>
       </div>
     )
   }
@@ -389,10 +390,9 @@ export default function AdminPage() {
   return (
     <div className="mx-auto w-full max-w-[1040px] px-4 sm:px-8 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-kumo-default">Admin</h1>
+        <h1 className="text-2xl font-semibold text-kumo-default">{t("workshop-frontend.AdminPage.admin")}</h1>
         <p className="text-sm text-kumo-subtle mt-1">
-          Deployment-wide settings. Changes apply to all users on their next connection.
-        </p>
+          {t("workshop-frontend.AdminPage.deployment_wide_settings_changes_apply_to_all_users_on_their_nex")}</p>
       </div>
 
       <Tabs
@@ -400,10 +400,10 @@ export default function AdminPage() {
         value={activeTab}
         onValueChange={setActiveTab}
         tabs={[
-          { value: 'general', label: 'General' },
-          { value: 'gatekeepers', label: 'Gatekeepers' },
-          { value: 'formats', label: 'Formats' },
-          { value: 'access', label: 'Access' },
+          { value: 'general', label: t("workshop-frontend.AdminPage.general") },
+          { value: 'gatekeepers', label: t("workshop-frontend.AdminPage.gatekeepers") },
+          { value: 'formats', label: t("workshop-frontend.AdminPage.formats") },
+          { value: 'access', label: t("gatekeeper-context.ContextLibraryPage.access") },
         ]}
       />
 
@@ -424,10 +424,9 @@ export default function AdminPage() {
               <UserPlus size={18} className="text-kumo-subtle" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-semibold text-kumo-strong">Allow new sign-ups</h2>
+              <h2 className="text-lg font-semibold text-kumo-strong">{t("workshop-frontend.AdminPage.allow_new_sign_ups")}</h2>
               <p className="text-sm text-kumo-subtle mt-0.5">
-                When off, existing users can still log in but no new accounts can be created.
-              </p>
+                {t("workshop-frontend.AdminPage.when_off_existing_users_can_still_log_in_but_no_new_accounts_can")}</p>
             </div>
             <Switch
               checked={signupsEnabled}
@@ -441,11 +440,9 @@ export default function AdminPage() {
       {/* Site name */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Site name</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">{t("workshop-frontend.AdminPage.site_name")}</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Shown next to the logo in the top bar. Leave empty to use the default
-            (&ldquo;{DEFAULT_SITE_NAME}&rdquo;). Applies on each user&rsquo;s next connection.
-          </p>
+            {renderTranslation(t("workshop-frontend.AdminPage.shown_next_to_the_logo_in_the_top_bar_leave_empty_to_use_the_defa"), { DEFAULT_SITE_NAME: DEFAULT_SITE_NAME })}</p>
 
           <Input
             value={siteNameDraft}
@@ -462,8 +459,7 @@ export default function AdminPage() {
                 onClick={() => setSiteNameDraft(savedSiteName)}
                 disabled={savingSiteName}
               >
-                Reset
-              </Button>
+                {t("workshop-frontend.AdminPage.reset")}</Button>
             )}
             <Button
               variant="primary"
@@ -472,8 +468,7 @@ export default function AdminPage() {
               loading={savingSiteName}
               disabled={siteNameDraft === savedSiteName}
             >
-              Save
-            </Button>
+              {t("workshop-frontend.AdminPage.save")}</Button>
           </div>
         </div>
       )}
@@ -481,12 +476,9 @@ export default function AdminPage() {
       {/* Site logo */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Logo</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">{t("workshop-frontend.AdminPage.logo")}</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Shown in the app chrome, sign-in screens, and browser tab. Images are scaled without
-            cropping and converted to a static PNG. Square images work best. Applies on each
-            user&rsquo;s next connection.
-          </p>
+            {t("workshop-frontend.AdminPage.shown_in_the_app_chrome_sign_in_screens_and_browser_tab_images_ar")}</p>
 
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-kumo-line bg-kumo-base p-2">
@@ -510,7 +502,7 @@ export default function AdminPage() {
                 loading={savingSiteLogo}
                 disabled={savingSiteLogo}
               >
-                {siteLogoUrl ? 'Change logo' : 'Upload logo'}
+                {siteLogoUrl ? t("workshop-frontend.AdminPage.change_logo") : t("workshop-frontend.AdminPage.upload_logo")}
               </Button>
               {siteLogoUrl && (
                 <Button
@@ -519,8 +511,7 @@ export default function AdminPage() {
                   onClick={handleRemoveSiteLogo}
                   disabled={savingSiteLogo}
                 >
-                  Restore default
-                </Button>
+                  {t("workshop-frontend.AdminPage.restore_default")}</Button>
               )}
             </div>
           </div>
@@ -530,12 +521,9 @@ export default function AdminPage() {
       {/* Theme / accent color */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Theme</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">{t("workshop-frontend.AdminPage.theme")}</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Accent color used for buttons, links, and highlights. Changes preview live here; click
-            Save to apply for everyone (on their next connection). Backgrounds keep the default
-            warm theme.
-          </p>
+            {t("workshop-frontend.AdminPage.accent_color_used_for_buttons_links_and_highlights_changes_previe")}</p>
 
           <div className="flex flex-wrap items-center gap-2 mb-4">
             {ACCENT_PRESETS.map((preset) => {
@@ -569,11 +557,9 @@ export default function AdminPage() {
                 value={accentDraft || DEFAULT_ACCENT_COLOR}
                 onChange={(e) => setAccentDraft(e.target.value)}
                 className="w-9 h-9 rounded-md border border-kumo-line bg-transparent cursor-pointer p-0.5"
-              />
-              Custom
-            </label>
+              />{t("workshop-frontend.AdminPage.custom")}</label>
             <span className="text-xs font-mono text-kumo-subtle">
-              {accentDraft || `${DEFAULT_ACCENT_COLOR} (default)`}
+              {accentDraft || t("workshop-frontend.AdminPage.default_2", { value1: DEFAULT_ACCENT_COLOR })}
             </span>
             <div className="flex-1" />
             {accentDirty && (
@@ -583,8 +569,7 @@ export default function AdminPage() {
                 onClick={() => setAccentDraft(savedAccent)}
                 disabled={savingAccent}
               >
-                Reset
-              </Button>
+                {t("workshop-frontend.AdminPage.reset")}</Button>
             )}
             <Button
               variant="primary"
@@ -593,8 +578,7 @@ export default function AdminPage() {
               loading={savingAccent}
               disabled={!accentDirty}
             >
-              Save
-            </Button>
+              {t("workshop-frontend.AdminPage.save")}</Button>
           </div>
         </div>
       )}
@@ -602,19 +586,16 @@ export default function AdminPage() {
       {/* Full-width banner */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Banner</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">{t("workshop-frontend.AdminPage.banner")}</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            A dismissible bar across the very top of the app (logged in or not). Markdown is
-            supported, so you can include links. Leave empty to hide it. Applies on each
-            user&rsquo;s next connection.
-          </p>
+            {t("workshop-frontend.AdminPage.a_dismissible_bar_across_the_very_top_of_the_app_logged_in_or_not")}</p>
 
           <Textarea
             className="w-full"
             value={bannerTextDraft}
             onValueChange={setBannerTextDraft}
             rows={1}
-            placeholder={'e.g. \uD83C\uDF89 New: blueprints now support imports \u2014 [learn more](https://example.com).'}
+            placeholder={t("workshop-frontend.AdminPage.e_g_new_blueprints_now_support_imports_learn_more_https_example")}
             maxLength={MAX_ANNOUNCEMENT_LENGTH}
             error={
               bannerTextDraft.length > MAX_ANNOUNCEMENT_LENGTH
@@ -625,7 +606,7 @@ export default function AdminPage() {
 
           <div className="mt-4 flex items-end justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-medium text-kumo-subtle mb-2">Type</p>
+              <p className="text-xs font-medium text-kumo-subtle mb-2">{t("workshop-frontend.AdminPage.type")}</p>
               <div className="flex flex-wrap items-center gap-2">
                 {BANNER_COLORS.map((c) => {
                   const selected = bannerColorDraft === c
@@ -662,8 +643,7 @@ export default function AdminPage() {
                   }}
                   disabled={savingBanner}
                 >
-                  Reset
-                </Button>
+                  {t("workshop-frontend.AdminPage.reset")}</Button>
               )}
               <Button
                 variant="primary"
@@ -672,8 +652,7 @@ export default function AdminPage() {
                 loading={savingBanner}
                 disabled={!bannerDirty || bannerTextDraft.length > MAX_ANNOUNCEMENT_LENGTH}
               >
-                Save
-              </Button>
+                {t("workshop-frontend.AdminPage.save")}</Button>
             </div>
           </div>
         </div>
@@ -682,19 +661,16 @@ export default function AdminPage() {
       {/* Top-bar notice */}
       {activeTab === 'general' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Top-bar notice</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">{t("workshop-frontend.AdminPage.top_bar_notice")}</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Shown centered in the top navigation bar. Markdown is supported, so you can include
-            links. Keep it short — it renders on a single line. Leave empty to show nothing. Applies
-            on each user&rsquo;s next connection.
-          </p>
+            {t("workshop-frontend.AdminPage.shown_centered_in_the_top_navigation_bar_markdown_is_supported_so")}</p>
 
           <Textarea
             className="w-full"
             value={announcementDraft}
             onValueChange={setAnnouncementDraft}
             rows={1}
-            placeholder={'e.g. Heads up: scheduled maintenance Saturday \u2014 see [status](https://status.example.com).'}
+            placeholder={t("workshop-frontend.AdminPage.e_g_heads_up_scheduled_maintenance_saturday_see_status_https_sta")}
             maxLength={MAX_ANNOUNCEMENT_LENGTH}
             error={
               announcementDraft.length > MAX_ANNOUNCEMENT_LENGTH
@@ -705,8 +681,7 @@ export default function AdminPage() {
 
           <div className="flex items-center justify-between mt-3">
             <span className="text-xs text-kumo-subtle">
-              {announcementDraft.length.toLocaleString()} / {MAX_ANNOUNCEMENT_LENGTH.toLocaleString()} characters
-            </span>
+              {renderTranslation(t("workshop-frontend.AdminPage.characters_3"), { value: announcementDraft.length.toLocaleString(getLocale()), value1: MAX_ANNOUNCEMENT_LENGTH.toLocaleString(getLocale()) })}</span>
             <div className="flex items-center gap-2">
               {announcementDraft !== savedAnnouncement && (
                 <Button
@@ -715,8 +690,7 @@ export default function AdminPage() {
                   onClick={() => setAnnouncementDraft(savedAnnouncement)}
                   disabled={savingAnnouncement}
                 >
-                  Reset
-                </Button>
+                  {t("workshop-frontend.AdminPage.reset")}</Button>
               )}
               <Button
                 variant="primary"
@@ -728,8 +702,7 @@ export default function AdminPage() {
                   announcementDraft.length > MAX_ANNOUNCEMENT_LENGTH
                 }
               >
-                Save
-              </Button>
+                {t("workshop-frontend.AdminPage.save")}</Button>
             </div>
           </div>
         </div>
@@ -738,18 +711,16 @@ export default function AdminPage() {
       {/* Agent system prompt additions */}
       {activeTab === 'general' && (
       <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-kumo-strong mb-1">Agent instructions</h2>
+        <h2 className="text-lg font-semibold text-kumo-strong mb-1">{t("workshop-frontend.AdminPage.agent_instructions")}</h2>
         <p className="text-sm text-kumo-subtle mb-5">
-          Extra instructions added to every agent&rsquo;s system prompt on this deployment. Use this
-          for instance-specific context, conventions, or guardrails.
-        </p>
+          {t("workshop-frontend.AdminPage.extra_instructions_added_to_every_agent_s_system_prompt_on_this_d")}</p>
 
         <Textarea
           className="w-full"
           value={instructionsDraft}
           onValueChange={setInstructionsDraft}
           rows={6}
-          placeholder={'e.g. ACME Corp is a logistics company that helps small businesses ship\ninternationally. Our team builds internal tools and dashboards to track shipments.'}
+          placeholder={t("workshop-frontend.AdminPage.e_g_acme_corp_is_a_logistics_company_that_helps_small_businesses")}
           maxLength={MAX_INSTANCE_INSTRUCTIONS_LENGTH}
           error={
             instructionsDraft.length > MAX_INSTANCE_INSTRUCTIONS_LENGTH
@@ -760,8 +731,7 @@ export default function AdminPage() {
 
         <div className="flex items-center justify-between mt-3">
           <span className="text-xs text-kumo-subtle">
-            {instructionsDraft.length.toLocaleString()} / {MAX_INSTANCE_INSTRUCTIONS_LENGTH.toLocaleString()} characters
-          </span>
+            {renderTranslation(t("workshop-frontend.AdminPage.characters_3"), { value: instructionsDraft.length.toLocaleString(getLocale()), value1: MAX_INSTANCE_INSTRUCTIONS_LENGTH.toLocaleString(getLocale()) })}</span>
           <div className="flex items-center gap-2">
             {instructionsDraft !== savedInstructions && (
               <Button
@@ -770,8 +740,7 @@ export default function AdminPage() {
                 onClick={() => setInstructionsDraft(savedInstructions)}
                 disabled={savingInstructions}
               >
-                Reset
-              </Button>
+                {t("workshop-frontend.AdminPage.reset")}</Button>
             )}
             <Button
               variant="primary"
@@ -783,8 +752,7 @@ export default function AdminPage() {
                 instructionsDraft.length > MAX_INSTANCE_INSTRUCTIONS_LENGTH
               }
             >
-              Save
-            </Button>
+              {t("workshop-frontend.AdminPage.save")}</Button>
           </div>
         </div>
       </div>
@@ -793,18 +761,13 @@ export default function AdminPage() {
       {/* Gatekeeper resources */}
       {activeTab === 'gatekeepers' && (
         <div className="bg-kumo-elevated border border-kumo-line rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-kumo-strong mb-1">Gatekeepers</h2>
+          <h2 className="text-lg font-semibold text-kumo-strong mb-1">{t("workshop-frontend.AdminPage.gatekeepers")}</h2>
           <p className="text-sm text-kumo-subtle mb-5">
-            Turn connectors and resource types on or off for each service. Auto-provisioned
-            gatekeepers (like the Context Library) have three modes &mdash; disabled, optional, or
-            enabled for everyone. Changes are soft: they don&rsquo;t revoke access a gadget already
-            holds.
-          </p>
+            {t("workshop-frontend.AdminPage.turn_connectors_and_resource_types_on_or_off_for_each_service_aut")}</p>
 
           {resourceVendors.length === 0 && (
             <p className="text-sm text-kumo-subtle">
-              No configurable gatekeepers are installed on this deployment.
-            </p>
+              {t("workshop-frontend.AdminPage.no_configurable_gatekeepers_are_installed_on_this_deployment")}</p>
           )}
 
           <div className="space-y-6">
@@ -815,9 +778,9 @@ export default function AdminPage() {
               if (vendor.autoProvisions) {
                 const mode = vendor.ambientMode ?? 'optional'
                 const options: { value: AmbientGatekeeperMode; label: string; hint: string }[] = [
-                  { value: 'disabled', label: 'Disabled', hint: 'Off for everyone' },
-                  { value: 'optional', label: 'Optional', hint: 'Users can add it themselves' },
-                  { value: 'enabled', label: 'Enabled', hint: 'On for everyone automatically' },
+                  { value: 'disabled', label: t("workshop-frontend.AdminPage.disabled"), hint: t("workshop-frontend.AdminPage.off_for_everyone") },
+                  { value: 'optional', label: t("workshop-frontend.AdminPage.optional"), hint: t("workshop-frontend.AdminPage.users_can_add_it_themselves") },
+                  { value: 'enabled', label: t("workshop-frontend.AdminPage.enabled"), hint: t("workshop-frontend.AdminPage.on_for_everyone_automatically") },
                 ]
                 return (
                   <div key={vendor.vendorId}>
@@ -833,8 +796,7 @@ export default function AdminPage() {
                         {vendor.displayName}
                       </h3>
                       <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-kumo-tint text-kumo-subtle border border-kumo-line">
-                        auto-provisioned
-                      </span>
+                        {t("workshop-frontend.AdminPage.auto_provisioned")}</span>
                     </div>
                     <div className="flex gap-2 px-3 py-1">
                       {options.map((opt) => (
@@ -886,12 +848,11 @@ export default function AdminPage() {
                     {vendor.displayName}
                     {!vendor.enabled && (
                       <span className="ml-2 text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-kumo-tint text-kumo-subtle border border-kumo-line">
-                        disabled
-                      </span>
+                        {t("workshop-frontend.AdminPage.disabled_2")}</span>
                     )}
                   </h3>
                   <span className="text-xs text-kumo-subtle">
-                    {vendor.enabled ? 'Enabled' : 'Off'}
+                    {vendor.enabled ? t("workshop-frontend.AdminPage.enabled") : t("workshop-frontend.AdminPage.off")}
                   </span>
                   <span onClick={(e) => e.stopPropagation()}>
                     <Switch
@@ -943,8 +904,7 @@ export default function AdminPage() {
                   </div>
                 ) : (
                   <p className="text-xs text-kumo-subtle px-3 py-1">
-                    {vendor.resources.length} resource{vendor.resources.length === 1 ? '' : 's'} hidden while disabled.
-                  </p>
+                    {renderTranslation(t("workshop-frontend.AdminPage.resources_hidden_while_disabled"), { n: vendor.resources.length })}</p>
                 )}
               </div>
             )})}

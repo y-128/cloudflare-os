@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import { List, X } from '@phosphor-icons/react'
@@ -29,6 +30,7 @@ function readCollapsed(): boolean {
  * is simpler and matches how the rest of the app handles small screens.
  */
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState<boolean>(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
@@ -125,7 +127,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             ref={drawerRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Primary navigation"
+            aria-label={t("workshop-frontend.AppShell.primary_navigation")}
             tabIndex={-1}
             className="fixed inset-y-0 left-0 z-50 outline-none md:hidden"
           >
@@ -148,7 +150,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             type="button"
             ref={menuButtonRef}
             onClick={() => setMobileOpen((o) => !o)}
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileOpen ? t("workshop-frontend.AppShell.close_menu") : t("workshop-frontend.AppShell.open_menu")}
             className="flex h-11 w-11 items-center justify-center rounded-md text-kumo-default transition-colors hover:bg-kumo-tint md:hidden"
           >
             {mobileOpen ? <X size={16} /> : <List size={16} />}

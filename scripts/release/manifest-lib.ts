@@ -21,8 +21,8 @@ import { join } from "node:path";
 import { parse } from "jsonc-parser";
 import type { AssetManifestEntry, CollectedAssets, CollectedModule } from "./hash-lib.ts";
 
-/** Manifest version the deploy-side renderer must agree with (see header comment). */
-export const MANIFEST_VERSION = 1;
+/** Manifest version: v2 adds required inbox infrastructure; older deploy services must fail closed. */
+export const MANIFEST_VERSION = 2;
 
 /** A `{ binding: "NAME" }`-shaped wrangler binding declaration. */
 export interface BindingDecl {
@@ -108,6 +108,19 @@ export interface WranglerConfig {
   kv_namespaces?: BindingDecl[];
   /** R2 bucket bindings; names become `$R2_<BINDING>_NAME` placeholders. */
   r2_buckets?: BindingDecl[];
+  /** Workers AI binding declared by the mailbox worker. */
+  ai?: BindingDecl;
+  /** Email Sending bindings, including any configured address restrictions. */
+  send_email?: {
+    name: string;
+    destination_address?: string;
+    allowed_destination_addresses?: string[];
+    allowed_sender_addresses?: string[];
+  }[];
+  /** Explicit namespace bindings to this worker's Durable Object classes. */
+  durable_objects?: { bindings: { name: string; class_name: string; script_name?: string }[] };
+  /** Compile-time constants consumed by Wrangler, absent from runtime bindings. */
+  define?: Record<string, string>;
   /** Worker Loader bindings (the Gadget sandbox). */
   worker_loaders?: BindingDecl[];
   /** Service bindings; targets become `$WORKER_NAME(<pkg>)` placeholders. */
@@ -167,7 +180,7 @@ export type ManifestBinding = { type: string; name: string } & Record<string, un
 /** Everything the manifest says about one worker in the release. */
 export interface WorkerEntry {
   /** Which role this worker plays in a deployment. */
-  kind: "backend" | "router" | "gatekeeper";
+  kind: "backend" | "router" | "gatekeeper" | "inbox";
   /** Gatekeepers only: the path segment the router routes `/gatekeeper/<shortName>/*` on. */
   shortName?: string;
   /** Whether the deploy wizard offers this worker for installation. */
@@ -244,7 +257,7 @@ export interface WorkerBuild {
 const HANDLED_CONFIG_KEYS = new Set([
   "$schema", "name", "main", "build", "compatibility_date", "compatibility_flags", "rules",
   "migrations", "observability", "kv_namespaces", "r2_buckets", "worker_loaders", "services",
-  "assets", "vars",
+  "assets", "vars", "ai", "send_email", "durable_objects", "define",
   // Browser Rendering (Gadget PDF exports). Unlike artifacts it is generally available, so it
   // passes through to customer instances as a placeholder-free binding, like the AI binding.
   "browser",
@@ -389,6 +402,7 @@ export function readDeployInputs(pkgDir: string): DeployInput[] | undefined {
 function workerKind(pkgName: string): WorkerEntry["kind"] {
   if (pkgName === "workshop-backend") return "backend";
   if (pkgName === "router") return "router";
+  if (pkgName === "inbox") return "inbox";
   if (isGatekeeperPackage(pkgName)) return "gatekeeper";
   throw new Error(`cannot classify deployable package: ${pkgName}`);
 }
@@ -426,6 +440,18 @@ export function buildWorkerEntry(
       type: "r2_bucket",
       name: r2.binding,
       bucket_name: `$R2_${r2.binding}_NAME`,
+    });
+  }
+  if (config.ai) bindings.push({ type: "ai", name: config.ai.binding });
+  for (const email of config.send_email ?? []) {
+    bindings.push({ type: "send_email", ...email });
+  }
+  for (const object of config.durable_objects?.bindings ?? []) {
+    bindings.push({
+      type: "durable_object_namespace",
+      name: object.name,
+      class_name: object.class_name,
+      ...(object.script_name ? { script_name: `$WORKER_NAME(${object.script_name})` } : {}),
     });
   }
   if (config.browser) {
@@ -490,6 +516,15 @@ export function buildWorkerEntry(
     // The router routes /gatekeeper/<short>/* by scanning its own GATEKEEPER_* bindings
     // (default entrypoint — it forwards whole HTTP requests, not vendor RPC).
     gatekeeperBindingExpansion = { propsByPackage: {} };
+  } else if (kind === "inbox") {
+    // A required core service, never a GatekeeperVendor or an OAuth connector. Version 2
+    // deployers collect these inputs and provision this worker before binding the router.
+    inputs = deployInputs ?? [];
+    for (const input of inputs) {
+      if (input.kind === "secret") {
+        bindings.push({ type: "secret_text", name: input.name, text: `$SECRET(${input.name})` });
+      }
+    }
   } else {
     vars.BASE_URL = `$PUBLIC_BASE_URL/gatekeeper/${releaseShortName(pkgName)}`;
     installable = !NOT_INSTALLABLE.has(pkgName);

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   HomeAssistantLabelConfiguratorRpc,
@@ -17,11 +18,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Label" description="Choose a Home Assistant label. The binding grants access to every entity carrying this label.">
+      <Field label={t("gatekeeper-homeassistant.label-configurator-ui.label")} description={t("gatekeeper-homeassistant.label-configurator-ui.choose_a_home_assistant_label_the_binding_grants_access_to_every")}>
         <Autocomplete
           name="labelId"
           value={values.labelId}
-          placeholder="Search labels..."
+          placeholder={t("gatekeeper-homeassistant.label-configurator-ui.search_labels")}
           loadOptions={query => ui.listLabels(query)}
           onChange={labelId => setValues({ labelId })}
         />

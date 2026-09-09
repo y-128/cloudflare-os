@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   GoogleSheetsConfiguratorRpc, GoogleSheetsConfiguratorValues,
@@ -16,11 +17,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Spreadsheet" description="Search recent spreadsheets from Drive.">
+      <Field label={t("gatekeeper-google.google-sheets-configurator-ui.spreadsheet")} description={t("gatekeeper-google.google-sheets-configurator-ui.search_recent_spreadsheets_from_drive")}>
         <Autocomplete
           name="spreadsheetId"
           value={values.spreadsheetId}
-          placeholder="Search recent spreadsheets..."
+          placeholder={t("gatekeeper-google.google-sheets-configurator-ui.search_recent_spreadsheets")}
           loadOptions={query => ui.listSpreadsheets(query)}
           onChange={spreadsheetId => setValues({ spreadsheetId })}
         />

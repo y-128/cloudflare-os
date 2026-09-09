@@ -338,6 +338,17 @@ function applyGatekeeper(
   if (r2Buckets) config.previews.r2_buckets = r2Buckets;
 }
 
+/** Give the mailbox its own preview bucket while keeping its private core-service role. */
+function applyInbox(config: StagingConfig): void {
+  config.previews = {
+    services: structuredClone(config.services),
+    observability: previewObservability(config),
+    vars: { ...config.vars },
+    ai: config.ai,
+    r2_buckets: previewResourceBindings(config.r2_buckets),
+  };
+}
+
 function applyBackend(
   config: StagingConfig,
   { baseUrl, gatekeepers }: PreviewContext,
@@ -375,6 +386,7 @@ function applyRouter(config: StagingConfig, { gatekeepers }: PreviewContext): vo
   config.preview_urls = true;
   config.services = [
     { binding: "WORKSHOP_BACKEND", service: "workshop-backend" },
+    { binding: "MAIL_INBOX", service: "inbox" },
     ...routerGatekeeperServices(gatekeepers),
   ];
   config.previews = {
@@ -435,6 +447,7 @@ export function buildPreviewConfigs({
     if (isGatekeeperPackage(pkg.name)) applyGatekeeper(pkg.name, config, context);
     else if (pkg.name === "workshop-backend") applyBackend(config, context);
     else if (pkg.name === "router") applyRouter(config, context);
+    else if (pkg.name === "inbox") applyInbox(config);
     else throw new Error(`cannot build a preview config for package: ${pkg.name}`);
 
     configs.set(pkg.name, config);

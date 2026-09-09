@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useState, useEffect, type CSSProperties } from 'react'
 import { X } from '@phosphor-icons/react'
 import ReactMarkdown, { type Components } from 'react-markdown'
@@ -39,6 +40,7 @@ const INLINE_MARKDOWN_COMPONENTS: Components = {
  * admin. Dismissible per-message: a changed banner re-appears after dismissal.
  */
 export default function AnnouncementBanner() {
+  const { t } = useTranslation();
   const config = useServerConfig()
   const text = (config?.banner ?? '').trim()
   const color: BannerColor = config?.bannerColor ?? DEFAULT_BANNER_COLOR
@@ -76,8 +78,8 @@ export default function AnnouncementBanner() {
       <button
         onClick={handleDismiss}
         className="flex-shrink-0 rounded-md p-0.5 hover:bg-black/10 transition-colors"
-        aria-label="Dismiss banner"
-        title="Dismiss"
+        aria-label={t("workshop-frontend.AnnouncementBanner.dismiss_banner")}
+        title={t("workshop-frontend.AnnouncementBanner.dismiss")}
         style={{ color: 'inherit' }}
       >
         <X size={16} />

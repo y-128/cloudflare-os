@@ -6,11 +6,16 @@
 
   // Gatekeeper service bindings (GATEKEEPER_*) are added dynamically at deploy time — by the
   // deploy service for customer instances, from the release manifest's binding templates. Only
-  // the static backend binding is checked in.
+  // the static, always-present backend and mailbox bindings are checked in. MAIL_INBOX is
+  // core infrastructure, so it is not discovered dynamically like optional gatekeepers.
   "services": [
     {
       "binding": "WORKSHOP_BACKEND",
       "service": "workshop-backend"
+    },
+    {
+      "binding": "MAIL_INBOX",
+      "service": "inbox"
     }
   ],
 
@@ -24,6 +29,8 @@
     "run_worker_first": [
       "/api",
       "/api/*",
+      "/api/inbox",
+      "/api/inbox/*",
       "/blueprint-screenshot",
       "/blueprint-screenshot/*",
       "/gatekeeper/*"

@@ -317,3 +317,36 @@ test("a gatekeeper-prefixed library is not a deployable worker", () => {
   assert.ok(!deployable.includes("gatekeeper-kit"),
       "gatekeeper-kit is a library; adding a wrangler.jsonc would publish it as a connector");
 });
+
+
+// Inbox is a required core service and must never be offered as an OAuth gatekeeper.
+test("inbox ships with its storage, mail, AI, and shared Workshop authentication contract", () => {
+  const manifest = buildTestManifest();
+  assert.equal(manifest.manifestVersion, 2);
+  const inbox = manifest.workers.inbox;
+  assert.equal(inbox.kind, "inbox");
+  assert.equal(inbox.shortName, undefined);
+  assert.equal(inbox.gatekeeperBindingExpansion, undefined);
+  assert.equal(inbox.vars.BASE_URL, undefined);
+  assert.deepEqual(inbox.inputs?.map(input => input.name), ["DOMAINS"]);
+  assert.ok(!inbox.bindings.some(binding => binding.name === "CLIENT_SECRET"));
+  assert.ok(inbox.bindings.some(binding => binding.type === "ai" && binding.name === "AI"));
+  assert.ok(inbox.bindings.some(binding => binding.type === "send_email" && binding.name === "EMAIL"));
+  assert.deepEqual(inbox.bindings.find(binding => binding.name === "BUCKET"), {
+    type: "r2_bucket", name: "BUCKET", bucket_name: "$R2_BUCKET_NAME",
+  });
+  for (const [name, className] of Object.entries({
+    MAILBOX: "MailboxDO", CONFIG: "ConfigDO", EMAIL_AGENT: "EmailAgent", EMAIL_MCP: "EmailMCP",
+  })) {
+    assert.deepEqual(inbox.bindings.find(binding => binding.name === name), {
+      type: "durable_object_namespace", name, class_name: className,
+    });
+  }
+  assert.equal(inbox.migrations.at(-1)?.tag, "v4");
+  assert.deepEqual(inbox.bindings.find(binding => binding.name === "WORKSHOP_AUTH"), {
+    type: "service", name: "WORKSHOP_AUTH", service: "$WORKER_NAME(workshop-backend)",
+  });
+  assert.deepEqual(manifest.workers.router.bindings.find(binding => binding.name === "MAIL_INBOX"), {
+    type: "service", name: "MAIL_INBOX", service: "$WORKER_NAME(inbox)",
+  });
+});

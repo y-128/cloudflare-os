@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useNavigate } from '@tanstack/react-router'
 import { DropdownMenu } from '@cloudflare/kumo'
 import { useAuthenticatedApi } from '../AuthContext'
@@ -5,6 +6,7 @@ import { useAvatar } from '../useAvatar'
 import { MENU_CONTENT, MENU_ITEM, MENU_ITEM_DANGER, MENU_POSITIONER_STYLE } from './menuStyles'
 
 export default function UserMenu() {
+  const { t } = useTranslation();
   const { authenticatedApi, logout, currentUser, isAdmin } = useAuthenticatedApi()
   const navigate = useNavigate()
 
@@ -20,8 +22,8 @@ export default function UserMenu() {
         render={
           <button
             className="flex h-11 w-11 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-kumo-tint transition-colors hover:bg-kumo-fill md:h-7 md:w-7"
-            title="Open profile menu"
-            aria-label="Open profile menu"
+            title={t("workshop-frontend.UserMenu.open_profile_menu")}
+            aria-label={t("workshop-frontend.UserMenu.open_profile_menu")}
           >
             {avatarUrl ? (
               <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -36,21 +38,18 @@ export default function UserMenu() {
           onClick={() => navigate({ to: '/profile' })}
           className={MENU_ITEM}
         >
-          Profile
-        </DropdownMenu.Item>
+          {t("workshop-frontend.UserMenu.profile")}</DropdownMenu.Item>
         <DropdownMenu.Item
           onClick={() => navigate({ to: '/providers' })}
           className={MENU_ITEM}
         >
-          Providers
-        </DropdownMenu.Item>
+          {t("workshop-frontend.UserMenu.providers")}</DropdownMenu.Item>
         {isAdmin && (
           <DropdownMenu.Item
             onClick={() => navigate({ to: '/admin' })}
             className={MENU_ITEM}
           >
-            Admin
-          </DropdownMenu.Item>
+            {t("workshop-frontend.UserMenu.admin")}</DropdownMenu.Item>
         )}
         <DropdownMenu.Separator />
         <DropdownMenu.Item
@@ -58,8 +57,7 @@ export default function UserMenu() {
           onClick={logout}
           className={MENU_ITEM_DANGER}
         >
-          Sign out
-        </DropdownMenu.Item>
+          {t("workshop-frontend.UserMenu.sign_out")}</DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu>
   )

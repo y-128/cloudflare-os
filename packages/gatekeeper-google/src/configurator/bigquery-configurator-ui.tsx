@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { BigQueryConfiguratorRpc, BigQueryConfiguratorValues } from "./bigquery-configurator-types";
 
@@ -27,11 +28,11 @@ export default {
 
   render({ values, setValues, clearFields, ui }) {
     return <Section>
-      <Field label="Project" description="Start with the Google Cloud project this connection can query.">
+      <Field label={t("gatekeeper-google.bigquery-configurator-ui.project")} description={t("gatekeeper-google.bigquery-configurator-ui.start_with_the_google_cloud_project_this_connection_can_query")}>
         <Autocomplete
           name="projectId"
           value={values.projectId}
-          placeholder="Search projects..."
+          placeholder={t("gatekeeper-google.bigquery-configurator-ui.search_projects")}
           loadOptions={query => ui.listProjects(query)}
           onChange={projectId => {
             clearFields("datasetId", "tableId");
@@ -40,11 +41,11 @@ export default {
         />
       </Field>
 
-      <Field label="Dataset" description="Leave blank to allow all datasets in the project." optional>
+      <Field label={t("gatekeeper-google.bigquery-configurator-ui.dataset")} description={t("gatekeeper-google.bigquery-configurator-ui.leave_blank_to_allow_all_datasets_in_the_project")} optional>
         <Autocomplete
           name="datasetId"
           value={values.datasetId}
-          placeholder={values.projectId ? "Search datasets..." : "Choose a project first"}
+          placeholder={values.projectId ? t("gatekeeper-google.bigquery-configurator-ui.search_datasets") : t("gatekeeper-google.bigquery-configurator-ui.choose_a_project_first")}
           disabled={!values.projectId}
           loadOptions={query => values.projectId ? ui.listDatasets(values.projectId, query) : Promise.resolve([])}
           onChange={datasetId => {
@@ -59,11 +60,11 @@ export default {
         />
       </Field>
 
-      <Field label="Table" description="Leave blank to allow all tables in dataset." optional>
+      <Field label={t("gatekeeper-google.bigquery-configurator-ui.table")} description={t("gatekeeper-google.bigquery-configurator-ui.leave_blank_to_allow_all_tables_in_dataset")} optional>
         <Autocomplete
           name="tableId"
           value={values.tableId}
-          placeholder={values.datasetId ? "Search tables..." : "Choose a dataset first"}
+          placeholder={values.datasetId ? t("gatekeeper-google.bigquery-configurator-ui.search_tables") : t("gatekeeper-google.bigquery-configurator-ui.choose_a_dataset_first")}
           disabled={!values.projectId || !values.datasetId}
           loadOptions={query => values.projectId && values.datasetId
             ? ui.listTables(values.projectId, values.datasetId, query)

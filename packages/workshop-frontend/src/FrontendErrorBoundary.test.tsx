@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -25,8 +26,8 @@ describe('FrontendErrorBoundary', () => {
         <Broken />
       </FrontendErrorBoundary>,
     ))
-    expect(container.textContent).toContain('Something went wrong')
-    expect(container.querySelector('button')?.textContent).toContain('Reload')
+    expect(container.textContent).toContain(t("gatekeeper-scheduler.ErrorBoundary.something_went_wrong"))
+    expect(container.querySelector('button')?.textContent).toContain(t("gatekeeper-scheduler.ErrorBoundary.reload"))
     expect(reportIssue).toHaveBeenCalledWith('workshop.react-render', expect.any(Error),
       expect.objectContaining({ captureMechanism: 'react', handled: false }))
     container.remove()

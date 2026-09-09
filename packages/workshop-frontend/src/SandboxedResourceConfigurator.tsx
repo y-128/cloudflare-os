@@ -1,3 +1,6 @@
+import { useTranslation } from "@gadgets/i18n";
+import { useFrameLocale } from "./hooks/useFrameLocale";
+
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RpcStub, RpcTarget, newMessagePortRpcSession } from 'capnweb'
@@ -37,7 +40,7 @@ class ResourceConfiguratorHostImpl extends RpcTarget implements ResourceConfigur
       maxCallsPerMinute: 120,
       maxPendingCalls: 32,
       onRateLimit: 'reject',
-      label: 'Resource configurator',
+      label: "Resource configurator",
     }).capability
   }
 
@@ -82,9 +85,11 @@ export default function SandboxedResourceConfigurator({
   initialResourceUrl?: string,
   resourceUrlPattern?: string,
 }) {
+  const { t } = useTranslation();
   const { resolvedThemeMode } = useTheme()
   const placeholderRef = useRef<HTMLDivElement>(null)
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  useFrameLocale(iframeRef)
   const rpcSessionRef = useRef<{ [Symbol.dispose]?(): void } | null>(null)
   const iframeRpcRef = useRef<RpcStub<ResourceConfiguratorIframe> | null>(null)
   // The configurator stub is an arbitrary gatekeeper-defined capability: its method shape is
@@ -249,16 +254,16 @@ export default function SandboxedResourceConfigurator({
   }
 
   const collectResourceUrl = () => {
-    if (iframeInvalidatedRef.current) return Promise.reject(new Error('Configurator is no longer available.'))
+    if (iframeInvalidatedRef.current) return Promise.reject(new Error(t("workshop-frontend.SandboxedResourceConfigurator.configurator_is_no_longer_available")))
     const iframe = iframeRpcRef.current
-    if (!iframe || !iframeConnectedRef.current) return Promise.reject(new Error('Configurator is not ready.'))
+    if (!iframe || !iframeConnectedRef.current) return Promise.reject(new Error(t("workshop-frontend.SandboxedResourceConfigurator.configurator_is_not_ready")))
 
     let timeout: number | null = null
     return Promise.race([
       iframe.collectResourceUrl(),
       new Promise<never>((_, reject) => {
         timeout = window.setTimeout(() => {
-          reject(new Error('Configurator did not provide its resource URL. Please try again.'))
+          reject(new Error(t("workshop-frontend.SandboxedResourceConfigurator.configurator_did_not_provide_its_resource_url_please_try_again")))
         }, COLLECT_VALUES_TIMEOUT_MS)
       }),
     ]).finally(() => {
@@ -391,7 +396,7 @@ export default function SandboxedResourceConfigurator({
         srcDoc={frame.iframeHtml}
         onLoad={handleIframeLoad}
         sandbox="allow-scripts"
-        title="Resource configurator"
+        title={t("workshop-frontend.SandboxedResourceConfigurator.resource_configurator")}
         scrolling="no"
         style={{
           position: 'fixed',

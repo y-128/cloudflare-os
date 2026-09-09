@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   WorkspaceConfiguratorRpc, WorkspaceConfiguratorValues,
@@ -17,8 +18,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole workspace"
-        description="This connection lets the client read the channels and direct messages you can access, browse Slack workspace members, and search messages."
+        label={t("gatekeeper-slack.workspace-configurator-ui.whole_workspace")}
+        description={t("gatekeeper-slack.workspace-configurator-ui.this_connection_lets_the_client_read_the_channels_and_direct_mes")}
       >
         <span />
       </Field>

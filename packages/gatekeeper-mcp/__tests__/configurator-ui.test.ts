@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 // The real `h` and the controls throw: the sandbox runtime supplies them at load time. These tests
 // exercise how a resource URL is read and written, not the markup.
-vi.mock("@gadgets/configurator-ui", () => ({
+vi.mock("@gadgets/configurator-ui", async () => ({
+  t: (await import("../../i18n/src/core.ts")).translate.bind(null, "ja"),
   h: (component: unknown, props: unknown, ...children: unknown[]) =>
     ({ component, props, children }),
   Section: "Section",

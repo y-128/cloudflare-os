@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, Section, TextInput, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { EmailMailboxConfiguratorRpc, EmailMailboxConfiguratorValues } from "./email-configurator-types";
 
@@ -20,11 +21,11 @@ export default {
 
   render({ values, setValues }) {
     return <Section>
-      <Field label="Email name" description="Choose the local part of the mailbox address this connection can receive.">
+      <Field label={t("gatekeeper-email.email-configurator-ui.email_name")} description={t("gatekeeper-email.email-configurator-ui.choose_the_local_part_of_the_mailbox_address_this_connection_can")}>
         <TextInput
           name="emailName"
           value={values.emailName}
-          placeholder="alerts"
+          placeholder={t("gatekeeper-email.email-configurator-ui.alerts")}
           onChange={emailName => setValues({ emailName })}
         />
       </Field>

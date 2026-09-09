@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import {
   CheckboxList, Field, h, RadioCards, Section, type ConfiguratorUISpec,
 } from "@gadgets/configurator-ui";
@@ -41,33 +42,32 @@ export default {
     const selectedCount = (values.tools ?? "").split(",").filter(Boolean).length;
 
     return <Section>
-      <Field label="Tools" description="Choose how much of this server this connection may call.">
+      <Field label={t("gatekeeper-mcp.server-configurator-ui.tools")} description={t("gatekeeper-mcp.server-configurator-ui.choose_how_much_of_this_server_this_connection_may_call")}>
         <RadioCards
           value={mode}
           options={[
             {
               value: "all",
-              title: "All tools",
-              description: "Every tool this server offers, including ones it adds later.",
+              title: t("gatekeeper-mcp-portal.server-configurator-ui.all_tools"),
+              description: t("gatekeeper-mcp-portal.server-configurator-ui.every_tool_this_server_offers_including_ones_it_adds_later"),
             },
             {
               value: "choose",
-              title: "Choose tools",
+              title: t("gatekeeper-mcp-portal.server-configurator-ui.choose_tools"),
               description:
-                "Only the tools you tick. Anything else is refused, including tools added later.",
+                t("gatekeeper-mcp.server-configurator-ui.only_the_tools_you_tick_anything_else_is_refused_including_tools_"),
             },
           ]}
           onChange={next => setValues({ mode: next })}
         />
       </Field>
       <Field
-        label="Allowed tools"
+        label={t("gatekeeper-mcp.server-configurator-ui.allowed_tools")}
         description={mode === "all"
-          ? "Read-only tools return data straight away; the rest queue for your approval."
+          ? t("gatekeeper-mcp.server-configurator-ui.read_only_tools_return_data_straight_away_the_rest_queue_for_you")
           : selectedCount > 0
-            ? `${selectedCount} selected. Read-only tools return data straight away; the rest `
-              + "queue for your approval."
-            : "Tick at least one tool to grant anything."}>
+            ? t("gatekeeper-mcp.server-configurator-ui.selected_read_only_tools_return_data_straight_away_the_rest_queue", { n: selectedCount })
+            : t("gatekeeper-mcp.server-configurator-ui.tick_at_least_one_tool_to_grant_anything")}>
         <CheckboxList
           name="tools"
           value={values.tools}

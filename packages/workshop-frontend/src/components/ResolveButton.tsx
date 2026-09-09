@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import type { MouseEventHandler } from 'react'
 
 export function ResolveButton({
@@ -11,6 +12,7 @@ export function ResolveButton({
   disabled: boolean
   onClick: MouseEventHandler<HTMLButtonElement>
 }) {
+  const { t } = useTranslation();
   const toneClassName = variant === 'filled'
     ? 'h-7 bg-kumo-brand px-3 text-white enabled:hover:opacity-90'
     : tone === 'approve'
@@ -24,7 +26,7 @@ export function ResolveButton({
       disabled={disabled}
       className={`flex cursor-pointer items-center rounded-md text-[12px] font-medium tracking-[-0.15px] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${toneClassName}`}
     >
-      {tone === 'approve' ? 'Approve' : 'Deny'}
+      {tone === 'approve' ? t("workshop-frontend.ResolveButton.approve") : t("workshop-frontend.ResolveButton.deny")}
     </button>
   )
 }
@@ -36,6 +38,7 @@ export function AlwaysApproveButton({
   disabled: boolean
   onClick: MouseEventHandler<HTMLButtonElement>
 }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -43,7 +46,6 @@ export function AlwaysApproveButton({
       disabled={disabled}
       className="flex h-6 cursor-pointer items-center rounded-md px-2 text-[12px] font-medium tracking-[-0.15px] text-kumo-inactive transition-colors enabled:hover:bg-kumo-tint enabled:hover:text-kumo-default disabled:cursor-not-allowed disabled:opacity-40"
     >
-      Always approve
-    </button>
+      {t("workshop-frontend.ResolveButton.always_approve")}</button>
   )
 }

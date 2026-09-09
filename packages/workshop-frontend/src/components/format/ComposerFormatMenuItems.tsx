@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 // The deployment's standard formats as rows in the composer's `+` menu.
 //
 // Picking one drops its name into the message at the caret (`onSelect`) rather than creating
@@ -24,6 +25,7 @@ export default function ComposerFormatMenuItems({
   onSelect: (format: OutputFormatOffer) => void
   showTrailingSeparator?: boolean
 }) {
+  const { t } = useTranslation();
   const { formats, creating, create } = useOutputFormats()
 
   if (formats.length === 0) return null
@@ -34,8 +36,7 @@ export default function ComposerFormatMenuItems({
   return (
     <>
       <p className="px-2 pb-1 pt-1.5 text-[10px] font-medium uppercase leading-4 tracking-[0.06em] text-kumo-inactive">
-        Start with
-      </p>
+        {t("workshop-frontend.ComposerFormatMenuItems.start_with")}</p>
       {formats.map((format) => (
         <DropdownMenu.Item
           key={format.blueprintId}
@@ -51,7 +52,7 @@ export default function ComposerFormatMenuItems({
             />
           </span>
           <span className="flex-1 truncate">
-            {creating === format.blueprintId ? 'Creating…' : format.output.noun}
+            {creating === format.blueprintId ? t("workshop-frontend.ComposerFormatMenuItems.creating") : format.output.noun}
           </span>
         </DropdownMenu.Item>
       ))}

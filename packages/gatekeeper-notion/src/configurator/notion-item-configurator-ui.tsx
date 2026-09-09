@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   NotionItemConfiguratorRpc,
@@ -22,13 +23,13 @@ export default {
   render({ values, setValues, ui }) {
     return <Section>
       <Field
-        label="Page or database"
-        description="Search the Notion pages and databases shared with this connection, or paste a Notion URL."
+        label={t("gatekeeper-notion.notion-item-configurator-ui.page_or_database")}
+        description={t("gatekeeper-notion.notion-item-configurator-ui.search_the_notion_pages_and_databases_shared_with_this_connectio")}
       >
         <Autocomplete
           name="itemUrl"
           value={values.itemUrl}
-          placeholder="Search Notion..."
+          placeholder={t("gatekeeper-notion.notion-item-configurator-ui.search_notion")}
           loadOptions={query => ui.listItems(query)}
           onChange={itemUrl => setValues({ itemUrl })}
         />

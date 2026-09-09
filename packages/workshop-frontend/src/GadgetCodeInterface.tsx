@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { useKumoToastManager } from '@cloudflare/kumo'
 import { DownloadSimple, List } from '@phosphor-icons/react'
@@ -173,6 +174,7 @@ export default function GadgetCodeInterface({
   liveRows, liveEditPreviews, pendingGadgetIds, streamingActiveFile, isAgentActive,
   isVisible = true, onHasCodeChange,
 }: GadgetCodeInterfaceProps) {
+  const { t } = useTranslation();
   const toasts = useKumoToastManager()
   const toastsRef = useRef(toasts)
   toastsRef.current = toasts
@@ -345,8 +347,7 @@ export default function GadgetCodeInterface({
       },
       onLocalEditsDiscarded: () => {
         toastsRef.current.add({
-          title: "Your latest code edits were discarded — this conversation's changes were " +
-            'reverted or changed by someone else at the same time.',
+          title: t("workshop-frontend.GadgetCodeInterface.your_latest_code_edits_were_discarded_because_someone_else_revert"),
           variant: 'warning',
         })
       },
@@ -948,19 +949,19 @@ export default function GadgetCodeInterface({
   const handleFileCreate = (filename: string) => {
     if (isEditingLocked || displayFiles === null) return
     if (displayFiles.has(filename)) {
-      toasts.add({ title: `File already exists: ${filename}`, variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.GadgetCodeInterface.file_already_exists", { value1: filename }), variant: 'error' })
       return
     }
     if (applyLocalFileChanges([[filename, { set: '' }]])) {
       setActiveFile(filename)
-      toasts.add({ title: `Created file: ${filename}`, variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.GadgetCodeInterface.created_file", { value1: filename }), variant: 'success' })
     }
   }
 
   const handleFileDelete = (filename: string) => {
     if (isEditingLocked || displayFiles === null) return
     if (!displayFiles.has(filename)) {
-      toasts.add({ title: 'File not found', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.GadgetCodeInterface.file_not_found"), variant: 'error' })
       return
     }
     if (applyLocalFileChanges([[filename, { remove: true }]])) {
@@ -968,7 +969,7 @@ export default function GadgetCodeInterface({
         const remaining = displayedFilesRef.current.filter(name => name !== filename)
         setActiveFile(remaining.length > 0 ? remaining[0] : null)
       }
-      toasts.add({ title: `Deleted file: ${filename}`, variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.GadgetCodeInterface.deleted_file", { value1: filename }), variant: 'success' })
     }
   }
 
@@ -976,25 +977,25 @@ export default function GadgetCodeInterface({
     if (isEditingLocked || displayFiles === null) return
     const text = displayFiles.get(oldName)
     if (text === undefined) {
-      toasts.add({ title: 'File not found', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.GadgetCodeInterface.file_not_found"), variant: 'error' })
       return
     }
     if (displayFiles.has(newName)) {
-      toasts.add({ title: `File already exists: ${newName}`, variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.GadgetCodeInterface.file_already_exists", { value1: newName }), variant: 'error' })
       return
     }
     if (applyLocalFileChanges([[oldName, { remove: true }], [newName, { set: text }]])) {
       if (activeFile === oldName) {
         setActiveFile(newName)
       }
-      toasts.add({ title: `Renamed file: ${oldName} \u2192 ${newName}`, variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.GadgetCodeInterface.renamed_file", { value1: oldName, value2: newName }), variant: 'success' })
     }
   }
 
   const handleFileDownload = useCallback((filename: string) => {
     const text = displayFiles?.get(filename)
     if (text === undefined) {
-      toasts.add({ title: `Could not download ${filename}`, variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.GadgetCodeInterface.could_not_download", { value1: filename }), variant: 'error' })
       return
     }
     saveTextToFile(filename, text)
@@ -1026,15 +1027,13 @@ export default function GadgetCodeInterface({
         style={{ height }}
       >
         <p className="m-0 text-sm text-kumo-danger">
-          Failed to load this gadget&apos;s code.
-        </p>
+          {t("workshop-frontend.GadgetCodeInterface.failed_to_load_this_gadget_s_code")}</p>
         <WorkshopButton
           tone="secondary"
           className="!h-8"
           onClick={() => setHeadRetryToken(token => token + 1)}
         >
-          Try again
-        </WorkshopButton>
+          {t("gatekeeper-scheduler.SchedulerPage.try_again")}</WorkshopButton>
       </div>
     )
   }
@@ -1045,8 +1044,7 @@ export default function GadgetCodeInterface({
         className="flex justify-center items-center px-6 text-center text-kumo-danger text-sm"
         style={{ height }}
       >
-        Failed to load this conversation&apos;s code changes. Try reloading the page.
-      </div>
+        {t("workshop-frontend.GadgetCodeInterface.failed_to_load_this_conversation_s_code_changes_try_reloading_the")}</div>
     )
   }
 
@@ -1056,8 +1054,7 @@ export default function GadgetCodeInterface({
         className="flex justify-center items-center text-kumo-subtle"
         style={{ height }}
       >
-        Loading code files...
-      </div>
+        {t("workshop-frontend.GadgetCodeInterface.loading_code_files")}</div>
     )
   }
 
@@ -1075,24 +1072,24 @@ export default function GadgetCodeInterface({
   const activeFileDownloadable =
     activeFile !== null && displayFiles?.get(activeFile) !== undefined
   const activeFileModeLabel = !branchMode
-    ? 'Viewing'
+    ? t("workshop-frontend.GadgetCodeInterface.viewing")
     : isEditingLocked
-      ? 'Reviewing changes in'
-      : 'Editing changes in'
+      ? t("workshop-frontend.GadgetCodeInterface.reviewing_changes_in")
+      : t("workshop-frontend.GadgetCodeInterface.editing_changes_in")
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height, width: '100%' }}>
       {hasUnsavedChanges && (
         <div className="bg-kumo-tint border-b border-kumo-line px-4 py-2 flex items-center gap-2 text-sm text-kumo-warning">
           <span className="text-base">&#9888;&#65039;</span>
-          <span>Connection issue - changes will be saved when connection is restored</span>
+          <span>{t("workshop-frontend.GadgetCodeInterface.connection_issue_changes_will_be_saved_when_connection_is_restor")}</span>
         </div>
       )}
       <div className="relative flex min-h-0 flex-1">
         {fileDrawerOpen && (
           <button
             type="button"
-            aria-label="Close files"
+            aria-label={t("workshop-frontend.FileSidebar.close_files")}
             onClick={() => setFileDrawerOpen(false)}
             className="absolute inset-0 z-20 bg-black/25 md:hidden"
           />
@@ -1101,7 +1098,7 @@ export default function GadgetCodeInterface({
           ref={fileDrawerRef}
           role={compactLayout ? 'dialog' : undefined}
           aria-modal={compactLayout ? true : undefined}
-          aria-label={compactLayout ? 'Files' : undefined}
+          aria-label={compactLayout ? t("gatekeeper-context.ContextLibraryPage.files") : undefined}
           aria-hidden={compactLayout && !fileDrawerOpen ? true : undefined}
           inert={compactLayout && !fileDrawerOpen ? true : undefined}
           tabIndex={compactLayout ? -1 : undefined}
@@ -1141,8 +1138,8 @@ export default function GadgetCodeInterface({
         >
           <div className={`${activeFile ? 'flex' : 'flex md:hidden'} h-11 shrink-0 items-center justify-between gap-2 border-b border-kumo-line bg-kumo-base px-2 md:h-9 md:px-3`}>
             <WorkshopIconButton
-              aria-label="Open files"
-              title="Files"
+              aria-label={t("workshop-frontend.GadgetCodeInterface.open_files")}
+              title={t("gatekeeper-context.ContextLibraryPage.files")}
               onClick={() => setFileDrawerOpen(true)}
               ref={fileDrawerTriggerRef}
               className="!h-9 !w-9 md:!hidden"
@@ -1152,12 +1149,12 @@ export default function GadgetCodeInterface({
             <div className="min-w-0 flex-1 truncate text-[13px] leading-4 text-kumo-subtle md:text-[12px]">
               {activeFile ? (
                 <>{activeFileModeLabel} <span className="font-mono font-medium text-kumo-default">{activeFile}</span></>
-              ) : 'Files'}
+              ) : t("gatekeeper-context.ContextLibraryPage.files")}
             </div>
             {activeFile && (
               <WorkshopIconButton
-                aria-label={`Download ${activeFile}`}
-                title="Download file"
+                aria-label={t("workshop-frontend.GadgetCodeInterface.download", { value1: activeFile })}
+                title={t("workshop-frontend.GadgetCodeInterface.download_file")}
                 onClick={() => handleFileDownload(activeFile)}
                 disabled={!activeFileDownloadable}
                 className="!h-9 !w-9 md:!h-6 md:!w-6"
@@ -1171,12 +1168,11 @@ export default function GadgetCodeInterface({
               <div className="flex h-full flex-col items-center justify-center bg-kumo-base px-6 text-center">
                 <div className="max-w-[360px]">
                   <p className="m-0 text-[15px] leading-[22px] font-semibold tracking-[-0.3px] text-kumo-default">
-                    No files yet
-                  </p>
+                    {t("workshop-frontend.GadgetCodeInterface.no_files_yet")}</p>
                   <p className="mt-1.5 mb-0 text-[13px] leading-[19px] tracking-[-0.25px] text-kumo-subtle">
                     {branchMode
-                      ? 'Keep building with the agent in chat and files will appear here as it works, or create one yourself.'
-                      : 'Open a conversation and build with the agent, and its accepted files will appear here.'}
+                      ? t("workshop-frontend.GadgetCodeInterface.keep_building_with_the_agent_in_chat_and_files_will_appear_here")
+                      : t("workshop-frontend.GadgetCodeInterface.open_a_conversation_and_build_with_the_agent_and_its_accepted_fil")}
                   </p>
                   {branchMode && (
                     <div className="mt-4 flex justify-center">
@@ -1186,8 +1182,7 @@ export default function GadgetCodeInterface({
                         tone="primary"
                         className="!h-8"
                       >
-                        New file
-                      </WorkshopButton>
+                        {t("workshop-frontend.GadgetCodeInterface.new_file")}</WorkshopButton>
                     </div>
                   )}
                 </div>

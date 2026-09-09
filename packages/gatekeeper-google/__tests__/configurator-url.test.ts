@@ -8,8 +8,10 @@
 // rather than as a resource the backend rejects after the user has filled the form.
 
 import { describe, expect, it, vi } from "vitest";
+import { translate } from "../../i18n/src/core.ts";
 
-vi.mock("@gadgets/configurator-ui", () => ({
+vi.mock("@gadgets/configurator-ui", async () => ({
+  t: (await import("../../i18n/src/core.ts")).translate.bind(null, "ja"),
   h: (component: unknown, props: unknown, ...children: unknown[]) => ({
     component, props, children,
   }),
@@ -157,13 +159,13 @@ describe("Drive configurator URLs", () => {
 
   it("explains native Doc and Sheet reads at every Drive scope", () => {
     expect(renderedCopy(driveAccountConfigurator)).toContain(
-      "native Google Docs and Sheets can be opened in read-only content sessions.",
+      translate("ja", "gatekeeper-google.drive-account-configurator-ui.find_files_and_folders_anywhere_this_google_account_can_read_in_d"),
     );
     expect(renderedCopy(sharedDriveConfigurator)).toContain(
-      "Search its files and read native Google Docs and Sheets.",
+      translate("ja", "gatekeeper-google.shared-drive-configurator-ui.choose_a_shared_drive_owned_by_an_organization_rather_than_an_ind"),
     );
     expect(renderedCopy(driveFileConfigurator)).toContain(
-      "A selected native Google Doc or Sheet also provides read-only content.",
+      translate("ja", "gatekeeper-google.drive-file-configurator-ui.search_recent_non_folder_files_a_selected_native_google_doc_or_sh"),
     );
   });
 

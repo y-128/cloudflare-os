@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -113,10 +114,10 @@ describe('BlueprintLandingPage model configuration', () => {
     await act(async () => { await Promise.resolve() })
 
     const configure = Array.from(document.body.querySelectorAll('button'))
-      .find(button => button.textContent === 'Configure')!
+      .find(button => button.textContent === t("workshop-frontend.BlueprintLandingPage.configure"))!
     await act(async () => configure.click())
 
-    const trigger = document.body.querySelector<HTMLButtonElement>('[aria-label="Choose an AI model"]')!
+    const trigger = document.body.querySelector<HTMLButtonElement>(`[aria-label="${t("workshop-frontend.BlueprintLandingPage.choose_an_ai_model")}"]`)!
     await act(async () => trigger.click())
 
     const option = document.body.querySelector<HTMLElement>('[role="option"]')!
@@ -129,7 +130,7 @@ describe('BlueprintLandingPage model configuration', () => {
     expect(trigger.textContent).toContain('Model one')
 
     const save = Array.from(document.body.querySelectorAll<HTMLButtonElement>('button'))
-      .find(button => button.textContent === 'Save connection')!
+      .find(button => button.textContent === t("workshop-frontend.BlueprintLandingPage.save_connection"))!
     expect(save.disabled).toBe(false)
   })
 })

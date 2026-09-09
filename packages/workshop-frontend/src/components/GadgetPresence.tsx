@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Popover, Tooltip } from '@cloudflare/kumo'
 import { RpcStub, RpcTarget } from 'capnweb'
@@ -7,8 +8,8 @@ import { PersonAvatar } from './PersonAvatar'
 const MAX_VISIBLE = 3
 
 const ROLE_LABELS: Record<PresenceParticipant['role'], string> = {
-  build: 'Workspace',
-  use: 'Gadget only',
+  get build() { return t("gatekeeper-linear.linear-workspace-configurator-ui.workspace"); },
+  get use() { return t("workshop-frontend.ShareModal.gadget_only"); },
 }
 
 export function GadgetPresence({
@@ -20,6 +21,7 @@ export function GadgetPresence({
   authenticatedApi: RpcStub<AuthenticatedApi>
   currentUserId: string | null
 }) {
+  const { t } = useTranslation();
   const [participants, setParticipants] = useState<PresenceParticipant[]>([])
 
   useEffect(() => {
@@ -182,8 +184,8 @@ export function GadgetPresence({
   const visible = display.slice(0, MAX_VISIBLE)
   const overflow = display.length - visible.length
   const count = display.length
-  const label = `${count} ${count === 1 ? 'person' : 'people'} here now`
-  const ariaLabel = `${count} ${count === 1 ? 'person' : 'people'} viewing this workspace`
+  const label = t("workshop-frontend.GadgetPresence.people_here_now", { n: count })
+  const ariaLabel = t("workshop-frontend.GadgetPresence.people_viewing_this_workspace", { n: count })
 
   return (
     <Popover>

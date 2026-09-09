@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useCallback, useState, type Dispatch, type SetStateAction } from 'react'
 import { useKumoToastManager } from '@cloudflare/kumo'
 import { RpcStub } from 'capnweb'
@@ -15,6 +16,7 @@ export function useAlwaysApproveTag(
     // Invoked after a rule is successfully enabled, so other views (e.g. the Connections rule list)
     // can refresh without waiting to be re-opened.
     onEnabled?: () => void) {
+  const { t } = useTranslation();
   const toasts = useKumoToastManager()
   const [enabledTags, setEnabledTags] = useState<Set<string>>(new Set())
 
@@ -31,7 +33,7 @@ export function useAlwaysApproveTag(
       return true
     } catch (err) {
       console.error('Failed to enable auto-approval:', err)
-      toasts.add({ title: 'Failed to enable auto-approval', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.useAlwaysApproveTag.failed_to_enable_auto_approval"), variant: 'error' })
       return false
     } finally {
       setProcessingActions(prev => {

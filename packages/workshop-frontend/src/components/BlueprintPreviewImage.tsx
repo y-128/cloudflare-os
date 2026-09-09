@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { Hexagon } from '@phosphor-icons/react'
 import { getGradient } from './BlueprintCard'
 
@@ -12,12 +13,13 @@ export function BlueprintPreviewImage({
   screenshotUrl?: string
   className?: string
 }) {
+  const { t } = useTranslation();
   return (
     <div className={`overflow-hidden rounded-xl border border-kumo-line bg-kumo-tint ${className ?? ''}`}>
       {screenshotUrl ? (
         <img
           src={screenshotUrl}
-          alt={`Screenshot of ${title}`}
+          alt={t("workshop-frontend.BlueprintLandingPage.screenshot_of_3", { value1: title })}
           className="aspect-[16/9] w-full object-cover"
           loading="lazy"
         />
@@ -29,6 +31,7 @@ export function BlueprintPreviewImage({
 }
 
 export function BlueprintPreviewPlaceholder({ id }: { id: string }) {
+  useTranslation();
   return (
     <div className="relative aspect-[16/9] overflow-hidden bg-kumo-base">
       <div className={`absolute inset-0 bg-gradient-to-br ${getGradient(id)} opacity-[0.08]`} />

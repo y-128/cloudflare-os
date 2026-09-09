@@ -403,9 +403,9 @@ test("every gatekeeper is bound to the backend by RPC and to the router by HTTP"
   const router = previewsOf(configs, "router").services;
   assert.ok(router, "the router preview declares no service bindings");
   assert.deepEqual(router.map((service) => service.service),
-      ["workshop-backend", ...gatekeepers],
+      ["workshop-backend", "inbox", ...gatekeepers],
       "the router fronts the backend and every gatekeeper");
-  for (const [index, service] of router.slice(1).entries()) {
+  for (const [index, service] of router.slice(2).entries()) {
     assert.equal(service.binding, gatekeeperBindingName(gatekeepers[index]));
     // The router forwards whole HTTP requests, so it binds the default entrypoint.
     assert.equal(service.entrypoint, undefined, service.service);
@@ -521,4 +521,19 @@ test("every gatekeeper handed an OAuth app is a package that exists, and reads t
     // what the deploy wizard's DEFAULT_CRED_INPUTS asks a real instance for.
     assert.deepEqual(Object.keys(secrets).toSorted(), ["CLIENT_ID", "CLIENT_SECRET"]);
   }
+});
+
+// Inbox receives its own storage and remains private behind the router.
+test("inbox has an isolated preview mailbox and a static router binding", () => {
+  const { configs } = buildAll();
+  const inbox = configs.get("inbox");
+  assert.ok(inbox);
+  assert.equal(inbox.workers_dev, false);
+  assert.equal(inbox.preview_urls, false);
+  assert.deepEqual(inbox.previews?.r2_buckets, [{ binding: "BUCKET" }]);
+  assert.deepEqual(inbox.previews?.ai, { binding: "AI" });
+  assert.equal(inbox.vars?.BASE_URL, undefined);
+  assert.equal(inbox.durable_objects?.bindings.length, 4);
+  assert.ok(previewsOf(configs, "router").services?.some(service =>
+    service.binding === "MAIL_INBOX" && service.service === "inbox"));
 });

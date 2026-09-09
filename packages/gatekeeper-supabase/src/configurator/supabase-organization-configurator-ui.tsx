@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   SupabaseOrganizationConfiguratorRpc,
@@ -17,11 +18,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Organization" description="Search the organizations in your connected Supabase account.">
+      <Field label={t("gatekeeper-supabase.supabase-organization-configurator-ui.organization")} description={t("gatekeeper-supabase.supabase-organization-configurator-ui.search_the_organizations_in_your_connected_supabase_account")}>
         <Autocomplete
           name="slug"
           value={values.slug}
-          placeholder="Search organizations..."
+          placeholder={t("gatekeeper-supabase.supabase-organization-configurator-ui.search_organizations")}
           loadOptions={query => ui.listOrganizations(query)}
           onChange={slug => setValues({ slug })}
         />

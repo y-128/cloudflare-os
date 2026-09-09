@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   NotionWorkspaceConfiguratorRpc,
@@ -19,8 +20,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole workspace"
-        description="Grants access to every page and database you have shared with this Notion connection. To limit access, connect a single page or database instead."
+        label={t("gatekeeper-notion.notion-workspace-configurator-ui.whole_workspace")}
+        description={t("gatekeeper-notion.notion-workspace-configurator-ui.grants_access_to_every_page_and_database_you_have_shared_with_th")}
       >
       </Field>
     </Section>;

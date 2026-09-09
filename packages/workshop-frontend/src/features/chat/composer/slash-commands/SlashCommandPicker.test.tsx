@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -224,7 +225,7 @@ describe("SlashCommandPicker", () => {
       container!.querySelector<HTMLButtonElement>('[data-testid="invalidate-catalog"]')!.click();
     });
     await act(async () => vi.waitFor(() => expect(document.body.textContent)
-      .toContain("Couldn’t load commands. disconnected")));
+      .toContain(t("workshop-frontend.SlashCommandPicker.couldn_t_load_commands", { value1: "disconnected" }))));
 
     expect(document.querySelectorAll('[role="option"]')).toHaveLength(0);
   });

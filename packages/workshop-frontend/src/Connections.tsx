@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation, getLocale } from "@gadgets/i18n";
 import { useState, useEffect, useMemo } from 'react'
 import { Dialog, Tooltip, useKumoToastManager } from '@cloudflare/kumo'
 import {
@@ -41,6 +42,7 @@ interface ConnectionsProps {
  * scoped to one gadget.
  */
 export default function Connections({ overseer, gadget, chatId, authenticatedApi, onConnectionsChange, isVisible, onHasGatekeepersChange }: ConnectionsProps) {
+  const { t } = useTranslation();
   const [bindings, setBindings] = useState<GadgetBindingInfo[]>([])
   // Identity of the gadget this tab is showing, needed to offer it to agent spawners.
   const [gadgetInfo, setGadgetInfo] = useState<{ id: WorkpieceId; title: string } | null>(null)
@@ -77,7 +79,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       // silently render "no connected resources".
       console.error('Failed to load gatekeepers:', err)
       reportIssue('connections.load', err)
-      toasts.add({ title: 'Failed to load connections', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.Connections.failed_to_load_connections"), variant: 'error' })
     } finally {
       setLoading(false)
     }
@@ -96,7 +98,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       await loadGatekeepers()
     } catch (err) {
       console.error('Failed to toggle hook:', err)
-      toasts.add({ title: `Failed to ${enabled ? 'enable' : 'disable'} hook`, variant: 'error' })
+      toasts.add({ title: (enabled ? t("workshop-frontend.Activity.failed_to_enable_hook") : t("workshop-frontend.Activity.failed_to_disable_hook")), variant: 'error' })
       // Revert optimistic update.
       setHooks((prev) => prev.map((h) => (h.id === id ? { ...h, enabled: !enabled } : h)))
     } finally {
@@ -115,7 +117,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       await loadGatekeepers()
     } catch (err) {
       console.error('Failed to delete hook:', err)
-      toasts.add({ title: 'Failed to delete hook', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.Connections.failed_to_delete_hook"), variant: 'error' })
     } finally {
       setDeleteHookTarget(null)
     }
@@ -148,12 +150,12 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
     return [
       {
         target: gadgetInfo.id,
-        targetTitle: `${gadgetInfo.title} (this gadget)`,
+        targetTitle: t("workshop-frontend.Connections.this_gadget", { value1: gadgetInfo.title }),
         name: 'GADGET',
       },
       ...bindings.map((b) => ({ target: b.target, targetTitle: b.resourceTitle, name: b.name })),
     ]
-  }, [gadgetInfo, bindings])
+  }, [gadgetInfo, bindings, getLocale()])
 
   const handleEditStart = (name: string) => {
     setEditingBinding(name)
@@ -163,7 +165,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
   const handleEditSave = async (name: string) => {
     const newName = editValue.trim()
     if (!newName) {
-      toasts.add({ title: 'Binding name cannot be empty', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.Connections.binding_name_cannot_be_empty"), variant: 'error' })
       return
     }
     if (newName === name) {
@@ -177,7 +179,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       onConnectionsChange?.()
     } catch (err) {
       console.error('Failed to rename binding:', err)
-      toasts.add({ title: 'Failed to update binding name', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.Connections.failed_to_update_binding_name"), variant: 'error' })
     } finally {
       setEditingBinding(null)
     }
@@ -196,7 +198,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
       onConnectionsChange?.()
     } catch (err) {
       console.error('Failed to remove binding:', err)
-      toasts.add({ title: 'Failed to remove connection', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.Connections.failed_to_remove_connection"), variant: 'error' })
     } finally {
       setDeleteTarget(null)
     }
@@ -209,30 +211,26 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h2 className="m-0 text-[17px] leading-6 font-medium tracking-[-0.35px] text-kumo-default">
-                Connections
-              </h2>
+                {t("workshop-frontend.Connections.connections")}</h2>
               <p className="mt-1 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-                External resources this gadget can use.
-              </p>
+                {t("workshop-frontend.Connections.external_resources_this_gadget_can_use")}</p>
             </div>
             <WorkshopButton
               tone="primary"
               onClick={() => setIsNewConnectionModalVisible(true)}
               className="self-start"
             >
-              Connect resource
-            </WorkshopButton>
+              {t("workshop-frontend.Connections.connect_resource")}</WorkshopButton>
           </div>
 
           {loading ? (
             <div className="rounded-xl border border-kumo-line bg-kumo-base px-4 py-6 text-center text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-              Loading connections...
-            </div>
+              {t("workshop-frontend.Connections.loading_connections")}</div>
           ) : bindings.length === 0 ? (
             <EmptyState
-              title="No connected resources"
-              description="Connect Google Docs, GitHub, Google Sheets, and other services so this gadget can safely use external data."
-              actionLabel="Connect resource"
+              title={t("workshop-frontend.Connections.no_connected_resources")}
+              description={t("workshop-frontend.Connections.connect_google_docs_github_google_sheets_and_other_services_so_t")}
+              actionLabel={t("workshop-frontend.Connections.connect_resource")}
               onAction={() => setIsNewConnectionModalVisible(true)}
             />
           ) : (
@@ -253,24 +251,20 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-danger">
-                            Delete {gk.resourceTitle}?
-                          </p>
+                            {renderTranslation(t("workshop-frontend.Connections.delete_4"), { resourceTitle: gk.resourceTitle })}</p>
                           <p className="truncate text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                            The binding <span className="font-mono">{gk.name}</span> will be removed from this gadget.
-                          </p>
+                            {renderTranslation(t("workshop-frontend.Connections.the_binding_will_be_removed_from_this_gadget"), { value: <span className="font-mono">{gk.name}</span> })}</p>
                         </div>
                         <WorkshopButton
                           tone="danger"
                           className="min-w-[68px]"
                           onClick={handleDeleteConfirm}
                         >
-                          Delete
-                        </WorkshopButton>
+                          {t("workshop-frontend.Connections.delete")}</WorkshopButton>
                         <WorkshopButton
                           onClick={() => setDeleteTarget(null)}
                         >
-                          Cancel
-                        </WorkshopButton>
+                          {t("workshop-frontend.Connections.cancel")}</WorkshopButton>
                       </div>
                     ) : isEditing ? (
                       <div className="flex items-center gap-2">
@@ -282,8 +276,8 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                             if (e.key === 'Enter') handleEditSave(gk.name)
                             if (e.key === 'Escape') handleEditCancel()
                           }}
-                          placeholder="Binding name"
-                          aria-label="Binding name"
+                          placeholder={t("workshop-frontend.Connections.binding_name")}
+                          aria-label={t("workshop-frontend.Connections.binding_name")}
                           autoFocus
                           className="min-w-0 flex-1 font-mono"
                         />
@@ -293,13 +287,11 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                           onClick={() => handleEditSave(gk.name)}
                           disabled={!editValue.trim()}
                         >
-                          Save
-                        </WorkshopButton>
+                          {t("workshop-frontend.Connections.save")}</WorkshopButton>
                         <WorkshopButton
                           onClick={handleEditCancel}
                         >
-                          Cancel
-                        </WorkshopButton>
+                          {t("workshop-frontend.Connections.cancel")}</WorkshopButton>
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
@@ -312,41 +304,39 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                           <p className="flex items-center gap-2 truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
                             <span className="min-w-0 truncate">{gk.resourceTitle}</span>
                             {isPending && (
-                              <Tooltip content="Added in this chat; kept when you accept the chat's changes" asChild>
+                              <Tooltip content={t("workshop-frontend.Connections.added_in_this_chat_kept_when_you_accept_the_chat_s_changes")} asChild>
                                 <span className="flex-shrink-0 rounded-full bg-kumo-fill px-1.5 py-0.5 text-[10px] leading-none font-medium text-kumo-subtle">
-                                  Draft
-                                </span>
+                                  {t("workshop-frontend.Connections.draft")}</span>
                               </Tooltip>
                             )}
                           </p>
                           <p className="mt-0.5 truncate text-[11px] leading-4 tracking-[-0.1px] text-kumo-inactive">
-                            Referenced in code as: <span className="font-mono text-kumo-subtle">{gk.name}</span>
-                          </p>
+                            {renderTranslation(t("workshop-frontend.Connections.referenced_in_code_as_2"), { value: <span className="font-mono text-kumo-subtle">{gk.name}</span> })}</p>
                         </div>
                         <div className="ml-auto flex shrink-0 items-center gap-1">
-                          <Tooltip content="Edit name used in code" asChild>
+                          <Tooltip content={t("workshop-frontend.Connections.edit_name_used_in_code")} asChild>
                             <WorkshopIconButton
                               onClick={() => handleEditStart(gk.name)}
-                              aria-label="Edit name used in code"
+                              aria-label={t("workshop-frontend.Connections.edit_name_used_in_code")}
                             >
                               <Pencil size={14} />
                             </WorkshopIconButton>
                           </Tooltip>
                           {!isPending && (
-                            <Tooltip content="Edit blueprint settings" asChild>
+                            <Tooltip content={t("workshop-frontend.Connections.edit_blueprint_settings")} asChild>
                               <WorkshopIconButton
                                 onClick={() => setAnnotationTarget(gk)}
-                                aria-label="Edit blueprint settings"
+                                aria-label={t("workshop-frontend.Connections.edit_blueprint_settings")}
                               >
                                 <Blueprint size={14} />
                               </WorkshopIconButton>
                             </Tooltip>
                           )}
-                          <Tooltip content="Delete connection" asChild>
+                          <Tooltip content={t("workshop-frontend.Connections.delete_connection")} asChild>
                             <WorkshopIconButton
                               danger
                               onClick={() => setDeleteTarget({ name: gk.name, resourceTitle: gk.resourceTitle })}
-                              aria-label="Delete connection"
+                              aria-label={t("workshop-frontend.Connections.delete_connection")}
                             >
                               <Trash size={14} />
                             </WorkshopIconButton>
@@ -365,11 +355,9 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
           <section className="mt-8">
             <div className="mb-3">
               <h2 className="m-0 text-[17px] leading-6 font-medium tracking-[-0.35px] text-kumo-default">
-                Hooks
-              </h2>
+                {t("workshop-frontend.Connections.hooks")}</h2>
               <p className="mt-1 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-                Callbacks that let connected resources wake up this gadget when events happen.
-              </p>
+                {t("workshop-frontend.Connections.callbacks_that_let_connected_resources_wake_up_this_gadget_when")}</p>
             </div>
 
             <div className="overflow-hidden rounded-xl border border-kumo-line bg-kumo-base">
@@ -386,24 +374,20 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-danger">
-                            Delete hook "{hook.description.title}"?
-                          </p>
+                            {renderTranslation(t("workshop-frontend.Connections.delete_hook_3"), { title: hook.description.title })}</p>
                           <p className="truncate text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                            This permanently removes the hook. Future events will stop being delivered.
-                          </p>
+                            {t("workshop-frontend.Connections.this_permanently_removes_the_hook_future_events_will_stop_being")}</p>
                         </div>
                         <WorkshopButton
                           tone="danger"
                           className="min-w-[68px]"
                           onClick={handleDeleteHookConfirm}
                         >
-                          Delete
-                        </WorkshopButton>
+                          {t("workshop-frontend.Connections.delete")}</WorkshopButton>
                         <WorkshopButton
                           onClick={() => setDeleteHookTarget(null)}
                         >
-                          Cancel
-                        </WorkshopButton>
+                          {t("workshop-frontend.Connections.cancel")}</WorkshopButton>
                       </div>
                     ) : (
                       <div className="flex items-center gap-3">
@@ -433,11 +417,11 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
                             disabled={togglingHooks.has(hook.id)}
                             onToggle={(enabled) => handleToggleHook(hook.id, enabled)}
                           />
-                          <Tooltip content="Delete hook" asChild>
+                          <Tooltip content={t("workshop-frontend.Connections.delete_hook_2")} asChild>
                             <WorkshopIconButton
                               danger
                               onClick={() => setDeleteHookTarget({ id: hook.id, title: hook.description.title })}
-                              aria-label="Delete hook"
+                              aria-label={t("workshop-frontend.Connections.delete_hook_2")}
                             >
                               <Trash size={14} />
                             </WorkshopIconButton>
@@ -482,7 +466,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
         gadget={gadget}
         onClose={() => setAnnotationTarget(null)}
         onSaved={() => {
-          toasts.add({ title: 'Blueprint settings saved.', variant: 'success' })
+          toasts.add({ title: t("workshop-frontend.Connections.blueprint_settings_saved"), variant: 'success' })
           setAnnotationTarget(null)
         }}
       />
@@ -502,6 +486,7 @@ function BlueprintAnnotationModal({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { t } = useTranslation();
   const [data, setData] = useState<BindingCardData | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -522,13 +507,13 @@ function BlueprintAnnotationModal({
           if (loaded) {
             setData(loaded)
           } else {
-            setLoadError('Connection not found.')
+            setLoadError(t("workshop-frontend.Connections.connection_not_found"))
           }
         }
       } catch (err: any) {
         if (!cancelled) {
           reportIssue('connections.binding-load', err)
-          setLoadError(err?.message || 'Could not load binding.')
+          setLoadError(err?.message || t("workshop-frontend.Connections.could_not_load_binding"))
         }
       }
     })()
@@ -546,7 +531,7 @@ function BlueprintAnnotationModal({
       onSaved()
     } catch (err: any) {
       reportIssue('connections.binding-save', err)
-      setSaveError(err?.message || 'Could not save.')
+      setSaveError(err?.message || t("workshop-frontend.Connections.could_not_save"))
     } finally {
       setSaving(false)
     }
@@ -561,15 +546,13 @@ function BlueprintAnnotationModal({
           <div className="flex items-start justify-between gap-4 border-b border-kumo-line px-4 py-4 sm:px-5">
             <div className="min-w-0">
               <Dialog.Title className="text-[15px] leading-5 font-medium tracking-[-0.3px] text-kumo-default">
-                Blueprint settings
-              </Dialog.Title>
+                {t("workshop-frontend.Connections.blueprint_settings")}</Dialog.Title>
               <Dialog.Description className="mt-1 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                How this connection appears in blueprints.
-              </Dialog.Description>
+                {t("workshop-frontend.Connections.how_this_connection_appears_in_blueprints")}</Dialog.Description>
             </div>
             <Dialog.Close
               render={(props) => (
-                <WorkshopIconButton {...props} aria-label="Close">
+                <WorkshopIconButton {...props} aria-label={t("workshop-frontend.Connections.close")}>
                   <X size={16} />
                 </WorkshopIconButton>
               )}
@@ -580,7 +563,7 @@ function BlueprintAnnotationModal({
             {loadError ? (
               <div className="text-[13px] text-kumo-subtle">{loadError}</div>
             ) : !data ? (
-              <div className="py-2 text-center text-[13px] text-kumo-subtle">Loading...</div>
+              <div className="py-2 text-center text-[13px] text-kumo-subtle">{t("workshop-frontend.Connections.loading")}</div>
             ) : (
               <>
                 <BlueprintBindingCard
@@ -605,14 +588,13 @@ function BlueprintAnnotationModal({
                 onClick={onClose}
                 disabled={saving}
               >
-                Cancel
-              </WorkshopButton>
+                {t("workshop-frontend.Connections.cancel")}</WorkshopButton>
               <WorkshopButton
                 tone="primary"
                 onClick={handleSave}
                 disabled={saving || !data}
               >
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? t("workshop-frontend.Connections.saving") : t("workshop-frontend.Connections.save")}
               </WorkshopButton>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -100,7 +101,7 @@ describe("SchedulerPage", () => {
     await render(<SchedulerPage api={{ list }} {...host} />);
 
     expect(container!.textContent).toContain("Morning brief");
-    expect(container!.textContent).toContain("Needs attention");
+    expect(container!.textContent).toContain(t("gatekeeper-scheduler.SchedulerPage.needs_attention"));
     expect(container!.querySelector('[role="switch"]')).toBeNull();
     // Rows carry cadence, target and timing only — never the schedule's description.
     expect(container!.textContent).not.toContain(active.description);
@@ -110,7 +111,7 @@ describe("SchedulerPage", () => {
     await click('[data-action="open-schedule"]', "Weekly roundup");
     expect(host.openWorkspace).toHaveBeenLastCalledWith(ROUNDUP_WORKSPACE, 2);
     await click('[data-action="create-schedule"]');
-    expect(host.openPrompt).toHaveBeenCalledWith(CREATE_SCHEDULE_PROMPT);
+    expect(host.openPrompt).toHaveBeenCalledWith(CREATE_SCHEDULE_PROMPT());
   });
 
   it("expands the failure reason on needs-attention rows only", async () => {
@@ -121,10 +122,10 @@ describe("SchedulerPage", () => {
 
     // Only the failed schedule gets a caret; healthy rows have nothing to expand.
     expect(container!.querySelectorAll('[data-action="toggle-diagnostic"]')).toHaveLength(1);
-    expect(container!.textContent).not.toContain("Task callback failed after retries.");
+    expect(container!.textContent).not.toContain(t("gatekeeper-scheduler.format.task_callback_failed_after_retries"));
 
     await click('[data-action="toggle-diagnostic"]');
-    expect(container!.textContent).toContain("Task callback failed after retries.");
+    expect(container!.textContent).toContain(t("gatekeeper-scheduler.format.task_callback_failed_after_retries"));
     expect(container!.textContent).not.toContain(dead.description);
   });
 
@@ -195,13 +196,13 @@ describe("SchedulerPage", () => {
     const list = vi.fn<ScheduleManagementClient["list"]>(() => result.promise);
     await render(<SchedulerPage api={{ list }} {...hostProps()} />);
 
-    expect(container!.textContent).toContain("Loading scheduled tasks");
+    expect(container!.textContent).toContain(t("gatekeeper-scheduler.SchedulerPage.loading_scheduled_tasks"));
     await act(async () => result.resolve({ schedules: [] }));
 
     expect(container!.querySelector('input[type="search"]')).toBeNull();
     expect(container!.querySelector('[data-filter="all"]')).toBeNull();
     expect(container!.querySelector('[data-action="create-schedule"]')).not.toBeNull();
-    expect(container!.textContent).toContain("Get started");
+    expect(container!.textContent).toContain(t("gatekeeper-scheduler.SchedulerPage.get_started"));
   });
 
   it("shows a bounded error and retries the first page", async () => {
@@ -211,9 +212,9 @@ describe("SchedulerPage", () => {
       .mockResolvedValueOnce({ schedules: [active] });
     await render(<SchedulerPage api={{ list }} {...hostProps()} />);
 
-    expect(container!.textContent).toContain("Couldn’t load scheduled tasks");
+    expect(container!.textContent).toContain(t("gatekeeper-scheduler.SchedulerPage.couldn_t_load_scheduled_tasks"));
     expect(container!.textContent).not.toContain("private backend detail");
-    await click("button", "Try again");
+    await click("button", t("gatekeeper-scheduler.SchedulerPage.test.try_again"));
     expect(container!.textContent).toContain("Morning brief");
   });
 
@@ -227,7 +228,7 @@ describe("SchedulerPage", () => {
     expect(list).toHaveBeenCalledTimes(1);
     await act(async () => new Promise((resolve) => setTimeout(resolve, 220)));
     expect(list).toHaveBeenLastCalledWith({ query: "weekly roundup", statuses: undefined });
-    expect(container!.textContent).toContain("No scheduled tasks match these filters");
+    expect(container!.textContent).toContain(t("gatekeeper-scheduler.SchedulerPage.no_scheduled_tasks_match_these_filters"));
     // The search and tabs must survive an empty result, or the filter can't be cleared.
     expect(container!.querySelector('input[type="search"]')).not.toBeNull();
     expect(container!.querySelector('[data-filter="all"]')).not.toBeNull();
@@ -250,7 +251,7 @@ describe("SchedulerPage", () => {
     const rows = [
       ...container!.querySelectorAll<HTMLButtonElement>('[data-action="open-schedule"]'),
     ];
-    expect(container!.textContent).toContain("Unavailable workspace");
+    expect(container!.textContent).toContain(t("gatekeeper-scheduler.SchedulerPage.unavailable_workspace"));
     expect(rows.find((row) => row.textContent?.includes("Missed reminder"))?.disabled).toBe(true);
     expect(rows.find((row) => row.textContent?.includes("Quarterly export"))?.disabled).toBe(false);
   });

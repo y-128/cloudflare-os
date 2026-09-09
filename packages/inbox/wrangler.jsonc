@@ -1,0 +1,81 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "inbox",
+  "compatibility_date": "2026-09-04",
+  "main": ".wrangler/validate/workers/app.ts",
+  "build": {
+    "command": "pnpm exec capnweb-validate build --out .wrangler/validate",
+    "watch_dir": ["workers", "shared"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "invocation_logs": false,
+    },
+  },
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    // Email Routingを有効にしたドメインを設定してください（例: example.com）。
+    "DOMAINS": "",
+    "EMAIL_ADDRESSES": "[]",
+  },
+  // 実メール送信は明示的な選択が必要です。ローカル開発では remote: true を設定しません。
+  "services": [{ "binding": "WORKSHOP_AUTH", "service": "workshop-backend" }],
+  "send_email": [
+    {
+      "name": "EMAIL",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "inbox",
+      "preview_bucket_name": "inbox-preview",
+    },
+  ],
+  "ai": {
+    "binding": "AI",
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MAILBOX",
+        "class_name": "MailboxDO",
+      },
+      {
+        "name": "EMAIL_AGENT",
+        "class_name": "EmailAgent",
+      },
+      {
+        "name": "EMAIL_MCP",
+        "class_name": "EmailMCP",
+      },
+      {
+        "name": "CONFIG",
+        "class_name": "ConfigDO",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MailboxDO"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["EmailAgent"],
+    },
+    {
+      "tag": "v3",
+      "new_sqlite_classes": ["EmailMCP"],
+    },
+    {
+      "tag": "v4",
+      "new_sqlite_classes": ["ConfigDO"],
+    },
+  ],
+  "define": {
+    "INBOX_LOCAL_DEV": "false",
+  },
+}

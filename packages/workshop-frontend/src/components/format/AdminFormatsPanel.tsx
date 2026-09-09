@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation } from "@gadgets/i18n";
 // Admin panel for the deployment's standard output formats.
 //
 // A format is an ordinary blueprint the deployment has *promoted*: offered as "New Slides" and
@@ -41,6 +42,7 @@ export default function AdminFormatsPanel({
    */
   onChanged: () => Promise<void>
 }) {
+  const { t } = useTranslation();
   const { authenticatedApi } = useAuthenticatedApi()
   const toasts = useKumoToastManager()
   const [busy, setBusy] = useState(false)
@@ -81,7 +83,7 @@ export default function AdminFormatsPanel({
       await onChanged()
     } catch (err) {
       console.error('Format update failed:', err)
-      toasts.add({ title: "Couldn't update standard formats", variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.AdminFormatsPanel.couldn_t_update_standard_formats"), variant: 'error' })
     } finally {
       setBusy(false)
     }
@@ -97,11 +99,9 @@ export default function AdminFormatsPanel({
 
   return (
     <div className="rounded-xl border border-kumo-line bg-kumo-elevated p-6">
-      <h2 className="mb-1 text-lg font-semibold text-kumo-strong">Standard formats</h2>
+      <h2 className="mb-1 text-lg font-semibold text-kumo-strong">{t("workshop-frontend.AdminFormatsPanel.standard_formats")}</h2>
       <p className="mb-5 text-sm text-kumo-subtle">
-        A promoted blueprint is offered by name (“New Doc”, “New Slides”) wherever people start
-        something, and the agent is told to prefer it over building the same thing from scratch.
-      </p>
+        {t("workshop-frontend.AdminFormatsPanel.a_promoted_blueprint_is_offered_by_name_new_doc_new_slides_wherev")}</p>
 
       <PreviewStrip formats={offered} />
 
@@ -132,15 +132,12 @@ export default function AdminFormatsPanel({
         <DropdownMenu.Trigger
           render={
             <Button variant="secondary" disabled={busy || available.length === 0}>
-              <Plus size={14} className="mr-1.5" />
-              Promote a blueprint
-            </Button>
+              <Plus size={14} className="mr-1.5" />{t("workshop-frontend.AdminFormatsPanel.promote_a_blueprint")}</Button>
           }
         />
         <DropdownMenu.Content className={MENU_CONTENT}>
           <p className="px-2 pb-1.5 pt-1 text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-            Offer as a standard format
-          </p>
+            {t("workshop-frontend.AdminFormatsPanel.offer_as_a_standard_format")}</p>
           {available.map((candidate) => (
             <DropdownMenu.Item
               key={candidate.id}
@@ -150,12 +147,12 @@ export default function AdminFormatsPanel({
               <FormatGlyph output={candidate.declared} size="lg" className="shrink-0 text-kumo-subtle" />
               <span className="min-w-0">
                 <span className="block truncate text-[13px] text-kumo-default">
-                  {candidate.title || 'Untitled blueprint'}
+                  {candidate.title || t("workshop-frontend.AdminFormatsPanel.untitled_blueprint")}
                 </span>
                 <span className="block truncate text-[11px] text-kumo-inactive">
                   {candidate.declared
-                    ? `Produces ${candidate.declared.plural}`
-                    : 'No declared format. You’ll name it.'}
+                    ? t("workshop-frontend.AdminFormatsPanel.produces", { value1: candidate.declared.plural })
+                    : t("workshop-frontend.AdminFormatsPanel.no_declared_format_you_ll_name_it")}
                 </span>
               </span>
             </DropdownMenu.Item>
@@ -168,15 +165,14 @@ export default function AdminFormatsPanel({
 
 // What users will actually get, drawn with the same components the real surfaces use.
 function PreviewStrip({ formats }: { formats: AdminFormat[] }) {
+  const { t } = useTranslation();
   return (
     <div className="mb-5 rounded-lg border border-dashed border-kumo-line bg-kumo-tint/40 p-4">
       <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-        What people will see
-      </p>
+        {t("workshop-frontend.AdminFormatsPanel.what_people_will_see")}</p>
       {formats.length === 0 ? (
         <p className="text-[13px] italic text-kumo-inactive">
-          Nothing yet. People will only see “New workspace”.
-        </p>
+          {t("workshop-frontend.AdminFormatsPanel.nothing_yet_people_will_only_see_new_workspace")}</p>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           {formats.map((format) => (
@@ -184,27 +180,23 @@ function PreviewStrip({ formats }: { formats: AdminFormat[] }) {
               key={format.blueprintId}
               className="flex items-center gap-2 rounded-full border border-kumo-line bg-kumo-base px-3.5 py-2 text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-default"
             >
-              <FormatGlyph output={format.output} size="md" className="text-kumo-subtle" />
-              New {format.output!.noun}
-            </span>
+              <FormatGlyph output={format.output} size="md" className="text-kumo-subtle" />{renderTranslation(t("workshop-frontend.AdminFormatsPanel.new_2"), { value1: format.output!.noun })}</span>
           ))}
         </div>
       )}
       <p className="mt-2.5 text-[12px] leading-4 text-kumo-subtle">
-        In the composer’s + menu, the command palette, and on an empty Outputs page, in this order.
-      </p>
+        {t("workshop-frontend.AdminFormatsPanel.in_the_composer_s_menu_the_command_palette_and_on_an_empty_outpu")}</p>
     </div>
   )
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <div className="mb-5 rounded-lg border border-kumo-line bg-kumo-base px-4 py-5 text-center">
-      <p className="text-sm font-medium text-kumo-default">No standard formats yet</p>
+      <p className="text-sm font-medium text-kumo-default">{t("workshop-frontend.AdminFormatsPanel.no_standard_formats_yet")}</p>
       <p className="mx-auto mt-1 max-w-md text-[13px] leading-[18px] text-kumo-subtle">
-        Promote a blueprint to offer it by name wherever people start something, and to have the
-        agent prefer it over building the same thing from scratch.
-      </p>
+        {t("workshop-frontend.AdminFormatsPanel.promote_a_blueprint_to_offer_it_by_name_wherever_people_start_som")}</p>
     </div>
   )
 }
@@ -230,6 +222,7 @@ function FormatRow({
   onPatch: (patch: Parameters<AdminApi['updateFormat']>[1]) => void
   onRemove: () => void
 }) {
+  const { t } = useTranslation();
   const needsNaming = !format.missing && !format.output
 
   return (
@@ -244,7 +237,7 @@ function FormatRow({
           {format.missing ? (
             <span
               className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-kumo-tint text-kumo-danger"
-              title="This blueprint no longer exists"
+              title={t("workshop-frontend.AdminFormatsPanel.this_blueprint_no_longer_exists")}
             >
               <Warning size={16} />
             </span>
@@ -257,18 +250,18 @@ function FormatRow({
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-2">
               <span className="truncate text-sm font-medium text-kumo-default">
-                {format.output ? `New ${format.output.noun}` : format.blueprintTitle || format.blueprintId}
+                {format.output ? t("workshop-frontend.AdminFormatsPanel.new_2", { value1: format.output.noun }) : format.blueprintTitle || format.blueprintId}
               </span>
-              {format.bundled && <Badge>Bundled</Badge>}
-              {!format.enabled && !format.missing && <Badge>Off</Badge>}
-              {needsNaming && <Badge tone="warn">Needs a name</Badge>}
+              {format.bundled && <Badge>{t("workshop-frontend.AdminFormatsPanel.bundled")}</Badge>}
+              {!format.enabled && !format.missing && <Badge>{t("workshop-frontend.AdminFormatsPanel.off")}</Badge>}
+              {needsNaming && <Badge tone="warn">{t("workshop-frontend.AdminFormatsPanel.needs_a_name")}</Badge>}
             </span>
             <span className="mt-0.5 block truncate text-xs text-kumo-subtle">
               {format.missing
-                ? 'Blueprint deleted. Remove this entry.'
+                ? t("workshop-frontend.AdminFormatsPanel.blueprint_deleted_remove_this_entry")
                 : needsNaming
-                ? 'This blueprint doesn’t declare what it produces. Give it a name to offer it.'
-                : `${format.blueprintTitle} · shown under ${format.output!.plural} on Outputs`}
+                ? t("workshop-frontend.AdminFormatsPanel.this_blueprint_doesn_t_declare_what_it_produces_give_it_a_name_t")
+                : t("workshop-frontend.AdminFormatsPanel.shown_under_on_outputs", { value1: format.blueprintTitle, value2: format.output!.plural })}
             </span>
           </span>
 
@@ -284,10 +277,10 @@ function FormatRow({
             open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'
           }`}
         >
-          <IconButton label="Move up" disabled={busy || isFirst} onClick={() => onMove(-1)}>
+          <IconButton label={t("workshop-frontend.AdminFormatsPanel.move_up")} disabled={busy || isFirst} onClick={() => onMove(-1)}>
             <ArrowUp size={13} />
           </IconButton>
-          <IconButton label="Move down" disabled={busy || isLast} onClick={() => onMove(1)}>
+          <IconButton label={t("workshop-frontend.AdminFormatsPanel.move_down")} disabled={busy || isLast} onClick={() => onMove(1)}>
             <ArrowDown size={13} />
           </IconButton>
         </div>
@@ -303,21 +296,13 @@ function FormatRow({
         <div className="flex flex-col gap-4 border-t border-kumo-line px-3 py-4">
           {format.missing ? (
             <p className="text-[13px] text-kumo-subtle">
-              The blueprint behind this format was deleted, so nobody is offered it. Remove the
-              entry.
-            </p>
+              {t("workshop-frontend.AdminFormatsPanel.the_blueprint_behind_this_format_was_deleted_so_nobody_is_offered")}</p>
           ) : (
             <>
               <Fieldset
-                title="How it’s presented"
+                title={t("workshop-frontend.AdminFormatsPanel.how_it_s_presented")}
                 detail={
-                  'Leave a field empty to use the name the blueprint declares. ' +
-                  (format.bundled
-                    ? 'A bundled blueprint can change its declared names when this deployment ' +
-                      'updates; a value you type here stays as you set it. '
-                    : '') +
-                  'Applies to outputs made from now on — existing ones keep the name they were ' +
-                  'made with.'
+                  format.bundled ? t("workshop-frontend.AdminFormatsPanel.leave_a_field_empty_to_use_the_name_the_blueprint_declares_a_bund") : t("workshop-frontend.AdminFormatsPanel.leave_a_field_empty_to_use_the_name_the_blueprint_declares_applie")
                 }
               >
                 <div className="flex items-center gap-4">
@@ -334,14 +319,14 @@ function FormatRow({
                       onPick={(icon) => onPatch({ overrides: { icon } })}
                     />
                     <OverrideField
-                      label="Name"
+                      label={t("workshop-frontend.AdminFormatsPanel.name")}
                       value={format.output?.noun ?? format.overrides?.noun ?? ''}
                       declared={format.declared?.noun}
                       disabled={busy}
                       onCommit={(noun) => onPatch({ overrides: { noun } })}
                     />
                     <OverrideField
-                      label="Plural"
+                      label={t("workshop-frontend.AdminFormatsPanel.plural")}
                       value={format.output?.plural ?? format.overrides?.plural ?? ''}
                       declared={format.declared?.plural}
                       disabled={busy}
@@ -355,19 +340,18 @@ function FormatRow({
                   <figure className="hidden shrink-0 flex-col items-center gap-1.5 sm:flex">
                     <FormatPreview output={format.output} width={112} />
                     <figcaption className="text-[10px] uppercase tracking-[0.06em] text-kumo-inactive">
-                      On Outputs
-                    </figcaption>
+                      {t("workshop-frontend.AdminFormatsPanel.on_outputs")}</figcaption>
                   </figure>
                 </div>
               </Fieldset>
 
               <Fieldset
-                title="How the agent picks it"
-                detail="Standard formats are listed first in the agent’s catalog, as the entry below — the blueprint’s own description does most of the work. Add a hint only if the agent needs to know when to prefer this format over another one."
+                title={t("workshop-frontend.AdminFormatsPanel.how_the_agent_picks_it")}
+                detail={t("workshop-frontend.AdminFormatsPanel.standard_formats_are_listed_first_in_the_agent_s_catalog_as_the_e")}
               >
                 <OverrideField
-                  label="Hint"
-                  placeholder="e.g. prefer for customer-facing decks"
+                  label={t("workshop-frontend.AdminFormatsPanel.hint")}
+                  placeholder={t("workshop-frontend.AdminFormatsPanel.e_g_prefer_for_customer_facing_decks")}
                   value={format.agentHint}
                   disabled={busy}
                   onCommit={(agentHint) => onPatch({ agentHint: agentHint ?? '' })}
@@ -380,9 +364,7 @@ function FormatRow({
                     <Sparkle size={12} className="mt-0.5 shrink-0" />
                     <span className="min-w-0">
                       <span className="block">
-                        “{format.output.noun}” — a standard format on this deployment
-                        {format.agentHint ? ` -- ${format.agentHint}` : ''}
-                      </span>
+                        {renderTranslation(t("workshop-frontend.AdminFormatsPanel.a_standard_format_on_this_deployment_2"), { noun: format.output.noun, value: format.agentHint ? ` -- ${format.agentHint}` : '' })}</span>
                       {format.blueprintDescription && (
                         <span className="mt-0.5 block text-kumo-inactive">
                           {format.blueprintDescription}
@@ -399,18 +381,13 @@ function FormatRow({
                   result. The backend refuses it too -- this is an RPC. */}
               <div className="flex items-end justify-between gap-4 border-t border-kumo-line pt-3">
                 <p className="text-[12px] leading-4 text-kumo-subtle">
-                  {(format.enabled
-                    ? 'Turning this off removes it from the menus above and from the agent’s catalog. Outputs already made from it keep working. '
-                    : 'Currently hidden from the menus above and from the agent’s catalog. ') +
-                    (format.bundled
-                      ? 'It ships with the deployment, so it stays in this list either way.'
-                      : '')}
+                  {format.enabled
+                    ? t(format.bundled ? "workshop-frontend.AdminFormatsPanel.turning_this_off_removes_it_from_the_menus_above_and_from_the_age" : "workshop-frontend.AdminFormatsPanel.turning_this_off_removes_it_from_the_menus_above_and_from_the_ag")
+                    : t(format.bundled ? "workshop-frontend.AdminFormatsPanel.currently_hidden_from_the_menus_above_and_from_the_agent_s_catalo" : "workshop-frontend.AdminFormatsPanel.currently_hidden_from_the_menus_above_and_from_the_agent_s_catal")}
                 </p>
                 {!format.bundled && (
                   <Button variant="secondary" disabled={busy} onClick={onRemove}>
-                    <Trash size={13} className="mr-1.5" />
-                    Stop offering
-                  </Button>
+                    <Trash size={13} className="mr-1.5" />{t("workshop-frontend.AdminFormatsPanel.stop_offering")}</Button>
                 )}
               </div>
             </>
@@ -419,9 +396,7 @@ function FormatRow({
           {format.missing && (
             <div className="flex justify-end">
               <Button variant="secondary" disabled={busy} onClick={onRemove}>
-                <Trash size={13} className="mr-1.5" />
-                Remove
-              </Button>
+                <Trash size={13} className="mr-1.5" />{t("workshop-frontend.Inbox.remove")}</Button>
             </div>
           )}
         </div>
@@ -439,6 +414,7 @@ function Fieldset({
   detail: string
   children: React.ReactNode
 }) {
+  useTranslation();
   return (
     <div>
       <p className="text-[13px] font-medium text-kumo-default">{title}</p>
@@ -449,6 +425,7 @@ function Fieldset({
 }
 
 function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'warn' }) {
+  useTranslation();
   return (
     <span
       className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none ${
@@ -478,6 +455,7 @@ function OverrideField({
   disabled?: boolean
   onCommit: (value: string | null) => void
 }) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(value)
   useEffect(() => setDraft(value), [value])
 
@@ -494,7 +472,7 @@ function OverrideField({
       <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
         {label}
         {overridden && (
-          <span className="ml-1 normal-case tracking-normal text-kumo-subtle">(overridden)</span>
+          <span className="ml-1 normal-case tracking-normal text-kumo-subtle">{t("workshop-frontend.AdminFormatsPanel.overridden")}</span>
         )}
       </span>
       <Input
@@ -526,18 +504,18 @@ function IconPicker({
   disabled?: boolean
   onPick: (icon: OutputIcon | null) => void
 }) {
+  const { t } = useTranslation();
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-        Icon
-      </span>
+        {t("workshop-frontend.AdminFormatsPanel.icon")}</span>
       <DropdownMenu>
         <DropdownMenu.Trigger
           render={
             <button
               type="button"
               disabled={disabled}
-              aria-label="Choose icon"
+              aria-label={t("workshop-frontend.AdminFormatsPanel.choose_icon")}
               className="grid h-9 w-9 cursor-pointer place-items-center rounded-lg border border-kumo-line bg-kumo-base text-kumo-subtle transition-colors hover:text-kumo-default disabled:cursor-default"
             >
               <FormatGlyph output={selected && { ...GENERIC_OUTPUT, icon: selected }} size="lg" />
@@ -581,6 +559,7 @@ function IconButton({
   onClick: () => void
   children: React.ReactNode
 }) {
+  useTranslation();
   return (
     <button
       type="button"

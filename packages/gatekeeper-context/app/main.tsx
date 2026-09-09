@@ -1,3 +1,4 @@
+import { initFrameI18n } from "@gadgets/i18n";
 // Entrypoint for the sandboxed Context Library iframe. All data flows through the host-injected
 // ContextApi RPC capability.
 
@@ -17,6 +18,7 @@ import './styles.css'
 import ErrorBoundary from './ErrorBoundary'
 import { installErrorReporting, reportIssue } from './error-reporting'
 
+initFrameI18n("gatekeeper-context.main.context_library");
 installErrorReporting()
 
 // The only capability the iframe exposes back to the host: a receiver for theme pushes.

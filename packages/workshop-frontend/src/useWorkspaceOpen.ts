@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useEffect, useRef, useState } from 'react'
 import { RpcStub, RpcTarget } from 'capnweb'
 import type {
@@ -43,6 +44,7 @@ export function useWorkspaceOpen({
   onShareKeyConsumed,
   onInvalidShareKey,
 }: Options) {
+  const { t } = useTranslation();
   const [overseer, setOverseer] = useState<{ stub: RpcStub<Overseer> } | null>(null)
   const [metadata, setMetadata] = useState<GadgetMetadata | null>(null)
   const [error, setError] = useState<WorkspaceLoadError | null>(null)
@@ -147,7 +149,7 @@ export function useWorkspaceOpen({
         if (message.includes(OBSERVER_CANCELLED)) {
           showTerminalError({
             kind: 'message',
-            message: 'To open this workspace, you must choose connected accounts for the services it uses.',
+            message: t("workshop-frontend.useWorkspaceOpen.to_open_this_workspace_you_must_choose_connected_accounts_for_th"),
           })
         } else if (message.includes('permitted to observe') ||
                    message.includes('no longer connected') ||

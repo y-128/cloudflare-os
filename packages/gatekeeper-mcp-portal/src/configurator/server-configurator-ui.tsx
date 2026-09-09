@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import {
   Autocomplete, CheckboxList, Field, h, RadioCards, Section,
   type ConfiguratorUIOption, type ConfiguratorUISpec,
@@ -57,7 +58,7 @@ export default {
   },
 
   async resourceUrl({ values, ui }) {
-    if (!values.server) throw new Error("Choose a server behind this portal before adding it.");
+    if (!values.server) throw new Error(t("gatekeeper-mcp-portal.server-configurator-ui.choose_a_server_behind_this_portal_before_adding_it"));
     const endpoint = await ui.getEndpoint();
     const params = new URLSearchParams({ server: values.server });
     if (values.mode !== "all") {
@@ -89,11 +90,9 @@ export default {
     if (values.endpointKind === "unavailable") {
       return <Section>
         <Field
-          label="Server"
+          label={t("gatekeeper-mcp-portal.server-configurator-ui.server")}
           description={
-            "Could not reach the portal to list the servers behind it, so there is nothing to " +
-            "grant yet. Close this and try again; if it keeps happening, ask an administrator to " +
-            "check the portal configuration and any context-optimization setting."
+            t("gatekeeper-mcp-portal.server-configurator-ui.could_not_reach_the_portal_to_list_its_servers_close_this_and_try")
           }
         />
       </Section>;
@@ -102,11 +101,9 @@ export default {
     if (values.endpointKind === "empty") {
       return <Section>
         <Field
-          label="Server"
+          label={t("gatekeeper-mcp-portal.server-configurator-ui.server")}
           description={
-            "No grantable servers are available through this connector. They may be disabled in " +
-            "the portal or available through native connectors. If this is unexpected, ask an " +
-            "administrator to check the portal configuration."
+            t("gatekeeper-mcp-portal.server-configurator-ui.no_grantable_servers_are_available_through_this_connector_they_ma")
           }
         />
       </Section>;
@@ -120,13 +117,13 @@ export default {
 
     return <Section>
       {(!soleServer || !values.server) && <Field
-        label="Server"
-        description="Which server behind this portal to grant. Its tools appear next."
+        label={t("gatekeeper-mcp-portal.server-configurator-ui.server")}
+        description={t("gatekeeper-mcp-portal.server-configurator-ui.which_server_behind_this_portal_to_grant_its_tools_appear_next")}
       >
         <Autocomplete
           name="server"
           value={values.server}
-          placeholder="Search servers behind this portal..."
+          placeholder={t("gatekeeper-mcp-portal.server-configurator-ui.search_servers_behind_this_portal")}
           loadOptions={query => loadServerOptions(ui, query)}
           onChange={server => setValues({ server, tools: null })}
           onClear={() => setValues({ server: null, tools: null })}
@@ -134,23 +131,22 @@ export default {
       </Field>}
 
       {toolsReady && <Field
-        label={soleServer ? `Tools · ${soleServer.title}` : "Tools"}
-        description="Choose how much of this server this connection may call."
+        label={soleServer ? t("gatekeeper-mcp-portal.server-configurator-ui.tools_2", { value1: soleServer.title }) : t("gatekeeper-mcp-portal.server-configurator-ui.tools")}
+        description={t("gatekeeper-mcp-portal.server-configurator-ui.choose_how_much_of_this_server_this_connection_may_call")}
       >
         <RadioCards
           value={mode}
           options={[
             {
               value: "all",
-              title: "All tools",
-              description: "Every tool this server offers, including ones it adds later.",
+              title: t("gatekeeper-mcp-portal.server-configurator-ui.all_tools"),
+              description: t("gatekeeper-mcp-portal.server-configurator-ui.every_tool_this_server_offers_including_ones_it_adds_later"),
             },
             {
               value: "choose",
-              title: "Choose tools",
+              title: t("gatekeeper-mcp-portal.server-configurator-ui.choose_tools"),
               description:
-                "Only the tools you tick, from up to 200 shown. Anything else is refused, " +
-                "including tools added later.",
+                t("gatekeeper-mcp-portal.server-configurator-ui.only_the_tools_you_tick_from_up_to_200_shown_anything_else_is_ref"),
             },
           ]}
           onChange={next => setValues({ mode: next })}
@@ -158,13 +154,12 @@ export default {
       </Field>}
 
       {toolsReady && <Field
-        label="Allowed tools"
+        label={t("gatekeeper-mcp-portal.server-configurator-ui.allowed_tools")}
         description={mode === "all"
-          ? "Read-only tools return data straight away; the rest queue for your approval."
+          ? t("gatekeeper-mcp-portal.server-configurator-ui.read_only_tools_return_data_straight_away_the_rest_queue_for_you")
           : selectedCount > 0
-            ? `${selectedCount} selected. Read-only tools return data straight away; the rest `
-              + "queue for your approval."
-            : "Tick at least one tool to grant anything."}
+            ? t("gatekeeper-mcp.server-configurator-ui.selected_read_only_tools_return_data_straight_away_the_rest_queue", { n: selectedCount })
+            : t("gatekeeper-mcp-portal.server-configurator-ui.tick_at_least_one_tool_to_grant_anything")}
       >
         <CheckboxList
           name={`tools:${serverKey}`}

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   HomeAssistantDeviceConfiguratorRpc,
@@ -17,11 +18,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Device" description="Choose a physical device. The binding grants access to all entities the device provides.">
+      <Field label={t("gatekeeper-homeassistant.device-configurator-ui.device")} description={t("gatekeeper-homeassistant.device-configurator-ui.choose_a_physical_device_the_binding_grants_access_to_all_entiti")}>
         <Autocomplete
           name="deviceId"
           value={values.deviceId}
-          placeholder="Search devices..."
+          placeholder={t("gatekeeper-homeassistant.device-configurator-ui.search_devices")}
           loadOptions={query => ui.listDevices(query)}
           onChange={deviceId => setValues({ deviceId })}
         />

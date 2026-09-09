@@ -5,6 +5,7 @@
     "lib": ["ESNext"],
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "jsx": "react",
     "jsxFactory": "h",
     "types": ["./worker-configuration.d.ts"],

@@ -19,6 +19,10 @@
     "./error-reporting": {
       "types": "./src/error-reporting.ts",
       "import": "./src/error-reporting.ts"
+    },
+    "./email-delivery": {
+      "types": "./src/email-delivery.ts",
+      "import": "./src/email-delivery.ts"
     }
   },
   "scripts": {

@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { RpcStub } from "capnweb";
 import { createPortal } from "react-dom";
 import {
@@ -72,6 +73,7 @@ export function useSlashCommandPicker({
    */
   chatExists: boolean;
 }) {
+  const { t } = useTranslation();
   const [choices, setChoices] = useState<SlashCommandChoice[]>([]);
   const [choicesQuery, setChoicesQuery] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -228,14 +230,14 @@ export function useSlashCommandPicker({
         ref={listRef}
         id={listboxId}
         role="listbox"
-        aria-label="Slash commands"
+        aria-label={t("workshop-frontend.SlashCommandPicker.slash_commands")}
         aria-busy={loading}
         className="sidebar-scroll min-h-0 flex-1 overflow-y-auto p-2"
       >
         {error ? (
-          <p className={PICKER_EMPTY}>{`Couldn’t load commands. ${error}`}</p>
+          <p className={PICKER_EMPTY}>{t("workshop-frontend.SlashCommandPicker.couldn_t_load_commands", { value1: error })}</p>
         ) : loading && choices.length === 0 ? (
-          <p className={PICKER_EMPTY}>Loading commands…</p>
+          <p className={PICKER_EMPTY}>{t("workshop-frontend.SlashCommandPicker.loading_commands")}</p>
         ) : choices.length > 0 ? (
           choices.map((choice, optionIndex) => (
             <button
@@ -273,7 +275,7 @@ export function useSlashCommandPicker({
           ))
         ) : (
           <p className={PICKER_EMPTY}>
-            {query ? "No commands match your search." : "No commands are available."}
+            {query ? t("workshop-frontend.SlashCommandPicker.no_commands_match_your_search") : t("workshop-frontend.SlashCommandPicker.no_commands_are_available")}
           </p>
         )}
       </div>
@@ -298,10 +300,10 @@ export function useSlashCommandPicker({
     setIndex: selectIndex,
     status: open
       ? loading
-        ? "Loading slash commands"
+        ? t("workshop-frontend.SlashCommandPicker.loading_slash_commands")
         : error
-          ? `Slash commands unavailable: ${error}`
-          : `${choices.length} slash command${choices.length === 1 ? "" : "s"} found`
+          ? t("workshop-frontend.SlashCommandPicker.slash_commands_unavailable", { value1: error })
+          : t("workshop-frontend.SlashCommandPicker.slash_commands_found", { n: choices.length })
       : "",
   };
 }

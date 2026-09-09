@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   HomeAssistantAreaConfiguratorRpc,
@@ -17,11 +18,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Area" description="Choose a Home Assistant area (room).">
+      <Field label={t("gatekeeper-homeassistant.area-configurator-ui.area")} description={t("gatekeeper-homeassistant.area-configurator-ui.choose_a_home_assistant_area_room")}>
         <Autocomplete
           name="areaId"
           value={values.areaId}
-          placeholder="Search areas..."
+          placeholder={t("gatekeeper-homeassistant.area-configurator-ui.search_areas")}
           loadOptions={query => ui.listAreas(query)}
           onChange={areaId => setValues({ areaId })}
         />

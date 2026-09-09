@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useEffect, useRef, useState } from 'react'
 import { DropdownMenu, Tooltip, useKumoToastManager } from '@cloudflare/kumo'
 import { DownloadSimple } from '@phosphor-icons/react'
@@ -14,6 +15,7 @@ type Props = {
 }
 
 export default function GadgetExportMenu({ gadget, gadgetTitle, chatId }: Props) {
+  const { t } = useTranslation();
   const [formats, setFormats] = useState<GadgetExportFormat[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
@@ -73,7 +75,7 @@ export default function GadgetExportMenu({ gadget, gadgetTitle, chatId }: Props)
       )
     } catch (error) {
       console.error(`Failed to export Gadget as ${format.label}:`, error)
-      toasts.add({ title: `Failed to export ${format.label}`, variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.GadgetExportMenu.failed_to_export", { value1: format.label }), variant: 'error' })
     } finally {
       setExportingId(null)
     }
@@ -82,7 +84,7 @@ export default function GadgetExportMenu({ gadget, gadgetTitle, chatId }: Props)
   if (!gadget) return null
 
   const exportingFormat = formats?.find(format => format.id === exportingId)
-  const tooltip = exportingFormat ? `Exporting to ${exportingFormat.label}` : 'Export Gadget'
+  const tooltip = exportingFormat ? t("workshop-frontend.GadgetExportMenu.exporting_to", { value1: exportingFormat.label }) : t("workshop-frontend.GadgetExportMenu.export_gadget")
 
   return (
     <Tooltip content={tooltip} asChild>
@@ -91,7 +93,7 @@ export default function GadgetExportMenu({ gadget, gadgetTitle, chatId }: Props)
           <DropdownMenu.Trigger
             render={(
               <WorkshopIconButton
-                aria-label="Export Gadget"
+                aria-label={t("workshop-frontend.GadgetExportMenu.export_gadget")}
                 disabled={exportingId !== null}
               >
                 <DownloadSimple size={17} />
@@ -100,7 +102,7 @@ export default function GadgetExportMenu({ gadget, gadgetTitle, chatId }: Props)
           />
           <DropdownMenu.Content className="themed-floating-shadow !z-[1100] !min-w-[144px] rounded-lg border border-kumo-line bg-kumo-base p-1">
             {loading ? (
-              <div role="status" aria-label="Loading export formats" className="space-y-1 py-0.5">
+              <div role="status" aria-label={t("workshop-frontend.GadgetExportMenu.loading_export_formats")} className="space-y-1 py-0.5">
                 {['w-20', 'w-14'].map(width => (
                   <div key={width} className="flex h-7 items-center gap-2 px-2.5">
                     <span className="h-3 w-3 animate-pulse rounded bg-kumo-elevated" />
@@ -110,19 +112,17 @@ export default function GadgetExportMenu({ gadget, gadgetTitle, chatId }: Props)
               </div>
             ) : loadFailed ? (
               <div className="px-2.5 py-2 text-[12px] leading-4 text-kumo-subtle">
-                <p>Export formats could not be loaded.</p>
+                <p>{t("workshop-frontend.GadgetExportMenu.export_formats_could_not_be_loaded")}</p>
                 <button
                   type="button"
                   onClick={loadFormats}
                   className="mt-1 font-medium text-kumo-default hover:underline"
                 >
-                  Try again
-                </button>
+                  {t("gatekeeper-scheduler.SchedulerPage.try_again")}</button>
               </div>
             ) : formats?.length === 0 ? (
               <p className="px-2.5 py-2 text-[12px] leading-4 text-kumo-subtle">
-                This Gadget does not support exports.
-              </p>
+                {t("workshop-frontend.GadgetExportMenu.this_gadget_does_not_support_exports")}</p>
             ) : formats?.map(format => (
               <DropdownMenu.Item
                 key={format.id}

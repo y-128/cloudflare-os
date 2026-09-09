@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 import { describe, expect, it } from "vitest";
 import { formatCadence, formatOccurrences, formatTiming } from "./format";
 import type { ManagementSchedule } from "../src/management-types";
@@ -11,7 +12,7 @@ const common = {
 
 describe("formatCadence", () => {
   it("describes interval, weekday, and one-shot schedules", () => {
-    expect(formatCadence({ kind: "interval", everyMs: 3_600_000, anchorMs: 0 })).toBe("Every hour");
+    expect(formatCadence({ kind: "interval", everyMs: 3_600_000, anchorMs: 0 })).toBe(t("gatekeeper-scheduler.format.every", { duration: "1 時間" }));
     expect(
       formatCadence({
         kind: "calendar",
@@ -25,14 +26,14 @@ describe("formatCadence", () => {
           anchorMs: 0,
         },
       }),
-    ).toBe("Weekdays at 8:00 AM");
+    ).toBe(t("gatekeeper-scheduler.format.weekdays_at", { time: "8:00" }));
     expect(
       formatCadence({
         kind: "once",
         fireAt: Date.UTC(2026, 6, 30, 14),
         timeZone: "America/Chicago",
       }),
-    ).toBe("Once on Jul 30, 2026 at 9:00 AM");
+    ).toBe(t("gatekeeper-scheduler.format.once_on_at", { date: "2026年7月30日", time: "9:00" }));
   });
 });
 
@@ -53,10 +54,10 @@ describe("formatTiming", () => {
       failureCode: "authorization_failed",
     };
 
-    expect(formatTiming(active, now).relative).toBe("Next run in 2 hours");
+    expect(formatTiming(active, now).relative).toBe(t("gatekeeper-scheduler.format.next_run", { time: "2 時間後" }));
     expect(formatTiming(dead, now)).toMatchObject({
-      relative: "Failed 1 minute ago",
-      diagnostic: "Authorization failed after retries.",
+      relative: t("gatekeeper-scheduler.format.failed", { time: "1 分前" }),
+      diagnostic: t("gatekeeper-scheduler.format.authorization_failed_after_retries"),
     });
   });
 
@@ -68,7 +69,7 @@ describe("formatTiming", () => {
     };
 
     expect(formatTiming(active, Date.UTC(2026, 6, 30, 12))).toEqual({
-      relative: "Next run pending",
+      relative: t("gatekeeper-scheduler.format.next_run_pending"),
     });
   });
 
@@ -82,7 +83,7 @@ describe("formatTiming", () => {
       retrying: true,
     };
 
-    expect(formatTiming(retrying, now).relative).toBe("Next run in 5 minutes (retry)");
+    expect(formatTiming(retrying, now).relative).toBe(t("gatekeeper-scheduler.format.next_retry", { time: "5 分後" }));
   });
 });
 
@@ -96,9 +97,9 @@ describe("formatOccurrences", () => {
 
   it("reports progress toward a counted bound", () => {
     expect(formatOccurrences({ ...hourly, occurrences: { count: 3 }, occurrenceCount: 1 }))
-      .toBe("1 of 3 occurrences");
+      .toBe(t("gatekeeper-scheduler.format.of_occurrences", { done: 1, n: 3 }));
     expect(formatOccurrences({ ...hourly, occurrences: { count: 1 } }))
-      .toBe("0 of 1 occurrence");
+      .toBe(t("gatekeeper-scheduler.format.of_occurrences", { done: 0, n: 1 }));
   });
 
   it("renders a time bound in the schedule's own timezone", () => {
@@ -114,8 +115,8 @@ describe("formatOccurrences", () => {
     };
 
     // Rendered in the cadence's zone, not UTC: 13:00Z is 9am in New York.
-    expect(formatOccurrences(calendar)).toContain("Aug 3, 2026");
-    expect(formatOccurrences(calendar)).toContain("EDT");
+    expect(formatOccurrences(calendar, "en")).toContain("Aug 3, 2026");
+    expect(formatOccurrences(calendar, "en")).toContain("EDT");
   });
 
   it("omits a bound the schedule does not have", () => {
@@ -133,19 +134,19 @@ describe("formatTiming terminal copy", () => {
 
   it("distinguishes a used bound from a delivered one-shot", () => {
     expect(formatTiming({ ...base, occurrences: { count: 2 } }, 0).diagnostic)
-      .toBe("This recurring task used its last scheduled occurrence.");
+      .toBe(t("gatekeeper-scheduler.format.this_recurring_task_used_its_last_scheduled_occurrence"));
     expect(
       formatTiming(
         { ...base, cadence: { kind: "once", fireAt: 0, timeZone: "UTC" } },
         0,
       ).diagnostic,
-    ).toBe("This one-time task completed.");
+    ).toBe(t("gatekeeper-scheduler.format.this_one_time_task_completed"));
   });
 
   it("explains a recurrence that expired before its first occurrence", () => {
     const expired = { ...base, status: "expired", expiredAt: 0 } as ManagementSchedule;
 
     expect(formatTiming(expired, 0).diagnostic)
-      .toBe("This recurring task's cutoff passed before its first occurrence.");
+      .toBe(t("gatekeeper-scheduler.format.this_recurring_task_s_cutoff_passed_before_its_first_occurrence"));
   });
 });

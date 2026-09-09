@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation } from "@gadgets/i18n";
 import { useCallback, useEffect, useState } from 'react'
 import { CloudflareUsageInfo, CloudflareAccountOption } from '@gadgets/workshop-shared/api'
 import { Dialog, Button, Loader, useKumoToastManager } from '@cloudflare/kumo'
@@ -17,6 +18,7 @@ interface OutOfCreditsModalProps {
  * up credits in the Cloudflare dashboard (if connected but low balance).
  */
 export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalProps) {
+  const { t } = useTranslation();
   const auth = useOptionalAuthenticatedApi()
   const toasts = useKumoToastManager()
   const [usage, setUsage] = useState<CloudflareUsageInfo | null>(null)
@@ -77,7 +79,7 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
       setAccounts(null)
       refresh()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to select account'
+      const msg = err instanceof Error ? err.message : t("workshop-frontend.UsageSettings.failed_to_select_account")
       toasts.add({ title: msg, variant: 'error' })
     } finally {
       setSelecting(null)
@@ -91,9 +93,7 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
     <Dialog.Root open={open} onOpenChange={(o) => { if (!o) onClose() }}>
       <Dialog className="responsive-dialog overflow-y-auto p-6 sm:w-[560px]" size="base">
         <Dialog.Title className="text-lg font-semibold mb-2 flex items-center gap-2">
-          <CloudWarning size={22} weight="bold" className="text-kumo-warning" />
-          You've reached your free usage limit
-        </Dialog.Title>
+          <CloudWarning size={22} weight="bold" className="text-kumo-warning" />{t("workshop-frontend.OutOfCreditsModal.you_ve_reached_your_free_usage_limit")}</Dialog.Title>
 
         {usage === null ? (
           <div className="flex justify-center py-8"><Loader size="base" /></div>
@@ -101,44 +101,21 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
           <div className="space-y-4">
             {!connected ? (
               <p className="text-sm text-kumo-subtle">
-                You've used all {usage.dailyLimit} of your free {usage.dailyLimit === 1 ? 'request' : 'requests'} for
-                today. Connect your Cloudflare account to keep building now — usage beyond the free
-                tier is billed to your own Cloudflare AI Gateway credits
-                {usage.resetAt ? (
-                  <>
-                    {' '}— or wait: your free {usage.dailyLimit === 1 ? 'request resets' : 'requests reset'} at
-                    00:00 UTC, in <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />.
-                  </>
-                ) : '.'}
-              </p>
+                {renderTranslation(t("workshop-frontend.OutOfCreditsModal.you_ve_used_all_free_requests_for_today_connect_your_cloudflare_a"), { n: usage.dailyLimit, reset: usage.resetAt ? renderTranslation(t("workshop-frontend.UsageSettings.free_requests_reset"), { countdown: <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} /> }) : null })}</p>
             ) : needsSelection ? (
               <p className="text-sm text-kumo-subtle">
-                Your Cloudflare connection has access to multiple accounts. Choose which one's AI
-                Gateway credits should be billed for usage beyond the free tier.
-              </p>
+                {t("workshop-frontend.OutOfCreditsModal.your_cloudflare_connection_has_access_to_multiple_accounts_choose")}</p>
             ) : (
               <p className="text-sm text-kumo-subtle">
-                Your Cloudflare account is connected
-                {usage.balance !== null && (
-                  <> with a balance of <strong>${usage.balance.toFixed(2)}</strong></>
-                )}
-                , but it's below the minimum needed to continue. Add credits to your AI Gateway to
-                keep building now
-                {usage.resetAt ? (
-                  <>
-                    {' '}or wait — your free {usage.dailyLimit === 1 ? 'request resets' : 'requests reset'} at
-                    00:00 UTC, in <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />.
-                  </>
-                ) : '.'}
-              </p>
+                {renderTranslation(t("workshop-frontend.OutOfCreditsModal.your_cloudflare_account_is_connected_but_its_balance_is_below_the"), { balance: usage.balance !== null ? t("workshop-frontend.UsageSettings.credit_balance", { balance: usage.balance.toFixed(2) }) : null, reset: usage.resetAt ? renderTranslation(t("workshop-frontend.UsageSettings.free_requests_reset"), { countdown: <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} /> }) : null })}</p>
             )}
 
             {needsSelection && (
               <div className="flex flex-col gap-2">
                 {accounts === null ? (
-                  <p className="text-sm text-kumo-subtle">Loading accounts…</p>
+                  <p className="text-sm text-kumo-subtle">{t("workshop-frontend.OutOfCreditsModal.loading_accounts")}</p>
                 ) : accounts.length === 0 ? (
-                  <p className="text-sm text-kumo-subtle">No accounts available on this connection.</p>
+                  <p className="text-sm text-kumo-subtle">{t("workshop-frontend.OutOfCreditsModal.no_accounts_available_on_this_connection")}</p>
                 ) : (
                   accounts.map((a) => (
                     <Button
@@ -157,38 +134,31 @@ export default function OutOfCreditsModal({ open, onClose }: OutOfCreditsModalPr
             )}
 
             <p className="text-sm text-kumo-subtle">
-              Learn more about{' '}
-              <a
+              {renderTranslation(t("workshop-frontend.OutOfCreditsModal.learn_more_about_2"), { link: <a
                 href="https://developers.cloudflare.com/ai-gateway/features/unified-billing/"
                 target="_blank"
                 rel="noreferrer"
                 className="underline"
               >
-                AI Gateway unified billing
-              </a>
-              .
-            </p>
+                {t("workshop-frontend.OutOfCreditsModal.ai_gateway_unified_billing")}</a> })}</p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               {!connected ? (
                 <>
-                  <Button variant="secondary" onClick={onClose}>Maybe later</Button>
+                  <Button variant="secondary" onClick={onClose}>{t("workshop-frontend.OutOfCreditsModal.maybe_later")}</Button>
                   <Button variant="primary" onClick={connect} loading={connecting}>
-                    <Lightning size={16} weight="bold" />
-                    Connect Cloudflare
-                  </Button>
+                    <Lightning size={16} weight="bold" />{t("workshop-frontend.OutOfCreditsModal.connect_cloudflare")}</Button>
                 </>
               ) : needsSelection ? (
-                <Button variant="secondary" onClick={onClose}>Close</Button>
+                <Button variant="secondary" onClick={onClose}>{t("workshop-frontend.OutOfCreditsModal.close")}</Button>
               ) : (
                 <>
-                  <Button variant="secondary" onClick={onClose}>Close</Button>
+                  <Button variant="secondary" onClick={onClose}>{t("workshop-frontend.OutOfCreditsModal.close")}</Button>
                   <Button
                     variant="primary"
                     onClick={() => window.open(buildAddCreditsUrl(usage.accountId), '_blank')}
                   >
-                    Add credits in Cloudflare
-                  </Button>
+                    {t("workshop-frontend.OutOfCreditsModal.add_credits_in_cloudflare")}</Button>
                 </>
               )}
             </div>

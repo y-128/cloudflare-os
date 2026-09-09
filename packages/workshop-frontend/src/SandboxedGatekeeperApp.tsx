@@ -1,3 +1,6 @@
+import { useTranslation } from "@gadgets/i18n";
+import { useFrameLocale } from "./hooks/useFrameLocale";
+
 import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { RpcStub, RpcTarget, newMessagePortRpcSession } from 'capnweb'
@@ -108,7 +111,7 @@ class GatekeeperAppHostImpl extends RpcTarget {
       maxCallsPerMinute: 600,
       maxPendingCalls: 128,
       onRateLimit: 'throttle',
-      label: 'Gatekeeper app',
+      label: "Gatekeeper app",
     })
     this.#ui = ui
     this.#disposeRateLimiter = dispose
@@ -220,9 +223,11 @@ export default function SandboxedGatekeeperApp({ frame, gatekeeperVendorId }: {
   frame: GatekeeperUiFrame,
   gatekeeperVendorId: string,
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate()
   const { authenticatedApi } = useAuthenticatedApi()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  useFrameLocale(iframeRef)
   const sessionRef = useRef<{ [Symbol.dispose]?(): void } | null>(null)
   const hostRef = useRef<GatekeeperAppHostImpl | null>(null)
   const connectedRef = useRef(false)
@@ -368,7 +373,7 @@ export default function SandboxedGatekeeperApp({ frame, gatekeeperVendorId }: {
       // allow-same-origin (the frame stays an opaque origin), and the app's CSP keeps connect-src 'none'.
       sandbox="allow-scripts allow-modals"
       allow="clipboard-write"
-      title="Gatekeeper app"
+      title={t("workshop-frontend.SandboxedGatekeeperApp.gatekeeper_app")}
       style={iframeStyleForOverlay(overlay)}
     />
   )

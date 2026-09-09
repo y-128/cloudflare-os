@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   ZoomInfoAccountConfiguratorRpc,
@@ -23,8 +24,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole-account access"
-        description="This binding grants access to the connected ZoomInfo account: lookup, company/contact/intent/scoop/news search, record enrichment (which consumes credits), recommendations, and account intelligence — all subject to the account's ZoomInfo entitlements.">
+        label={t("gatekeeper-zoominfo.account-configurator-ui.whole_account_access")}
+        description={t("gatekeeper-zoominfo.account-configurator-ui.this_binding_grants_access_to_the_connected_zoominfo_account_loo")}>
       </Field>
     </Section>;
   },

@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { createFileRoute } from '@tanstack/react-router'
 import GatekeeperAppPage from '../GatekeeperAppPage'
 import { useDocumentTitle } from '../useDocumentTitle'
@@ -16,8 +17,9 @@ export const Route = createFileRoute('/gatekeepers_/$appId')({
 })
 
 function GatekeeperApp() {
+  const { t } = useTranslation();
   const { appId } = Route.useParams()
   const app = useGatekeeperApps().find((a) => a.id === appId)
-  useDocumentTitle(app?.title ?? 'App')
+  useDocumentTitle(app?.title ?? t("workshop-frontend.gatekeepers_.$appId.app"))
   return <GatekeeperAppPage appId={appId} />
 }

@@ -15,7 +15,7 @@
   },
   "commit": "0000000000000000000000000000000000000000",
   "createdAt": "2026-01-01T00:00:00.000Z",
-  "manifestVersion": 1,
+  "manifestVersion": 2,
   "releaseId": "r000000-fixture",
   "workers": {
     "gatekeeper-cloudflare": {
@@ -977,12 +977,117 @@
         "BASE_URL": "$PUBLIC_BASE_URL/gatekeeper/zoominfo"
       }
     },
+    "inbox": {
+      "bindings": [
+        {
+          "bucket_name": "$R2_BUCKET_NAME",
+          "name": "BUCKET",
+          "type": "r2_bucket"
+        },
+        {
+          "name": "AI",
+          "type": "ai"
+        },
+        {
+          "name": "EMAIL",
+          "type": "send_email"
+        },
+        {
+          "class_name": "MailboxDO",
+          "name": "MAILBOX",
+          "type": "durable_object_namespace"
+        },
+        {
+          "class_name": "EmailAgent",
+          "name": "EMAIL_AGENT",
+          "type": "durable_object_namespace"
+        },
+        {
+          "class_name": "EmailMCP",
+          "name": "EMAIL_MCP",
+          "type": "durable_object_namespace"
+        },
+        {
+          "class_name": "ConfigDO",
+          "name": "CONFIG",
+          "type": "durable_object_namespace"
+        },
+        {
+          "name": "WORKSHOP_AUTH",
+          "service": "$WORKER_NAME(workshop-backend)",
+          "type": "service"
+        }
+      ],
+      "compatibilityDate": "2026-09-04",
+      "compatibilityFlags": [
+        "nodejs_compat"
+      ],
+      "inputs": [
+        {
+          "help": "Comma-separated domains with Cloudflare Email Routing enabled, for example example.com.",
+          "kind": "var",
+          "label": "Inbound email domains",
+          "name": "DOMAINS"
+        }
+      ],
+      "installable": true,
+      "kind": "inbox",
+      "mainModule": "index.js",
+      "migrations": [
+        {
+          "new_sqlite_classes": [
+            "MailboxDO"
+          ],
+          "tag": "v1"
+        },
+        {
+          "new_sqlite_classes": [
+            "EmailAgent"
+          ],
+          "tag": "v2"
+        },
+        {
+          "new_sqlite_classes": [
+            "EmailMCP"
+          ],
+          "tag": "v3"
+        },
+        {
+          "new_sqlite_classes": [
+            "ConfigDO"
+          ],
+          "tag": "v4"
+        }
+      ],
+      "modules": [
+        {
+          "name": "index.js",
+          "r2Key": "blobs/modules/3bc8390b1dab56c564cbc7f37d59edec212568dfbb86c53ecd488d10fadc37bf",
+          "sha256": "3bc8390b1dab56c564cbc7f37d59edec212568dfbb86c53ecd488d10fadc37bf",
+          "size": 47,
+          "type": "esm"
+        }
+      ],
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "logs": {
+          "invocation_logs": false
+        }
+      },
+      "vars": {
+        "DOMAINS": "",
+        "EMAIL_ADDRESSES": "[]"
+      }
+    },
     "router": {
       "assetsConfig": {
         "not_found_handling": "single-page-application",
         "run_worker_first": [
           "/api",
           "/api/*",
+          "/api/inbox",
+          "/api/inbox/*",
           "/blueprint-screenshot",
           "/blueprint-screenshot/*",
           "/gatekeeper/*"
@@ -1014,6 +1119,11 @@
         {
           "name": "WORKSHOP_BACKEND",
           "service": "$WORKER_NAME(workshop-backend)",
+          "type": "service"
+        },
+        {
+          "name": "MAIL_INBOX",
+          "service": "$WORKER_NAME(inbox)",
           "type": "service"
         },
         {
@@ -1114,6 +1224,12 @@
             "PendingLogin"
           ],
           "tag": "v2"
+        },
+        {
+          "new_sqlite_classes": [
+            "LinkDirectoryDurableObject"
+          ],
+          "tag": "v3"
         }
       ],
       "modules": [

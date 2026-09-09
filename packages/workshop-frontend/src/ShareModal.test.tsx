@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -150,13 +151,13 @@ function verificationSection(rendered: HTMLElement, headingId: string): HTMLElem
 }
 
 async function invite(rendered: HTMLElement, username: string) {
-  const input = rendered.querySelector<HTMLInputElement>('input[aria-label="Username or email"]')!
+  const input = rendered.querySelector<HTMLInputElement>(`input[aria-label="${t("workshop-frontend.ShareModal.username_or_email")}"]`)!
   const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
   await act(async () => {
     setValue.call(input, username)
     input.dispatchEvent(new Event('input', { bubbles: true }))
   })
-  await click(button(rendered, 'Invite'))
+  await click(button(rendered, t("workshop-frontend.ShareModal.invite")))
 }
 
 describe('ShareModal', () => {
@@ -201,7 +202,7 @@ describe('ShareModal', () => {
 
     await invite(rendered, 'ada')
 
-    expect(rendered.textContent).toContain('Added Ada')
+    expect(rendered.textContent).toContain(t("workshop-frontend.ShareModal.added_2", { invitedName: "Ada" }))
     expect(rendered.textContent).toContain(WORKSPACE_URL)
   })
 
@@ -209,10 +210,10 @@ describe('ShareModal', () => {
     const rendered = await render(fakeOverseer())
     await invite(rendered, 'ada')
 
-    await click(button(rendered, 'Copy link'))
+    await click(button(rendered, t("workshop-frontend.BlueprintModal.copy_link")))
 
     expect(copyToClipboard).toHaveBeenCalledWith(WORKSPACE_URL)
-    expect(rendered.textContent).toContain('Link copied')
+    expect(rendered.textContent).toContain(t("workshop-frontend.ShareModal.link_copied_to_your_clipboard"))
   })
 
   it('names the connections a recipient must verify for the selected role', async () => {
@@ -224,7 +225,7 @@ describe('ShareModal', () => {
     expect(rendered.textContent).toContain('Q3 planning')
     expect(rendered.textContent).not.toContain('Pipeline dashboard')
 
-    await click(roleOption(rendered, 'Workspace'))
+    await click(roleOption(rendered, t("gatekeeper-linear.linear-workspace-configurator-ui.workspace")))
 
     expect(rendered.textContent).toContain('Pipeline dashboard')
   })
@@ -234,13 +235,13 @@ describe('ShareModal', () => {
       requirements: { use: [DOC_REQUIREMENT], build: [DOC_REQUIREMENT, CRM_REQUIREMENT] },
     }))
 
-    await click(button(rendered, 'Create a share link'))
+    await click(button(rendered, t("workshop-frontend.ShareModal.create_a_share_link")))
     expect(rendered.querySelector('#recipient-verification-heading')).not.toBeNull()
     expect(rendered.querySelector('#invite-verification-heading')).toBeNull()
     expect(rendered.querySelector('#link-verification-heading')).toBeNull()
 
     const buildOptions = [...rendered.querySelectorAll<HTMLButtonElement>('[data-testid="role-option"]')]
-      .filter(option => option.textContent?.startsWith('Workspace'))
+      .filter(option => option.textContent?.startsWith(t("gatekeeper-linear.linear-workspace-configurator-ui.workspace")))
     expect(buildOptions).toHaveLength(2)
     await click(buildOptions[1])
 
@@ -249,7 +250,7 @@ describe('ShareModal', () => {
     expect(verificationSection(rendered, 'link-verification-heading').textContent)
       .toContain('Pipeline dashboard')
 
-    await click(button(rendered, 'Create link'))
+    await click(button(rendered, t("workshop-frontend.ShareModal.create_link")))
     expect(verificationSection(rendered, 'link-verification-heading').textContent)
       .toContain('Pipeline dashboard')
   })
@@ -266,9 +267,9 @@ describe('ShareModal', () => {
       listObserverRequirements: async () => { throw new Error('offline') },
     }))
 
-    expect(rendered.textContent).toContain('Couldn’t check')
+    expect(rendered.textContent).toContain(t("workshop-frontend.ShareModal.couldn_t_check_which_connections_recipients_will_be_asked_to_ver"))
     // The rest of the modal still works.
-    expect(rendered.textContent).toContain('People with access')
+    expect(rendered.textContent).toContain(t("workshop-frontend.ShareModal.people_with_access"))
   })
 
   it('refreshes requirements when the modal regains focus', async () => {
@@ -290,12 +291,12 @@ describe('ShareModal', () => {
     const updateShareLink = vi.fn<(linkId: string, note?: string) => Promise<void>>(async () => {})
     const rendered = await render(fakeOverseer({ shareLinks: [SHARE_LINK], updateShareLink }))
 
-    await click(button(rendered, 'Rename Team link'))
-    expect(rendered.querySelector<HTMLInputElement>('input[aria-label="Share link name"]')?.value)
+    await click(button(rendered, t("workshop-frontend.ShareModal.rename", { name: "Team link" })))
+    expect(rendered.querySelector<HTMLInputElement>(`input[aria-label="${t("workshop-frontend.ShareModal.share_link_name")}"]`)?.value)
       .toBe('Team link')
-    await click(button(rendered, 'Save'))
+    await click(button(rendered, t("gatekeeper-context.ContextLibraryPage.save")))
 
     expect(updateShareLink).not.toHaveBeenCalled()
-    expect(rendered.querySelector('input[aria-label="Share link name"]')).toBeNull()
+    expect(rendered.querySelector(`input[aria-label="${t("workshop-frontend.ShareModal.share_link_name")}"]`)).toBeNull()
   })
 })

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   LinearIssueConfiguratorRpc,
@@ -25,11 +26,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Issue" description="Search issues, or type an identifier like ENG-123.">
+      <Field label={t("gatekeeper-linear.linear-issue-configurator-ui.issue")} description={t("gatekeeper-linear.linear-issue-configurator-ui.search_issues_or_type_an_identifier_like_eng_123")}>
         <Autocomplete
           name="issueIdentifier"
           value={values.issueIdentifier}
-          placeholder="Search issues..."
+          placeholder={t("gatekeeper-linear.linear-issue-configurator-ui.search_issues")}
           loadOptions={query => ui.listIssues(query)}
           onChange={issueIdentifier => setValues({ issueIdentifier })}
         />

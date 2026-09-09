@@ -7,6 +7,7 @@ import { basename, join, resolve } from "node:path";
 // the workspace "typescript" (7.x, tsgo), build-time transpilers stay on the JS-based 6.x line.
 import ts from "typescript6";
 import { loadEnv } from "vite";
+import { configuratorTranslationImports } from "./i18n/configurator-runtime.ts";
 
 const packageDir = resolve(process.argv[2] ?? ".");
 const watchMode = process.argv.includes("--watch");
@@ -73,9 +74,16 @@ async function createConfiguratorHtml(configuratorUIModuleSource: string): Promi
   const exceptionSerializerImport = frontendReportingEnabled
     ? await createExceptionSerializerImport()
     : "";
+  const translationImports = await configuratorTranslationImports(configuratorUIModuleSource, ["gatekeeper-context.ContextLibraryPage.optional","workshop-frontend.BlueprintModal.loading","configurator-ui.runtime.this_server_published_no_tools","configurator-ui.runtime.filter_tools","configurator-ui.runtime.select_all","workshop-frontend.BlueprintModal.clear","workshop-frontend.SidebarWorkspaces.no_matches","configurator-ui.runtime.could_not_load_options","configurator-ui.runtime.unavailable","configurator-ui.runtime.select_shown","configurator-ui.runtime.clear_shown","configurator-ui.runtime.of_selected"]);
   const runtime = `//# sourceURL=${sourceBase}/runtime.js
 import { RpcTarget, newMessagePortRpcSession } from "data:text/javascript;charset=utf-8;base64,${capnwebBase64}";
 ${exceptionSerializerImport}
+${translationImports}
+
+let locale = "ja";
+function t(key, params) {
+  return translateWithFallback(locale, key, "[missing: " + key + "]", params);
+}
 
 const frontendReportingEnabled = ${frontendReportingEnabled};
 function reportFrontendIssue(failureSite, caught, options = {}) {
@@ -274,7 +282,7 @@ function withUnavailableOptions(options, value) {
   const available = new Set(options.map(option => option.value));
   return [...options, ...splitList(value)
     .filter(selected => !available.has(selected))
-    .map(selected => ({ value: selected, title: selected + " (unavailable)" }))];
+    .map(selected => ({ value: selected, title: t("configurator-ui.runtime.unavailable", { name: selected }) }))];
 }
 
 const components = {
@@ -289,7 +297,7 @@ const components = {
     return el("section", { className: "field" }, [
       el("div", { className: "field-header" }, [
         el("label", { className: "field-label", text: label }),
-        optional ? el("span", { className: "field-optional", text: "Optional" }) : null,
+        optional ? el("span", { className: "field-optional", text: t("gatekeeper-context.ContextLibraryPage.optional") }) : null,
       ]),
       description ? el("p", { className: "field-description", text: description }) : null,
       childrenArray(children)[0],
@@ -364,10 +372,10 @@ const components = {
     const notice = text => el("div", { className: "checkbox-list", "data-name": name }, [
       el("p", { className: "checkbox-empty", text }),
     ]);
-    if (status === "loading") return notice("Loading...");
+    if (status === "loading") return notice(t("workshop-frontend.BlueprintModal.loading"));
     if (status === "failed") return notice(message);
     const shownOptions = withUnavailableOptions(options, value);
-    if (shownOptions.length === 0) return notice("This server published no tools.");
+    if (shownOptions.length === 0) return notice(t("configurator-ui.runtime.this_server_published_no_tools"));
 
     // The filter only earns its space once the list is long enough to scroll.
     const filterName = \`\${name}__filter\`;
@@ -400,11 +408,11 @@ const components = {
           className: "input",
           "data-configurator-input": filterName,
           value: filter,
-          placeholder: "Filter tools...",
+          placeholder: t("configurator-ui.runtime.filter_tools"),
           disabled,
           autocomplete: "off",
           type: "search",
-          "aria-label": "Filter tools...",
+          "aria-label": t("configurator-ui.runtime.filter_tools"),
           oninput: event => {
             checkboxFilterByName[name] = event.currentTarget.value;
             render(getFocusState());
@@ -423,7 +431,7 @@ const components = {
         type: "button",
         className: "checkbox-action",
         disabled,
-        text: needle ? \`Select \${matches.length} shown\` : "Select all",
+        text: needle ? t("configurator-ui.runtime.select_shown", { n: matches.length }) : t("configurator-ui.runtime.select_all"),
         onclick: () => {
           const next = new Set(selected);
           for (const option of matches) next.add(option.value);
@@ -438,7 +446,7 @@ const components = {
         type: "button",
         className: "checkbox-action",
         disabled,
-        text: needle ? \`Clear \${clearable.length} shown\` : "Clear",
+        text: needle ? t("configurator-ui.runtime.clear_shown", { n: clearable.length }) : t("workshop-frontend.BlueprintModal.clear"),
         onclick: () => {
           const next = new Set(selected);
           for (const option of clearable) next.delete(option.value);
@@ -450,9 +458,7 @@ const components = {
     children.push(el("div", { className: "checkbox-toolbar" }, [
       el("span", {
         className: selected.size > 0 ? "checkbox-count selected" : "checkbox-count",
-        text: selected.size > 0
-          ? \`\${selected.size} of \${shownOptions.length} selected\`
-          : \`None of \${shownOptions.length} selected\`,
+        text: t("configurator-ui.runtime.of_selected", { n: selected.size, total: shownOptions.length }),
       }),
       bulk.length > 0 ? el("span", { className: "checkbox-actions" }, bulk) : null,
     ]));
@@ -556,11 +562,11 @@ const components = {
       input.setAttribute("aria-expanded", "true");
       applyPopupMaxHeight();
       if (loading) {
-        popup.append(el("div", { className: "autocomplete-empty", text: "Loading..." }));
+        popup.append(el("div", { className: "autocomplete-empty", text: t("workshop-frontend.BlueprintModal.loading") }));
       } else if (error) {
         popup.append(el("div", { className: "autocomplete-empty", text: error }));
       } else if (options.length === 0) {
-        popup.append(el("div", { className: "autocomplete-empty", text: "No matches." }));
+        popup.append(el("div", { className: "autocomplete-empty", text: t("workshop-frontend.SidebarWorkspaces.no_matches") }));
       } else {
         for (const option of options) {
           popup.append(el("button", {
@@ -598,7 +604,7 @@ const components = {
       } catch (error) {
         if (currentRequest !== requestId) return;
         reportFrontendIssue("configurator.autocomplete-load", error);
-        renderPopup({ error: error?.message || "Could not load options." });
+        renderPopup({ error: error?.message || t("configurator-ui.runtime.could_not_load_options") });
       }
     }
 
@@ -626,7 +632,7 @@ const components = {
       inputWrapper.append(el("button", {
         type: "button",
         className: "clear-button",
-        "aria-label": "Clear",
+        "aria-label": t("workshop-frontend.BlueprintModal.clear"),
         onclick: () => {
           queryByName[queryName] = "";
           input.value = "";
@@ -780,7 +786,12 @@ async function main() {
   host = newMessagePortRpcSession(port1, new ResourceConfiguratorIframe());
   ui = host.gatekeeper;
 
-  Object.assign(globalThis, { h, Fragment, Section, Field, TextInput, RadioCards, CheckboxList, Autocomplete });
+  Object.assign(globalThis, { h, Fragment, Section, Field, TextInput, RadioCards, CheckboxList, Autocomplete, t });
+  receiveFrameLocale(next => {
+    locale = next;
+    document.documentElement.lang = next;
+    render();
+  });
   spec = new Function(${JSON.stringify(configuratorUIModuleSource)})();
   if (!spec) throw new Error("Configurator UI module did not define a configurator UI.");
   values = { ...(spec.initial || {}) };
@@ -860,7 +871,7 @@ window.addEventListener("touchmove", event => {
 `;
 
   return `<!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; script-src data: 'unsafe-inline' 'unsafe-eval'; style-src 'unsafe-inline'; img-src data:; media-src data:; object-src 'none'; base-uri 'none'; form-action 'none'; connect-src 'none'; navigate-to 'none';">
   <style>

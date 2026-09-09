@@ -562,6 +562,7 @@ function writePreviewComment(
 function tiers(packages: readonly DeployablePackage[]): {
   gatekeepers: DeployablePackage[];
   backend: DeployablePackage;
+  inbox: DeployablePackage;
   router: DeployablePackage;
 } {
   const byName = (name: string): DeployablePackage => {
@@ -573,6 +574,7 @@ function tiers(packages: readonly DeployablePackage[]): {
     gatekeepers: packages.filter((pkg) => isGatekeeperPackage(pkg.name))
         .toSorted((a, b) => a.name.localeCompare(b.name)),
     backend: byName("workshop-backend"),
+    inbox: byName("inbox"),
     router: byName("router"),
   };
 }
@@ -585,7 +587,7 @@ async function deploy({ dryRun }: { dryRun: boolean }): Promise<void> {
   const secrets = backendSecrets();
   const oauthApps = resolveGatekeeperSecrets();
   const { previewName, workersDevHost, baseUrl, packages } = generatePreviewConfigs();
-  const { gatekeepers, backend, router } = tiers(packages);
+  const { gatekeepers, backend, inbox, router } = tiers(packages);
 
   if (dryRun) {
     console.log(`\ndry-run plan for preview "${previewName}" at ${baseUrl}:`);
@@ -599,6 +601,7 @@ async function deploy({ dryRun }: { dryRun: boolean }): Promise<void> {
     console.log(`  tier 2: ${backend.name} (no hostname; served at ` +
         `${baseUrl}/api), bound to the tier 1 previews, holding the ` +
         `${Object.keys(secrets).join(", ")} secrets`);
+    console.log(`  tier 2: ${inbox.name} (private mailbox service)`);
     console.log(`  tier 3: ${router.name} -> ${baseUrl}, ` +
         "bound to every preview above");
     return;
@@ -629,8 +632,17 @@ async function deploy({ dryRun }: { dryRun: boolean }): Promise<void> {
     const backendPreview = await deployPreview(backend, previewName, wrangler.command);
     assertNoPreviewUrl(backend, backendPreview.url);
 
+    // Reuse the same Access policy for the shared-origin inbox API without printing its values.
+    await uploadPreviewSecrets(inbox, wrangler.command, {
+      POLICY_AUD: secrets.CF_ACCESS_AUD,
+      TEAM_DOMAIN: secrets.CF_ACCESS_ISS,
+    });
+    const inboxPreview = await deployPreview(inbox, previewName, wrangler.command);
+    assertNoPreviewUrl(inbox, inboxPreview.url);
+
     patchPreviewServiceBindings(router, {
       [backend.name]: backendPreview.id,
+      [inbox.name]: inboxPreview.id,
     });
     const routerPreview = await deployPreview(router, previewName, wrangler.command);
     assertRouterPreviewUrl(router, previewName, workersDevHost, routerPreview.url);
@@ -638,6 +650,9 @@ async function deploy({ dryRun }: { dryRun: boolean }): Promise<void> {
     console.log(`\nPreview "${previewName}" is live at ${routerPreview.url}`);
     writePreviewComment(routerPreview.url, routerPreview.slug,
         readConfig(router.dir).account_id);
+  } catch (err) {
+    console.error("[deploy] failed", { operation: "preview", err });
+    throw err;
   } finally {
     wrangler.cleanup();
   }
@@ -648,11 +663,11 @@ async function remove({ dryRun }: { dryRun: boolean }): Promise<void> {
   // Regenerate rather than assume: `delete` runs in its own CI job with a fresh checkout, and
   // wrangler needs a config to know which worker and account the preview belongs to.
   const { packages } = generatePreviewConfigs({ previewName });
-  const { gatekeepers, backend, router } = tiers(packages);
+  const { gatekeepers, backend, inbox, router } = tiers(packages);
 
   if (dryRun) {
     console.log(`\ndry-run: would delete preview "${previewName}" for ` +
-        [router, backend, ...gatekeepers].map((pkg) => pkg.name).join(", "));
+        [router, backend, inbox, ...gatekeepers].map((pkg) => pkg.name).join(", "));
     return;
   }
 

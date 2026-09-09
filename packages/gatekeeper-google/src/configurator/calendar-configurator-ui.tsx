@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, RadioCards, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { CalendarConfiguratorRpc, CalendarConfiguratorValues } from "./calendar-configurator-types";
 
@@ -28,32 +29,32 @@ export default {
   render({ values, setValues, ui }) {
     const availabilityMode = values.availabilityMode === "allVisible" ? "allVisible" : "thisCalendar";
     return <Section>
-      <Field label="Calendar" description="Choose the calendar this connection can read and manage.">
+      <Field label={t("gatekeeper-google.calendar-configurator-ui.calendar")} description={t("gatekeeper-google.calendar-configurator-ui.choose_the_calendar_this_connection_can_read_and_manage")}>
         <Autocomplete
           name="calendarId"
           value={values.calendarId}
-          placeholder="Search calendars..."
+          placeholder={t("gatekeeper-google.calendar-configurator-ui.search_calendars")}
           loadOptions={query => ui.listCalendars(query)}
           onChange={calendarId => setValues({ calendarId })}
         />
       </Field>
 
       <Field
-        label="Availability lookup"
-        description="Free/busy checks show only busy/free blocks, never event details."
+        label={t("gatekeeper-google.calendar-configurator-ui.availability_lookup")}
+        description={t("gatekeeper-google.calendar-configurator-ui.free_busy_checks_show_only_busy_free_blocks_never_event_details")}
       >
         <RadioCards
           value={availabilityMode}
           options={[
             {
               value: "thisCalendar",
-              title: "This calendar only",
-              description: "Check availability for this calendar only.",
+              title: t("gatekeeper-google.calendar-configurator-ui.this_calendar_only"),
+              description: t("gatekeeper-google.calendar-configurator-ui.check_availability_for_this_calendar_only"),
             },
             {
               value: "allVisible",
-              title: "All calendars visible to me",
-              description: "Check anyone visible to your account. Collaborators must also be able to see their availability.",
+              title: t("gatekeeper-google.calendar-configurator-ui.all_calendars_visible_to_me"),
+              description: t("gatekeeper-google.calendar-configurator-ui.check_anyone_visible_to_your_account_collaborators_must_also_be_a"),
             },
           ]}
           onChange={nextMode => {

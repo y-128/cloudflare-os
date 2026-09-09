@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import { useEffect, useRef, useState } from 'react'
 
 // Format the milliseconds remaining until `resetAt` as a compact "Hh Mm Ss" string.
@@ -8,9 +9,9 @@ function formatRemaining(ms: number): string {
   const minutes = Math.floor((totalSeconds % 3600) / 60)
   const seconds = totalSeconds % 60
   const parts: string[] = []
-  if (hours > 0) parts.push(`${hours}h`)
-  if (hours > 0 || minutes > 0) parts.push(`${minutes}m`)
-  parts.push(`${seconds}s`)
+  if (hours > 0) parts.push(t("workshop-frontend.ResetCountdown.h", { n: hours }))
+  if (hours > 0 || minutes > 0) parts.push(t("workshop-frontend.ResetCountdown.m", { n: minutes }))
+  parts.push(t("workshop-frontend.ResetCountdown.s", { n: seconds }))
   return parts.join(' ')
 }
 
@@ -26,6 +27,7 @@ export default function ResetCountdown({
   resetAt?: string
   onElapsed?: () => void
 }) {
+  useTranslation();
   const [now, setNow] = useState(() => Date.now())
 
   // Keep the latest onElapsed in a ref so the "elapsed" effect can fire it without depending on a

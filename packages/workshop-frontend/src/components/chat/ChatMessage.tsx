@@ -1,9 +1,11 @@
+import { useTranslation } from "@gadgets/i18n";
 import { Loader } from '@cloudflare/kumo'
 import { Hexagon } from '@phosphor-icons/react'
 import type { ChatMessage as ChatMessageType } from '../../data/chat'
 import ToolCallCard from './ToolCallCard'
 
 function AssistantAvatar() {
+  useTranslation();
   return (
     <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-kumo-brand">
       <Hexagon size={12} className="text-kumo-inverse" weight="bold" />
@@ -12,6 +14,7 @@ function AssistantAvatar() {
 }
 
 function UserAvatar() {
+  useTranslation();
   return (
     <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-kumo-tint">
       <span className="text-[10px] font-semibold text-kumo-strong">U</span>
@@ -21,6 +24,7 @@ function UserAvatar() {
 
 /** Render markdown-ish content: bold, code, backtick blocks, bullets */
 function RichContent({ text }: { text: string }) {
+  useTranslation();
   const parts = text.split(/(\*\*.*?\*\*|`[^`]+`|\n)/g)
   return (
     <>
@@ -57,6 +61,7 @@ function RichContent({ text }: { text: string }) {
 }
 
 export default function ChatMessage({ message }: { message: ChatMessageType }) {
+  const { t } = useTranslation();
   const isUser = message.role === 'user'
 
   return (
@@ -67,7 +72,7 @@ export default function ChatMessage({ message }: { message: ChatMessageType }) {
         {/* Role + time */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-kumo-default">
-            {isUser ? 'You' : 'Workshop'}
+            {isUser ? t("workshop-frontend.ChatMessage.you") : 'Workshop'}
           </span>
           <span className="font-mono text-xs text-kumo-subtle">{message.timestamp}</span>
         </div>

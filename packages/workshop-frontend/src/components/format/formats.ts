@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // How an output format is drawn: which glyph, which nouns, which wireframe. The server sends a
 // blueprint's `BlueprintOutput` declaration; this module is the only place that maps it to pixels.
 //
@@ -58,8 +59,8 @@ const WIREFRAME_FOR_ICON: Record<OutputIcon, FormatWireframe> = {
  */
 export const GENERIC_OUTPUT: BlueprintOutput = {
   id: 'app',
-  noun: 'App',
-  plural: 'Apps',
+  get noun() { return t("workshop-frontend.gatekeepers_.$appId.app"); },
+  get plural() { return t("workshop-frontend.formats.apps"); },
   icon: 'appWindow',
 }
 

@@ -18,5 +18,8 @@
     "typescript": "catalog:",
     "vitest": "catalog:",
     "wrangler": "catalog:"
+  },
+  "dependencies": {
+    "@gadgets/backend-utils": "workspace:*"
   }
 }

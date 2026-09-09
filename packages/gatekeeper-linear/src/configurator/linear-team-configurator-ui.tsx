@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   LinearTeamConfiguratorRpc,
@@ -25,11 +26,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Team" description="Search the teams in your workspace.">
+      <Field label={t("gatekeeper-linear.linear-team-configurator-ui.team")} description={t("gatekeeper-linear.linear-team-configurator-ui.search_the_teams_in_your_workspace")}>
         <Autocomplete
           name="teamKey"
           value={values.teamKey}
-          placeholder="Search teams..."
+          placeholder={t("gatekeeper-linear.linear-team-configurator-ui.search_teams")}
           loadOptions={query => ui.listTeams(query)}
           onChange={teamKey => setValues({ teamKey })}
         />

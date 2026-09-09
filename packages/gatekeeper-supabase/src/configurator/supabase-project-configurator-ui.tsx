@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   SupabaseProjectConfiguratorRpc,
@@ -17,11 +18,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Project" description="Search the projects in your connected Supabase account.">
+      <Field label={t("gatekeeper-supabase.supabase-project-configurator-ui.project")} description={t("gatekeeper-supabase.supabase-project-configurator-ui.search_the_projects_in_your_connected_supabase_account")}>
         <Autocomplete
           name="ref"
           value={values.ref}
-          placeholder="Search projects..."
+          placeholder={t("gatekeeper-supabase.supabase-project-configurator-ui.search_projects")}
           loadOptions={query => ui.listProjects(query)}
           onChange={ref => setValues({ ref })}
         />

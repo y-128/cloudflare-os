@@ -1,3 +1,5 @@
+import type { WranglerConfig } from "./release/manifest-lib.ts";
+
 /**
  * The port a `VITE_BACKEND_HOST` names, as a string, or null when it names no port. Throws on a
  * value that is not a bare `host[:port]`.
@@ -66,4 +68,21 @@ export function getDevServerConfig(args: readonly string[], envBackendHost?: str
     backendHost,
     wranglerPort: getWranglerPortFromBackendHost(backendHost),
   };
+}
+
+/** Keep inbox storage and mail delivery local; real AI requires the existing opt-in flag. */
+export function getInboxDevConfig(
+  config: WranglerConfig, env: NodeJS.ProcessEnv, useWorkersAi: boolean,
+): WranglerConfig {
+  const dev = {
+    ...config,
+    vars: {
+      ...config.vars,
+      DOMAINS: env.DOMAINS ?? (config.vars?.DOMAINS || "inbox.test"),
+      EMAIL_ADDRESSES: env.EMAIL_ADDRESSES ?? (config.vars?.EMAIL_ADDRESSES || "[]"),
+    },
+    send_email: config.send_email?.map(binding => ({ ...binding, remote: false })),
+  };
+  if (!useWorkersAi) delete dev.ai;
+  return dev;
 }

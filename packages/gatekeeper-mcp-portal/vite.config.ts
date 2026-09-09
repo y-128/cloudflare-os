@@ -7,6 +7,8 @@ import { withTests } from "@gadgets/scripts/gatekeeper-configurator";
 export default {
   ...withTests,
   test: {
+    // Wrangler's generated copies retain source-relative imports and are not test entrypoints.
+    include: ["__tests__/**/*.test.ts"],
     alias: {
       "cloudflare:workers": fileURLToPath(
         new URL("../mcp-shared/__tests__/stubs/cloudflare-workers.ts", import.meta.url)),

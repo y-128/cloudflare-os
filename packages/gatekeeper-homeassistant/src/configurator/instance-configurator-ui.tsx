@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   HomeAssistantInstanceConfiguratorRpc,
@@ -26,8 +27,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole instance access"
-        description="This binding grants access to every area, device, entity, and dashboard on the connected Home Assistant instance.">
+        label={t("gatekeeper-homeassistant.instance-configurator-ui.whole_instance_access")}
+        description={t("gatekeeper-homeassistant.instance-configurator-ui.this_binding_grants_access_to_every_area_device_entity_and_dashb")}>
       </Field>
     </Section>;
   },

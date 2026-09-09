@@ -3,8 +3,35 @@ import { describe, it } from "node:test";
 
 import {
   getDevServerConfig,
+  getInboxDevConfig,
   getWranglerPortFromBackendHost,
 } from "./dev-server-config.ts";
+
+describe("getInboxDevConfig", () => {
+  it("boots without a real domain or remote mail/AI while retaining administrator authentication", () => {
+    const config = {
+      name: "inbox", vars: { DOMAINS: "", EMAIL_ADDRESSES: "[]" },
+      services: [{ binding: "WORKSHOP_AUTH", service: "workshop-backend" }],
+      send_email: [{ name: "EMAIL", remote: true }], ai: { binding: "AI" },
+    };
+    const dev = getInboxDevConfig(config, {}, false);
+    assert.equal(dev.vars?.DOMAINS, "inbox.test");
+    assert.equal(dev.vars?.EMAIL_ADDRESSES, "[]");
+    assert.deepEqual(dev.send_email, [{ name: "EMAIL", remote: false }]);
+    assert.equal(dev.ai, undefined);
+    assert.deepEqual(dev.services, config.services);
+    assert.equal(config.send_email[0].remote, true);
+  });
+
+  it("honours explicit address configuration and the Workers AI opt-in", () => {
+    const config = { vars: { DOMAINS: "configured.test", EMAIL_ADDRESSES: "[]" }, ai: { binding: "AI" } };
+    const dev = getInboxDevConfig(config, { DOMAINS: "other.test", EMAIL_ADDRESSES: '["admin@other.test"]' }, true);
+    assert.equal(dev.vars?.DOMAINS, "other.test");
+    assert.equal(dev.vars?.EMAIL_ADDRESSES, '["admin@other.test"]');
+    assert.deepEqual(dev.ai, config.ai);
+    assert.equal(getInboxDevConfig(config, {}, false).vars?.DOMAINS, "configured.test");
+  });
+});
 
 describe("getWranglerPortFromBackendHost", () => {
   it("extracts a port from a localhost backend host", () => {

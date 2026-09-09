@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -161,9 +162,9 @@ describe('GadgetExportMenu', () => {
     await act(async () => { button('open export menu')?.click() })
     await act(async () => { button('CSV')?.click() })
 
-    const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Export Gadget"]')
+    const trigger = container.querySelector<HTMLButtonElement>(`[aria-label="${t("workshop-frontend.GadgetExportMenu.export_gadget")}"]`)
     expect(trigger?.disabled).toBe(true)
-    expect(trigger?.closest('[data-tooltip]')?.getAttribute('data-tooltip')).toBe('Exporting to CSV')
+    expect(trigger?.closest('[data-tooltip]')?.getAttribute('data-tooltip')).toBe(t("workshop-frontend.GadgetExportMenu.exporting_to", { value1: "CSV" }))
 
     await act(async () => {
       finishExport()
@@ -171,7 +172,7 @@ describe('GadgetExportMenu', () => {
     })
 
     expect(trigger?.disabled).toBe(false)
-    expect(trigger?.closest('[data-tooltip]')?.getAttribute('data-tooltip')).toBe('Export Gadget')
+    expect(trigger?.closest('[data-tooltip]')?.getAttribute('data-tooltip')).toBe(t("workshop-frontend.GadgetExportMenu.export_gadget"))
   })
 
   it('shows an empty state without hiding or disabling the export button', async () => {
@@ -184,14 +185,14 @@ describe('GadgetExportMenu', () => {
     await act(async () => {
       root.render(<GadgetExportMenu gadget={client} gadgetTitle="Report" />)
     })
-    const trigger = container.querySelector<HTMLButtonElement>('[aria-label="Export Gadget"]')
+    const trigger = container.querySelector<HTMLButtonElement>(`[aria-label="${t("workshop-frontend.GadgetExportMenu.export_gadget")}"]`)
     expect(trigger).not.toBeNull()
     expect(trigger?.disabled).toBe(false)
 
     await act(async () => { button('open export menu')?.click() })
 
-    expect(container.textContent).toContain('This Gadget does not support exports.')
-    expect(container.querySelector('[aria-label="Export Gadget"]')).not.toBeNull()
+    expect(container.textContent).toContain(t("workshop-frontend.GadgetExportMenu.this_gadget_does_not_support_exports"))
+    expect(container.querySelector(`[aria-label="${t("workshop-frontend.GadgetExportMenu.export_gadget")}"]`)).not.toBeNull()
   })
 
   it('does not render the control without a selected Gadget', async () => {
@@ -199,7 +200,7 @@ describe('GadgetExportMenu', () => {
       root.render(<GadgetExportMenu gadget={null} gadgetTitle="Gadget" />)
     })
 
-    expect(container.querySelector('[aria-label="Export Gadget"]')).toBeNull()
+    expect(container.querySelector(`[aria-label="${t("workshop-frontend.GadgetExportMenu.export_gadget")}"]`)).toBeNull()
   })
 
   it('loads fresh formats on every open and ignores a response after close', async () => {
@@ -219,9 +220,9 @@ describe('GadgetExportMenu', () => {
     })
     await act(async () => { button('open export menu')?.click() })
 
-    expect(container.querySelector('[role="status"][aria-label="Loading export formats"]')).not.toBeNull()
+    expect(container.querySelector(`[role="status"][aria-label="${t("workshop-frontend.GadgetExportMenu.loading_export_formats")}"]`)).not.toBeNull()
     await act(async () => { button('close export menu')?.click() })
-    expect(container.querySelector('[role="status"][aria-label="Loading export formats"]')).toBeNull()
+    expect(container.querySelector(`[role="status"][aria-label="${t("workshop-frontend.GadgetExportMenu.loading_export_formats")}"]`)).toBeNull()
 
     await act(async () => { button('open export menu')?.click() })
     expect(container.textContent).toContain('Second sheet')
@@ -256,10 +257,10 @@ describe('GadgetExportMenu', () => {
       })
       await act(async () => { button('open export menu')?.click() })
 
-      expect(container.textContent).toContain('Export formats could not be loaded.')
-      expect(button('Try again')).toBeDefined()
+      expect(container.textContent).toContain(t("workshop-frontend.GadgetExportMenu.export_formats_could_not_be_loaded"))
+      expect(button(t("gatekeeper-scheduler.SchedulerPage.try_again"))).toBeDefined()
 
-      await act(async () => { button('Try again')?.click() })
+      await act(async () => { button(t("gatekeeper-scheduler.SchedulerPage.try_again"))?.click() })
 
       expect(button('HTML')).toBeDefined()
       expect(getExportFormats).toHaveBeenCalledTimes(2)

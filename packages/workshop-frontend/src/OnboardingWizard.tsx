@@ -1,3 +1,4 @@
+import { t, useTranslation, renderTranslation } from "@gadgets/i18n";
 import { logRpcFailure } from './rpcErrors'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useKumoToastManager } from '@cloudflare/kumo'
@@ -62,11 +63,12 @@ export default function OnboardingWizard({
 }: {
   onComplete: () => void
 }) {
+  const { t } = useTranslation();
   const { authenticatedApi, currentUser } = useAuthenticatedApi()
   const { resolvedThemeMode } = useTheme()
   const toasts = useKumoToastManager()
   const siteName = useSiteName()
-  useDocumentTitle('Setup')
+  useDocumentTitle(t("workshop-frontend.OnboardingWizard.setup"))
 
   // Wizard state
   const [step, setStep] = useState(0) // 0 = avatar, 1 = model, 2 = connections
@@ -223,7 +225,7 @@ export default function OnboardingWizard({
 
   const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      toasts.add({ title: 'Please select an image file', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.OnboardingWizard.please_select_an_image_file"), variant: 'error' })
       return
     }
     setAvatarProcessing(true)
@@ -234,7 +236,7 @@ export default function OnboardingWizard({
       setAvatarPreview(avatarBlobUrl(compressed))
     } catch (err) {
       console.error('Failed to process avatar:', err)
-      toasts.add({ title: 'Failed to process image', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.OnboardingWizard.failed_to_process_image"), variant: 'error' })
     } finally {
       setAvatarProcessing(false)
     }
@@ -255,7 +257,7 @@ export default function OnboardingWizard({
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
       console.error('Failed to start connection:', err)
-      toasts.add({ title: 'Failed to start connection', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.OnboardingWizard.failed_to_start_connection"), variant: 'error' })
     } finally {
       // Reset after a short delay — the subscription will update the UI when the connection completes
       setTimeout(() => setConnectingVendorId(null), 2000)
@@ -296,7 +298,7 @@ export default function OnboardingWizard({
       onComplete()
     } catch (err) {
       console.error('Failed to complete onboarding:', err)
-      toasts.add({ title: 'Something went wrong. Please try again.', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.OnboardingWizard.something_went_wrong_please_try_again"), variant: 'error' })
       setFinishing(false)
     }
   }
@@ -352,15 +354,13 @@ export default function OnboardingWizard({
               mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
           >
-            Let&apos;s set you up
-          </h1>
+            {t("workshop-frontend.OnboardingWizard.let_s_set_you_up")}</h1>
           <p
             className={`mt-2 text-sm text-kumo-subtle transition-all duration-500 delay-200 ${
               mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
             }`}
           >
-            Just a few things before you start building
-          </p>
+            {t("workshop-frontend.OnboardingWizard.just_a_few_things_before_you_start_building")}</p>
         </div>
 
         {/* Step indicator */}
@@ -388,11 +388,9 @@ export default function OnboardingWizard({
             {/* ── Step 0: Profile ───────────────────────────────────────────── */}
             <div className="min-h-[320px] w-full flex-shrink-0 p-5 sm:min-h-[420px] sm:p-8">
               <h2 className="text-lg font-medium text-kumo-default mb-1">
-                Create your profile
-              </h2>
+                {t("workshop-frontend.OnboardingWizard.create_your_profile")}</h2>
               <p className="text-sm text-kumo-subtle mb-12">
-                This is how you&apos;ll appear in conversations
-              </p>
+                {t("workshop-frontend.OnboardingWizard.this_is_how_you_ll_appear_in_conversations")}</p>
 
               {/* Avatar + Display name side by side */}
               <div className="flex flex-col items-start gap-5 min-[380px]:flex-row">
@@ -417,7 +415,7 @@ export default function OnboardingWizard({
                       <>
                         <img
                           src={avatarPreview}
-                          alt="Avatar preview"
+                          alt={t("workshop-frontend.OnboardingWizard.avatar_preview")}
                           className="w-full h-full rounded-full object-cover"
                         />
                         <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -449,7 +447,7 @@ export default function OnboardingWizard({
                     }}
                   />
                   <p className="text-xs text-kumo-inactive mt-1.5">
-                    {avatarPreview ? 'Change' : 'Add photo'}
+                    {avatarPreview ? t("workshop-frontend.OnboardingWizard.change") : t("workshop-frontend.OnboardingWizard.add_photo")}
                   </p>
                 </div>
 
@@ -459,14 +457,13 @@ export default function OnboardingWizard({
                     htmlFor="onboarding-display-name"
                     className="block text-xs font-medium text-kumo-subtle mb-1.5"
                   >
-                    Display name
-                  </label>
+                    {t("workshop-frontend.OnboardingWizard.display_name")}</label>
                   <input
                     id="onboarding-display-name"
                     type="text"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="How should we call you?"
+                    placeholder={t("workshop-frontend.OnboardingWizard.how_should_we_call_you")}
                     className="w-full rounded-lg border border-kumo-line bg-kumo-base px-3 py-2.5 text-[16px] text-kumo-default transition-colors placeholder:text-kumo-inactive focus:border-kumo-brand focus:outline-none sm:text-sm"
                   />
                 </div>
@@ -477,11 +474,9 @@ export default function OnboardingWizard({
             <div className="min-h-[320px] w-full flex-shrink-0 p-5 sm:min-h-[420px] sm:p-8">
               <div>
                 <h2 className="text-lg font-medium text-kumo-default mb-1">
-                  Choose your model
-                </h2>
+                  {t("workshop-frontend.OnboardingWizard.choose_your_model")}</h2>
                 <p className="text-sm text-kumo-subtle mb-6">
-                  Pick the AI model you&apos;d like to use by default
-                </p>
+                  {t("workshop-frontend.OnboardingWizard.pick_the_ai_model_you_d_like_to_use_by_default")}</p>
 
                 {modelsLoading ? (
                   <div className="flex items-center justify-center py-12">
@@ -536,11 +531,9 @@ export default function OnboardingWizard({
                       {models.length === 0 && (
                         <div className="text-center py-8">
                           <p className="text-sm text-kumo-subtle mb-1">
-                            No models configured yet
-                          </p>
+                            {t("workshop-frontend.OnboardingWizard.no_models_configured_yet")}</p>
                           <p className="text-xs text-kumo-inactive">
-                            Add a model to get started
-                          </p>
+                            {t("workshop-frontend.OnboardingWizard.add_a_model_to_get_started")}</p>
                         </div>
                       )}
                     </div>
@@ -549,9 +542,7 @@ export default function OnboardingWizard({
                       onClick={() => setAddModelOpen(true)}
                       className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-kumo-subtle border border-dashed border-kumo-line rounded-xl hover:border-kumo-fill hover:text-kumo-default hover:bg-kumo-tint transition-colors"
                     >
-                      <Plus size={14} weight="bold" />
-                      Add new model...
-                    </button>
+                      <Plus size={14} weight="bold" />{t("workshop-frontend.OnboardingWizard.add_new_model")}</button>
                   </>
                 )}
               </div>
@@ -561,11 +552,9 @@ export default function OnboardingWizard({
             <div className={`min-h-[320px] w-full flex-shrink-0 p-5 sm:min-h-[420px] sm:p-8 ${showConnectionsStep ? '' : 'hidden'}`}>
               <div>
                 <h2 className="text-lg font-medium text-kumo-default mb-1">
-                  Connect your services
-                </h2>
+                  {t("workshop-frontend.OnboardingWizard.connect_your_services")}</h2>
                 <p className="text-sm text-kumo-subtle mb-6">
-                  Link your accounts so your gadgets can access them. You can always add more later.
-                </p>
+                  {t("workshop-frontend.OnboardingWizard.link_your_accounts_so_your_gadgets_can_access_them_you_can_alway")}</p>
 
                 {vendorsLoading ? (
                   <div className="flex items-center justify-center py-12">
@@ -574,8 +563,7 @@ export default function OnboardingWizard({
                 ) : vendors.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-sm text-kumo-subtle">
-                      No services available
-                    </p>
+                      {t("workshop-frontend.OnboardingWizard.no_services_available")}</p>
                   </div>
                 ) : (
                   <div className="grid max-h-64 grid-cols-1 gap-2 overflow-y-auto pr-1 min-[360px]:grid-cols-2">
@@ -616,7 +604,7 @@ export default function OnboardingWizard({
                               {vendor.description.displayName}
                             </p>
                             <p className="text-xs text-kumo-subtle truncate">
-                              {isConnected ? 'Connected' : isConnecting ? 'Connecting...' : 'Not connected'}
+                              {isConnected ? t("workshop-frontend.OnboardingWizard.connected") : isConnecting ? t("workshop-frontend.OnboardingWizard.connecting") : t("workshop-frontend.OnboardingWizard.not_connected")}
                             </p>
                           </div>
                           {isConnected && (
@@ -636,8 +624,7 @@ export default function OnboardingWizard({
                 )}
 
                 <p className="text-xs text-kumo-inactive mt-4 text-center">
-                  Optional &middot; you can manage connections any time
-                </p>
+                  {t("workshop-frontend.OnboardingWizard.optional_you_can_manage_connections_any_time")}</p>
               </div>
             </div>
 
@@ -655,8 +642,7 @@ export default function OnboardingWizard({
                 onClick={goBack}
                 className="text-sm text-kumo-subtle hover:text-kumo-default transition-colors"
               >
-                Back
-              </button>
+                {t("workshop-frontend.OnboardingWizard.back")}</button>
             ) : (
               <span />
             )}
@@ -668,9 +654,7 @@ export default function OnboardingWizard({
                   onClick={goNext}
                   className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-150 text-kumo-inverse bg-kumo-brand hover:bg-kumo-brand-hover"
                 >
-                  Next
-                  <ArrowRight size={14} weight="bold" />
-                </button>
+                  <ArrowRight size={14} weight="bold" />{t("workshop-frontend.Inbox.next")}</button>
               ) : (
                 <button
                   onClick={handleFinish}
@@ -686,14 +670,10 @@ export default function OnboardingWizard({
                 >
                   {finishing ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-kumo-inverse/30 border-t-kumo-inverse rounded-full animate-spin" />
-                      Setting up...
-                    </>
+                      <div className="w-4 h-4 border-2 border-kumo-inverse/30 border-t-kumo-inverse rounded-full animate-spin" />{t("workshop-frontend.OnboardingWizard.setting_up")}</>
                   ) : (
                     <>
-                      Let&apos;s build
-                      <ArrowRight size={14} weight="bold" />
-                    </>
+                      <ArrowRight size={14} weight="bold" />{t("workshop-frontend.OnboardingWizard.let_s_build")}</>
                   )}
                 </button>
               )}
@@ -735,37 +715,34 @@ const SHOWCASE_FEATURES: ShowcaseFeature[] = [
     icon: Sparkle,
     iconColor: 'text-media-100',
     iconBg: 'bg-media-200',
-    title: 'Build gadgets or just chat',
-    description:
-      'Create full web apps, or keep it simple with agent-only conversations. Your call.',
+    get title() { return t("workshop-frontend.OnboardingWizard.build_gadgets_or_just_chat"); },
+    get description() { return t("workshop-frontend.OnboardingWizard.create_full_web_apps_or_keep_it_simple_with_agent_only_conversat"); },
   },
   {
     icon: UsersThree,
     iconColor: 'text-compute-100',
     iconBg: 'bg-compute-200',
-    title: 'Collaborate in real time',
-    description:
-      'Share a workspace with teammates and work on it together, live.',
+    get title() { return t("workshop-frontend.OnboardingWizard.collaborate_in_real_time"); },
+    get description() { return t("workshop-frontend.OnboardingWizard.share_a_workspace_with_teammates_and_work_on_it_together_live"); },
   },
   {
     icon: Key,
     iconColor: 'text-kumo-warning',
     iconBg: 'bg-kumo-warning-tint',
-    title: 'Bring your own models',
-    description:
-      'Plug in personal API tokens from any provider to use the models you love.',
+    get title() { return t("workshop-frontend.OnboardingWizard.bring_your_own_models"); },
+    get description() { return t("workshop-frontend.OnboardingWizard.plug_in_personal_api_tokens_from_any_provider_to_use_the_models"); },
   },
   {
     icon: Plugs,
     iconColor: 'text-storage-100',
     iconBg: 'bg-storage-200',
-    title: 'AI meets your tools',
-    description:
-      'Have AI review a Google Doc, summarize Slack threads, triage Jira tickets, and more.',
+    get title() { return t("workshop-frontend.OnboardingWizard.ai_meets_your_tools"); },
+    get description() { return t("workshop-frontend.OnboardingWizard.have_ai_review_a_google_doc_summarize_slack_threads_triage_jira"); },
   },
 ]
 
 function ShowcaseStep({ active, siteName }: { active: boolean; siteName: string }) {
+  const { t } = useTranslation();
   // Mount-trigger for staggered fade-in when the step becomes visible
   const [revealed, setRevealed] = useState(false)
 
@@ -781,11 +758,9 @@ function ShowcaseStep({ active, siteName }: { active: boolean; siteName: string 
     <div>
       <div className="text-center mb-6">
         <h2 className="text-lg font-medium text-kumo-default mb-1">
-          You&apos;re all set
-        </h2>
+          {t("workshop-frontend.OnboardingWizard.you_re_all_set")}</h2>
         <p className="text-sm text-kumo-subtle">
-          Here&apos;s a taste of what you can do with {siteName}
-        </p>
+          {renderTranslation(t("workshop-frontend.OnboardingWizard.here_s_a_taste_of_what_you_can_do_with_2"), { siteName: siteName })}</p>
       </div>
 
       <div className="space-y-2.5">

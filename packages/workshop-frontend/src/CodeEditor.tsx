@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useEffect, useRef } from 'react'
 import { Annotation, Compartment, EditorState, Transaction } from '@codemirror/state'
 import type { Extension } from '@codemirror/state'
@@ -107,6 +108,7 @@ export function setDocText(view: EditorView, text: string) {
 export default function CodeEditor({
   filename, text = null, session, readOnly = false, height = '100%',
 }: CodeEditorProps) {
+  const { t } = useTranslation();
   const { resolvedThemeMode } = useTheme()
   const hostRef = useRef<HTMLDivElement | null>(null)
   const viewRef = useRef<EditorView | null>(null)
@@ -208,8 +210,7 @@ export default function CodeEditor({
         className="flex justify-center items-center bg-kumo-base text-kumo-subtle"
         style={{ height }}
       >
-        Select a file to start editing
-      </div>
+        {t("workshop-frontend.CodeEditor.select_a_file_to_start_editing")}</div>
     )
   }
 

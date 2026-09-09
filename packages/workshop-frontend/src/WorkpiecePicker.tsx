@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useState } from 'react'
 import { CaretLeft, CaretRight, Check, Lightning, PencilSimple, Pulse, X } from '@phosphor-icons/react'
 import { FormatGlyph } from './components/format/FormatVisuals'
@@ -39,6 +40,7 @@ export default function WorkpiecePicker({
   pendingActivityCount,
   onOpenActivity,
 }: WorkpiecePickerProps) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState<{ id: WorkpieceId; value: string } | null>(null)
 
   const commitRename = () => {
@@ -61,15 +63,15 @@ export default function WorkpiecePicker({
       <button
         type="button"
         onClick={toggleExpanded}
-        title={expanded ? 'Collapse outputs' : 'Expand outputs'}
-        aria-label={expanded ? 'Collapse outputs' : 'Expand outputs'}
+        title={expanded ? t("workshop-frontend.WorkpiecePicker.collapse_outputs") : t("workshop-frontend.WorkpiecePicker.expand_outputs")}
+        aria-label={expanded ? t("workshop-frontend.WorkpiecePicker.collapse_outputs") : t("workshop-frontend.WorkpiecePicker.expand_outputs")}
         aria-expanded={expanded}
         className={`flex h-12 flex-shrink-0 cursor-pointer items-center text-kumo-inactive transition-colors hover:text-kumo-subtle ${
           expanded ? 'justify-between px-3' : 'justify-center'
         }`}
       >
         {expanded && (
-          <span className="text-[11px] font-medium uppercase tracking-[0.06em]">Outputs</span>
+          <span className="text-[11px] font-medium uppercase tracking-[0.06em]">{t("workshop-frontend.WorkpiecePicker.outputs")}</span>
         )}
         {expanded ? <CaretRight size={14} /> : <CaretLeft size={14} />}
       </button>
@@ -100,14 +102,14 @@ export default function WorkpiecePicker({
                   onClick={commitRename}
                   disabled={!editing.value.trim()}
                   className="!h-6 !w-6"
-                  aria-label="Save gadget name"
+                  aria-label={t("workshop-frontend.WorkpiecePicker.save_gadget_name")}
                 >
                   <Check size={13} />
                 </WorkshopIconButton>
                 <WorkshopIconButton
                   onClick={() => setEditing(null)}
                   className="!h-6 !w-6"
-                  aria-label="Cancel rename"
+                  aria-label={t("workshop-frontend.WorkpiecePicker.cancel_rename")}
                 >
                   <X size={13} />
                 </WorkshopIconButton>
@@ -126,7 +128,7 @@ export default function WorkpiecePicker({
                   : 'text-kumo-default hover:bg-kumo-tint'
               }`}
             >
-              <Tooltip content={`${gadget.title}${!expanded && isPending ? ' (Draft)' : ''}${hasHook ? ' · Hooks enabled' : ''}`} asChild>
+              <Tooltip content={hasHook ? t("workshop-frontend.WorkpiecePicker.hooks_enabled_2", { name: !expanded && isPending ? t("workshop-frontend.WorkpiecePicker.draft_2", { name: gadget.title }) : gadget.title }) : !expanded && isPending ? t("workshop-frontend.WorkpiecePicker.draft_2", { name: gadget.title }) : gadget.title} asChild>
                 <button
                   type="button"
                   onClick={() => onSelect(gadget.id)}
@@ -152,8 +154,7 @@ export default function WorkpiecePicker({
                   {isPending && (
                     expanded ? (
                       <span className="flex-shrink-0 rounded-full bg-kumo-base px-1.5 py-0.5 text-[10px] leading-none font-medium text-kumo-subtle">
-                        Draft
-                      </span>
+                        {t("workshop-frontend.WorkpiecePicker.draft")}</span>
                     ) : (
                       <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full border border-kumo-base bg-kumo-brand" />
                     )
@@ -161,7 +162,7 @@ export default function WorkpiecePicker({
                   {hasHook && (
                     <span
                       role="img"
-                      aria-label="Hooks enabled"
+                      aria-label={t("workshop-frontend.WorkpiecePicker.hooks_enabled")}
                       className={expanded
                         ? 'flex-shrink-0 text-kumo-inactive'
                         : 'absolute bottom-0.5 left-0.5 rounded-full border border-kumo-base bg-kumo-base text-kumo-inactive'}
@@ -175,8 +176,8 @@ export default function WorkpiecePicker({
                 <WorkshopIconButton
                   onClick={() => setEditing({ id: gadget.id, value: gadget.title })}
                   className="!h-6 !w-6 flex-shrink-0 opacity-0 transition-opacity duration-150 ease-out group-hover/workpiece:opacity-100 focus-visible:opacity-100"
-                  title="Rename gadget"
-                  aria-label={`Rename ${gadget.title}`}
+                  title={t("workshop-frontend.WorkpiecePicker.rename_gadget")}
+                  aria-label={t("workshop-frontend.FileSidebar.rename_2", { value1: gadget.title })}
                 >
                   <PencilSimple size={13} />
                 </WorkshopIconButton>
@@ -185,7 +186,7 @@ export default function WorkpiecePicker({
           )
         })}
 
-        <Tooltip content="View activity" asChild>
+        <Tooltip content={t("workshop-frontend.WorkpiecePicker.view_activity")} asChild>
           <button
             type="button"
             onClick={onOpenActivity}
@@ -194,7 +195,7 @@ export default function WorkpiecePicker({
             }`}
           >
             <Pulse size={expanded ? 15 : 17} className="flex-shrink-0 text-kumo-inactive" />
-            {expanded && <span className="min-w-0 flex-1 truncate">View activity</span>}
+            {expanded && <span className="min-w-0 flex-1 truncate">{t("workshop-frontend.WorkpiecePicker.view_activity")}</span>}
             {expanded ? (
               <CountBadge count={pendingActivityCount} />
             ) : pendingActivityCount > 0 && (

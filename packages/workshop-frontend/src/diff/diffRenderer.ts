@@ -1,3 +1,4 @@
+import { t, getLocale } from "@gadgets/i18n";
 import {
   Decoration, EditorView, GutterMarker, WidgetType, gutter, lineNumberMarkers,
   lineNumberWidgetMarker,
@@ -276,7 +277,7 @@ function zoneRows(run: ChangeRun, expanded: boolean): ZoneRow[] {
 
 /** Everything a deletion zone renders, for cheap widget/marker equality across model rebuilds. */
 function zoneSignature(run: ChangeRun, expanded: boolean): string {
-  const parts: string[] = [run.key, expanded ? 'x' : '-', String(run.originalStart)]
+  const parts: string[] = [getLocale(), run.key, expanded ? 'x' : '-', String(run.originalStart)]
   for (let i = 0; i < run.originalCount; i++) {
     const lineNumber = run.originalStart + i
     const paired = run.pairedOriginalLines.has(lineNumber)
@@ -315,7 +316,7 @@ class DeletionZoneWidget extends WidgetType {
         button.type = 'button'
         button.className = 'gadgets-deleted-code-row gadgets-deleted-omitted-row'
         button.textContent =
-          `Show ${row.hidden} hidden deleted line${row.hidden === 1 ? '' : 's'}`
+          t("workshop-frontend.diffRenderer.show_hidden_deleted_lines", { n: row.hidden })
         button.addEventListener('click', () => this.onExpand(this.run.key))
         zone.append(button)
         continue

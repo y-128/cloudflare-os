@@ -1,0 +1,81 @@
+# 各 [ここに○○を入力] は角括弧ごと削除して実際の値に置き換えてください。
+# 未使用の任意項目は行ごと削除してください。このファイルに実値は保存しません。
+# ============================================
+# 受信ドメインの設定 (DOMAINSとは: メールを受け付けるドメインの許可リスト)
+# ============================================
+# 取得方法: Cloudflareで所有ドメインのEmail Routingを有効化し、そのドメイン名を指定します。
+# 本番はpackages/inbox/wrangler.jsoncのvars.DOMAINSにも設定します。
+# 例: example.com,example.org または ["example.com","example.org"]
+DOMAINS=[ここに受信ドメインを入力]
+
+# ============================================
+# 受信アドレスの設定 (EMAIL_ADDRESSESとは: ConfigDOの登録がない場合の宛先許可リスト)
+# ============================================
+# 取得方法: 自分で運用するメールアドレスをJSON配列で指定します。
+# 明示的な [] はDOMAINS内の作成済みメールボックスを許可します。変数の省略はエラーです。
+# 本番はpackages/inbox/wrangler.jsoncのvars.EMAIL_ADDRESSESにJSON配列を設定します。
+# 例: ["hello@example.com"] または []
+EMAIL_ADDRESSES=[ここに受信アドレスのJSON配列を入力]
+
+# ============================================
+# Accessポリシーの設定 (POLICY_AUDとは: このAPIを保護するAccessアプリの識別子)
+# ============================================
+# 取得方法: Cloudflare Zero Trust > Access > Applicationsでアプリを作成し、Application Audienceをコピーします。
+# 本番ではwrangler secret put POLICY_AUDまたはwrangler.jsoncのvarsに設定します。
+# 例: Access画面に表示される64桁の英数字
+POLICY_AUD=[ここにAccessのApplication Audienceを入力]
+
+# ============================================
+# Accessチームの設定 (TEAM_DOMAINとは: JWT署名の検証に使うAccessチームのURL)
+# ============================================
+# 取得方法: Cloudflare Zero Trustのチームドメインを確認し、https付きで指定します。
+# 本番ではwrangler secret put TEAM_DOMAINまたはwrangler.jsoncのvarsに設定します。
+# 例: https://your-team.cloudflareaccess.com
+TEAM_DOMAIN=[ここにAccessチームのURLを入力]
+
+# EMAIL / BUCKET / AI / MAILBOX / CONFIG / EMAIL_AGENT / EMAIL_MCPはWranglerのバインディングです。
+# APIキーの代わりにCloudflareが注入するため、.dev.varsに値を記入しません。
+# 任意のVECTORIZEもwrangler.jsoncのvectorizeに追加するバインディングです。
+# VAPID秘密鍵はConfigDOが生成して内部保存します。環境変数には設定しません。
+# INBOX_LOCAL_DEVは環境変数ではなくビルド定数です。pnpm devのローカルビルドだけでtrueになります。
+
+# ============================================
+# Discord通知の設定 (Webhookとは: 指定したURLにPOSTするだけでDiscordに投稿できる仕組み)
+# ============================================
+# 取得方法: Discordのサーバー設定 > 連携サービス > ウェブフック > 新しいウェブフック
+# 例: https://discord.com/api/webhooks/123456789/abcdefg...
+DISCORD_WEBHOOK_URL=[ここにWebhook URLを入力]
+
+# ============================================
+# cfos公開URLの設定 (通知内のメールリンクに使う公開元URL)
+# ============================================
+# 取得方法: cfosを公開している独自ドメインを確認します。パス、クエリ、フラグメントは含めません。
+# 本番はpackages/inbox/wrangler.jsoncのvars、ローカルはpackages/inbox/.dev.varsに設定します。
+# 例: https://cfos.example.com
+CFOS_PUBLIC_URL=[ここにcfosの公開元URLを入力]
+
+# ============================================
+# Cloudflare APIの設定 (APIトークンとは: ドメインの送受信・DNS設定を管理する認証情報)
+# ============================================
+# 取得方法: Cloudflareプロフィール > API Tokens > Create Token > Create Custom Token。
+# 対象アカウントにEmail Sending: Edit、Email Routing Addresses: Editを付与します。
+# 対象ゾーンだけにZone: Read、Zone Settings: Edit、Email Routing Rules: Edit、DNS: Editを付与します。
+# 本番: packages/inboxで PATH="/usr/local/bin:$PATH" pnpm exec wrangler secret put CLOUDFLARE_API_TOKEN
+# 例: Cloudflareの作成画面に一度だけ表示される英数字のトークン
+CLOUDFLARE_API_TOKEN=[ここにCloudflare APIトークンを入力]
+
+# ============================================
+# Cloudflareアカウントの設定 (アカウントIDとは: ドメインが属するアカウントの識別子)
+# ============================================
+# 取得方法: Cloudflareダッシュボード > 対象ドメイン > Overview > API > Account ID。
+# 本番はWorkerの変数として設定します。
+# 例: 32桁の16進英数字
+CLOUDFLARE_ACCOUNT_ID=[ここにCloudflareアカウントIDを入力]
+
+# ============================================
+# 受信Workerの設定 (ルーターとは: inboxとGadgetへ受信メールを振り分ける公開Worker)
+# ============================================
+# 取得方法: Workers & Pagesで、このcfosデプロイのpackages/routerに対応するWorker名を確認します。
+# 本番はWorkerの変数として設定します。inbox単体ではなく公開ルーターの名前を指定してください。
+# 例: my-cfos-router
+MAIL_ROUTING_WORKER=[ここにデプロイ済みのルーターWorker名を入力]

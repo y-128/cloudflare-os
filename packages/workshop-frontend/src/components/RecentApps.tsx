@@ -1,3 +1,4 @@
+import { t, useTranslation, renderTranslation } from "@gadgets/i18n";
 import { Link } from '@tanstack/react-router'
 import { Clock, ArrowRight } from '@phosphor-icons/react'
 import { useAuthenticatedApi } from '../AuthContext'
@@ -24,15 +25,16 @@ function formatRelativeTime(date: Date): string {
   const now = Date.now()
   const diff = now - date.getTime()
   const minutes = Math.floor(diff / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 1) return t("workshop-frontend.ShareModal.just_now")
+  if (minutes < 60) return t("gatekeeper-context.ContextLibraryPage.m_ago", { n: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t("gatekeeper-context.ContextLibraryPage.h_ago", { n: hours })
   const days = Math.floor(hours / 24)
-  return `${days}d ago`
+  return t("gatekeeper-context.ContextLibraryPage.d_ago", { n: days })
 }
 
 function AppRow({ gadget }: { gadget: GadgetMetadataWithTimestamps }) {
+  const { t } = useTranslation();
   const gradient = getGradient(gadget.id)
 
   return (
@@ -49,12 +51,11 @@ function AppRow({ gadget }: { gadget: GadgetMetadataWithTimestamps }) {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <h3 className="text-sm font-medium text-kumo-default truncate">
-          {gadget.title || 'Untitled Workspace'}
+          {gadget.title || t("workshop-frontend.RecentApps.untitled_workspace")}
         </h3>
         {gadget.owner && (
           <p className="text-xs text-kumo-subtle truncate mt-0.5">
-            Shared by {gadget.owner.name}
-          </p>
+            {renderTranslation(t("workshop-frontend.GadgetList.shared_by_2"), { name: gadget.owner.name })}</p>
         )}
       </div>
 
@@ -71,6 +72,7 @@ function AppRow({ gadget }: { gadget: GadgetMetadataWithTimestamps }) {
 }
 
 export default function RecentApps() {
+  const { t } = useTranslation();
   const { authenticatedApi } = useAuthenticatedApi()
   const [gadgets, setGadgets] = useState<GadgetMetadataWithTimestamps[]>([])
   const [loading, setLoading] = useState(true)
@@ -94,7 +96,7 @@ export default function RecentApps() {
     return (
       <section className="w-full max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-medium text-kumo-default">Recent workspaces</h2>
+          <h2 className="text-sm font-medium text-kumo-default">{t("workshop-frontend.RecentApps.recent_workspaces")}</h2>
         </div>
         <div className="flex flex-col gap-2">
           {[1, 2].map((i) => (
@@ -109,8 +111,7 @@ export default function RecentApps() {
     return (
       <section className="w-full max-w-2xl mx-auto">
         <div className="text-center py-8 text-sm text-kumo-danger">
-          Unable to load your workspaces. Check your connection and try refreshing.
-        </div>
+          {t("workshop-frontend.RecentApps.unable_to_load_your_workspaces_check_your_connection_and_try_ref")}</div>
       </section>
     )
   }
@@ -119,8 +120,7 @@ export default function RecentApps() {
     return (
       <section className="w-full max-w-2xl mx-auto">
         <div className="text-center py-8 text-kumo-inactive text-sm">
-          No workspaces yet. Create your first one above!
-        </div>
+          {t("workshop-frontend.RecentApps.no_workspaces_yet_create_your_first_one_above")}</div>
       </section>
     )
   }
@@ -129,15 +129,12 @@ export default function RecentApps() {
     <section className="w-full max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-medium text-kumo-default">
-          Recent workspaces
-        </h2>
+          {t("workshop-frontend.RecentApps.recent_workspaces")}</h2>
         <Link
           to="/"
           className="flex items-center gap-1 text-xs text-kumo-subtle hover:text-kumo-brand transition-colors"
         >
-          View all
-          <ArrowRight size={12} />
-        </Link>
+          <ArrowRight size={12} />{t("workshop-frontend.RecentApps.view_all")}</Link>
       </div>
 
       <div className="flex flex-col gap-2">

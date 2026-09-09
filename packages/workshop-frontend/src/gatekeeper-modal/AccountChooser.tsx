@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useState } from 'react'
 import { Check, Plus, UserCircle } from '@phosphor-icons/react'
 import { AccountDescription, SupportedResource, VendorDescription } from '@gadgets/workshop-shared/gatekeeper'
@@ -22,6 +23,7 @@ export type AccountOption = {
  * generic user icon.
  */
 export function AccountAvatar({ avatarUrl, logoUrl }: { avatarUrl: string | undefined, logoUrl: string | undefined }) {
+  useTranslation();
   const [failed, setFailed] = useState(false)
   if (avatarUrl && !failed) {
     return <img src={avatarUrl} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} />
@@ -59,22 +61,23 @@ export function AccountChooser({
   onReconnect: (id: number) => void
   onGrantAccess?: (id: number) => void
 }) {
+  const { t } = useTranslation();
   const isEmailMailbox = vendorId === 'email' && resourceTitle === 'Email Mailbox'
 
   return (
     <section className="overflow-hidden rounded-xl border border-kumo-line bg-kumo-base">
       <div className="border-b border-kumo-line px-3 py-2.5">
-        <p className="text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default">Account</p>
+        <p className="text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default">{t("workshop-frontend.AccountChooser.account")}</p>
         <p className="mt-0.5 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
           {isEmailMailbox
-            ? 'Enable the Email receiver account, then choose the mailbox name below.'
-            : `Pick which ${vendorName} identity this ${resourceTitle ?? 'connection'} should use.`}
+            ? t("workshop-frontend.AccountChooser.enable_the_email_receiver_account_then_choose_the_mailbox_name_b")
+            : t("workshop-frontend.AccountChooser.pick_which_identity_this_should_use", { vendor: vendorName, resource: resourceTitle ?? t("workshop-frontend.AccountChooser.connection") })}
         </p>
       </div>
       <div className="divide-y divide-kumo-line">
         {accounts.map(account => {
           const selected = selectedAccountId === account.id
-          const name = account.description.uniqueName || account.description.displayName || 'Connected account'
+          const name = account.description.uniqueName || account.description.displayName || t("workshop-frontend.AccountChooser.connected_account_2")
           const expired = !account.credentialsValid
           const reconnecting = reconnectingAccountId === account.id
           const granted = account.description.grantedResourceUrlPatterns
@@ -108,10 +111,10 @@ export function AccountChooser({
                   <p className="truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">{name}</p>
                   <p className={`truncate text-[12px] leading-4 font-normal tracking-[-0.2px] ${needsAccess ? 'text-kumo-brand' : 'text-kumo-subtle'}`}>
                     {expired
-                      ? 'Expired credentials'
+                      ? t("workshop-frontend.AccountChooser.expired_credentials")
                       : needsAccess
-                      ? 'Additional permission needed'
-                      : resourceTitle ? `Connected ${vendorName} account` : 'Connected'}
+                      ? t("workshop-frontend.AccountChooser.additional_permission_needed")
+                      : resourceTitle ? t("workshop-frontend.AccountChooser.connected_account", { value1: vendorName }) : t("workshop-frontend.AccountChooser.connected")}
                   </p>
                 </div>
               </button>
@@ -122,7 +125,7 @@ export function AccountChooser({
                   disabled={reconnecting}
                   className="shrink-0 cursor-pointer rounded-md border border-kumo-line px-2 py-1 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default transition-colors hover:bg-kumo-elevated disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {reconnecting ? 'Opening...' : 'Reconnect'}
+                  {reconnecting ? t("workshop-frontend.AccountChooser.opening") : t("workshop-frontend.AccountChooser.reconnect")}
                 </button>
               ) : needsAccess ? (
                 <button
@@ -131,7 +134,7 @@ export function AccountChooser({
                   disabled={granting}
                   className="shrink-0 cursor-pointer rounded-md border border-kumo-line px-2 py-1 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default transition-colors hover:bg-kumo-elevated disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {granting ? 'Opening...' : 'Grant access'}
+                  {granting ? t("workshop-frontend.AccountChooser.opening") : t("workshop-frontend.AccountChooser.grant_access")}
                 </button>
               ) : null}
               {selected && <Check size={15} weight="bold" className="shrink-0 text-kumo-brand" />}
@@ -152,8 +155,8 @@ export function AccountChooser({
               <Plus size={14} />
             )}
             {isEmailMailbox
-              ? 'Enable Email mailboxes'
-              : accounts.length === 0 ? `Connect ${vendorName}` : `Use another ${vendorName} account`}
+              ? t("workshop-frontend.AccountChooser.enable_email_mailboxes")
+              : accounts.length === 0 ? t("workshop-frontend.ConnectConnectorModal.connect", { value1: vendorName }) : t("workshop-frontend.AccountChooser.use_another_account", { value1: vendorName })}
           </button>
         )}
       </div>

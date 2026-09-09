@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Columns, Rows } from '@phosphor-icons/react'
 import { Compartment, EditorState } from '@codemirror/state'
@@ -80,6 +81,7 @@ export default function CodeDiffEditor({
   readOnly = false,
   height = '100%',
 }: CodeDiffEditorProps) {
+  const { t, locale } = useTranslation();
   const { resolvedThemeMode } = useTheme()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const modifiedHostRef = useRef<HTMLDivElement | null>(null)
@@ -320,7 +322,7 @@ export default function CodeDiffEditor({
   // Layout and expansion changes re-render the existing model without re-diffing.
   useEffect(() => {
     dispatchRender()
-  }, [splitDiff, expandedDeletions, dispatchRender])
+  }, [splitDiff, expandedDeletions, dispatchRender, locale])
 
   // Theme and read-only flips reconfigure in place.
   useEffect(() => {
@@ -417,7 +419,7 @@ export default function CodeDiffEditor({
         className="flex items-center justify-center bg-kumo-base text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle"
         style={{ height }}
       >
-        {!filename ? 'Select a file to view changes' : 'Loading diff...'}
+        {!filename ? t("workshop-frontend.CodeDiffEditor.select_a_file_to_view_changes") : t("workshop-frontend.CodeDiffEditor.loading_diff")}
       </div>
     )
   }
@@ -433,8 +435,8 @@ export default function CodeDiffEditor({
             <button
               type="button"
               className={layoutButtonClass(diffLayoutPreference === 'stacked')}
-              title="Stacked diff"
-              aria-label="Use stacked diff layout"
+              title={t("workshop-frontend.CodeDiffEditor.stacked_diff")}
+              aria-label={t("workshop-frontend.CodeDiffEditor.use_stacked_diff_layout")}
               aria-pressed={diffLayoutPreference === 'stacked'}
               onClick={() => setDiffLayoutPreference('stacked')}
             >
@@ -443,8 +445,8 @@ export default function CodeDiffEditor({
             <button
               type="button"
               className={layoutButtonClass(diffLayoutPreference === 'split' && canSplitDiff, !canSplitDiff)}
-              title={canSplitDiff ? 'Split diff' : 'Split diff needs more space'}
-              aria-label="Use split diff layout"
+              title={canSplitDiff ? t("workshop-frontend.CodeDiffEditor.split_diff") : t("workshop-frontend.CodeDiffEditor.split_diff_needs_more_space")}
+              aria-label={t("workshop-frontend.CodeDiffEditor.use_split_diff_layout")}
               aria-pressed={diffLayoutPreference === 'split' && canSplitDiff}
               disabled={!canSplitDiff}
               onClick={() => setDiffLayoutPreference('split')}
@@ -457,7 +459,7 @@ export default function CodeDiffEditor({
             style={{ fontFamily: monoFont }}
           >
             {summary.status !== 'Modified' && (
-              <span className="text-[10px] font-medium text-kumo-subtle">{summary.status}</span>
+              <span className="text-[10px] font-medium text-kumo-subtle">{({ Added: t("workshop-frontend.ShareModal.added"), Deleted: t("workshop-frontend.Activity.deleted"), Unchanged: t("workshop-frontend.CodeDiffEditor.unchanged") })[summary.status]}</span>
             )}
             <span className="text-kumo-danger">-{summary.deletions}</span>
             <span className="text-kumo-success">+{summary.additions}</span>

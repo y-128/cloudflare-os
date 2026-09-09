@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation } from "@gadgets/i18n";
 import { useState, FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { RpcStub } from "capnweb";
@@ -16,11 +17,12 @@ interface SignupPageProps {
 }
 
 export default function SignupPage({ rpcStub }: SignupPageProps) {
+  const { t } = useTranslation();
   const serverConfig = useServerConfig();
   const serverConfigError = useServerConfigError();
   const siteName = useSiteName();
   const connectionLost = useConnectionLost();
-  useDocumentTitle("Create account");
+  useDocumentTitle(t("workshop-frontend.SignupPage.create_account"));
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -29,17 +31,17 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
 
   const usernameError =
     username && !/^[a-z0-9_-]+$/i.test(username)
-      ? "Letters, numbers, underscores, and hyphens only"
+      ? t("workshop-frontend.SignupPage.letters_numbers_underscores_and_hyphens_only")
       : undefined;
 
   const passwordError =
     password && password.length < 8
-      ? "Must be at least 8 characters"
+      ? t("workshop-frontend.SettingsPage.must_be_at_least_8_characters")
       : undefined;
 
   const confirmError =
     confirmPassword && confirmPassword !== password
-      ? "Passwords do not match"
+      ? t("workshop-frontend.SignupPage.passwords_do_not_match")
       : undefined;
 
   const canSubmit =
@@ -68,10 +70,10 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
         localStorage.setItem("authToken", token);
         window.location.href = "/";
       } else {
-        setError("Username already exists");
+        setError(t("workshop-frontend.SignupPage.username_already_exists"));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Account creation failed");
+      setError(err instanceof Error ? err.message : t("workshop-frontend.SignupPage.account_creation_failed"));
     } finally {
       setLoading(false);
     }
@@ -85,9 +87,8 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
           className="flex h-full min-h-0 flex-col items-center justify-center gap-4 overflow-y-auto bg-kumo-base px-4 py-8"
         >
           <p className="text-sm text-kumo-danger text-center">
-            Couldn&apos;t load deployment settings.
-          </p>
-          <Button variant="secondary" onClick={() => window.location.reload()}>Reload</Button>
+            {t("workshop-frontend.SignupPage.couldn_t_load_deployment_settings")}</p>
+          <Button variant="secondary" onClick={() => window.location.reload()}>{t("workshop-frontend.SignupPage.reload")}</Button>
         </div>
       );
     }
@@ -95,7 +96,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 overflow-y-auto bg-kumo-base px-4 py-8">
         <Loader size="lg" />
         <p className="text-sm text-kumo-subtle text-center">
-          {connectionLost ? "Can't reach the server. Retrying…" : "Loading…"}
+          {connectionLost ? t("workshop-frontend.SignupPage.can_t_reach_the_server_retrying") : t("workshop-frontend.SignupPage.loading")}
         </p>
       </div>
     );
@@ -133,17 +134,16 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
           <h1 className="text-xl font-semibold text-kumo-default">
             {siteName}
           </h1>
-          <p className="text-sm text-kumo-subtle mt-1">Create your account</p>
+          <p className="text-sm text-kumo-subtle mt-1">{t("workshop-frontend.SignupPage.create_your_account")}</p>
         </div>
 
         {!signupsEnabled && (
           <Banner
             variant="default"
-            title="Signups are closed"
+            title={t("workshop-frontend.SignupPage.signups_are_closed")}
             className="mb-4"
           >
-            New account registration is currently disabled on this deployment.
-          </Banner>
+            {t("workshop-frontend.SignupPage.new_account_registration_is_currently_disabled_on_this_deploymen")}</Banner>
         )}
 
         {passwordAuthEnabled && (
@@ -152,20 +152,20 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 className="w-full"
-                label="Username"
+                label={t("workshop-frontend.SignupPage.username")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
                 autoComplete="username"
                 disabled={loading}
-                placeholder="your-username"
+                placeholder={t("workshop-frontend.SignupPage.your_username")}
                 error={usernameError}
               />
 
               <Input
                 className="w-full"
                 type="password"
-                label="Password"
+                label={t("workshop-frontend.SignupPage.password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
@@ -177,7 +177,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
               <Input
                 className="w-full"
                 type="password"
-                label="Confirm Password"
+                label={t("workshop-frontend.SignupPage.confirm_password")}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
@@ -195,8 +195,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
                 loading={loading}
                 className="w-full justify-center"
               >
-                Create account
-              </Button>
+                {t("workshop-frontend.SignupPage.create_account")}</Button>
             </form>
           </>
         )}
@@ -207,7 +206,7 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
             {passwordAuthEnabled && (
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-px flex-1 bg-kumo-line" />
-                <span className="text-xs text-kumo-subtle">or</span>
+                <span className="text-xs text-kumo-subtle">{t("workshop-frontend.SignupPage.or")}</span>
                 <div className="h-px flex-1 bg-kumo-line" />
               </div>
             )}
@@ -217,11 +216,8 @@ export default function SignupPage({ rpcStub }: SignupPageProps) {
 
         {passwordAuthEnabled && (
           <p className="text-center text-sm text-kumo-subtle mt-6">
-            Already have an account?{" "}
-            <Link to="/" className="text-kumo-brand hover:underline font-medium">
-              Sign in
-            </Link>
-          </p>
+            {renderTranslation(t("workshop-frontend.SignupPage.already_have_an_account_2"), { value: <Link to="/" className="text-kumo-brand hover:underline font-medium">
+              {t("workshop-frontend.SignupPage.sign_in")}</Link> })}</p>
         )}
       </div>
     </div>

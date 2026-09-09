@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { ReactNode } from 'react'
 import { RpcStub } from 'capnweb'
 import { PublicApi } from '@gadgets/workshop-shared/api'
@@ -12,6 +13,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, rpcStub }: ProtectedRouteProps) {
+  const { t } = useTranslation();
   const { isAuthenticated, authenticatedApi, isLoading, error, logout, login } = useAuth(rpcStub)
 
   const handleLoginSuccess = () => {
@@ -36,8 +38,7 @@ export default function ProtectedRoute({ children, rpcStub }: ProtectedRouteProp
       >
         <Loader size="lg" />
         <div style={{ textAlign: 'center' }}>
-          Loading...
-        </div>
+          {t("workshop-frontend.ProtectedRoute.loading")}</div>
       </div>
     )
   }
@@ -57,12 +58,11 @@ export default function ProtectedRoute({ children, rpcStub }: ProtectedRouteProp
       >
         <Banner
           variant="error"
-          title={`Authentication error: ${error}`}
+          title={t("workshop-frontend.ProtectedRoute.authentication_error", { value1: error })}
           className="mb-4"
         />
         <Button variant="primary" onClick={() => window.location.reload()}>
-          Retry
-        </Button>
+          {t("workshop-frontend.ProtectedRoute.retry")}</Button>
       </div>
     )
   }
@@ -85,8 +85,7 @@ export default function ProtectedRoute({ children, rpcStub }: ProtectedRouteProp
         >
           <Loader size="lg" />
           <div style={{ textAlign: 'center' }}>
-            Authenticating...
-          </div>
+            {t("workshop-frontend.ProtectedRoute.authenticating")}</div>
         </div>
       )
     }

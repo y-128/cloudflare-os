@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   ConversationConfiguratorRpc, ConversationConfiguratorValues,
@@ -24,13 +25,13 @@ export default {
   render({ values, setValues, ui }) {
     return <Section>
       <Field
-        label="Conversation"
-        description="Choose a channel or direct message this connection can read."
+        label={t("gatekeeper-slack.conversation-configurator-ui.conversation")}
+        description={t("gatekeeper-slack.conversation-configurator-ui.choose_a_channel_or_direct_message_this_connection_can_read")}
       >
         <Autocomplete
           name="conversationId"
           value={values.conversationId}
-          placeholder="Search channels and DMs..."
+          placeholder={t("gatekeeper-slack.conversation-configurator-ui.search_channels_and_dms")}
           loadOptions={query => ui.listConversations(query)}
           onChange={conversationId => setValues({ conversationId })}
         />

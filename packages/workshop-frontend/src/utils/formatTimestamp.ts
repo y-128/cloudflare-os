@@ -1,22 +1,16 @@
-// Locale-aware timestamp formatting for chat UI tooltips.
-//
-// `Intl.DateTimeFormat(undefined, ...)` uses the browser's preferred locale, which already encodes
-// the user's 12h vs 24h preference (e.g. en-US -> 12h, en-GB -> 24h, en-US-u-hc-h23 -> 24h). We
-// intentionally do not pass `hour12` or `hourCycle` so the OS/browser setting wins.
-//
-// The formatter instance is cached at module scope because constructing `Intl.DateTimeFormat` is
-// surprisingly expensive and a chat view can render hundreds of timestamps.
+import { getLocale } from "@gadgets/i18n";
 
-let fullTimestampFormatter: Intl.DateTimeFormat | null = null;
+// Cache per language so changing the UI language also changes timestamp formatting.
+const fullTimestampFormatters = new Map<string, Intl.DateTimeFormat>();
 
 function getFullTimestampFormatter(): Intl.DateTimeFormat {
-  if (fullTimestampFormatter === null) {
-    fullTimestampFormatter = new Intl.DateTimeFormat(undefined, {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
+  const locale = getLocale();
+  let formatter = fullTimestampFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, { dateStyle: "short", timeStyle: "short" });
+    fullTimestampFormatters.set(locale, formatter);
   }
-  return fullTimestampFormatter;
+  return formatter;
 }
 
 /**

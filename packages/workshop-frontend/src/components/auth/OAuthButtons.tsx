@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation } from "@gadgets/i18n";
 import { useEffect, useRef, useState } from 'react'
 import { RpcStub } from 'capnweb'
 import { PublicApi, AuthVendorInfo } from '@gadgets/workshop-shared/api'
@@ -15,6 +16,7 @@ interface OAuthButtonsProps {
  * stored and the app re-authenticates.
  */
 export default function OAuthButtons({ rpcStub, vendors, onSuccess }: OAuthButtonsProps) {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<string | null>(null)
 
@@ -60,7 +62,7 @@ export default function OAuthButtons({ rpcStub, vendors, onSuccess }: OAuthButto
       if (!popup) {
         try { (attempt as unknown as Disposable)[Symbol.dispose]() } catch { /* already disposed */ }
         loginRpcRef.current = null
-        throw new Error('Pop-up blocked. Please allow pop-ups and try again.')
+        throw new Error(t("workshop-frontend.OAuthButtons.pop_up_blocked_please_allow_pop_ups_and_try_again"))
       }
       // Resolve when the gatekeeper finishes, or reject if the user closes the pop-up first.
       const token = await new Promise<string>((resolve, reject) => {
@@ -76,11 +78,11 @@ export default function OAuthButtons({ rpcStub, vendors, onSuccess }: OAuthButto
           fn()
         }
         pollRef.current = window.setInterval(() => {
-          if (popup.closed) finish(() => reject(new Error('Sign-in was cancelled.')))
+          if (popup.closed) finish(() => reject(new Error(t("workshop-frontend.OAuthButtons.sign_in_was_cancelled"))))
         }, 500)
         attempt.wait()
           .then(t => finish(() => resolve(t)))
-          .catch(e => finish(() => reject(e instanceof Error ? e : new Error('Could not sign in'))))
+          .catch(e => finish(() => reject(e instanceof Error ? e : new Error(t("workshop-frontend.OAuthButtons.could_not_sign_in")))))
       })
       if (!mountedRef.current) return  // user navigated away mid-flow; drop the result
       localStorage.setItem('authToken', token)
@@ -88,7 +90,7 @@ export default function OAuthButtons({ rpcStub, vendors, onSuccess }: OAuthButto
       else window.location.reload()
     } catch (err) {
       if (!mountedRef.current) return
-      setError(err instanceof Error ? err.message : 'Could not sign in')
+      setError(err instanceof Error ? err.message : t("workshop-frontend.OAuthButtons.could_not_sign_in"))
       setPending(null)
     }
   }
@@ -112,9 +114,7 @@ export default function OAuthButtons({ rpcStub, vendors, onSuccess }: OAuthButto
               className="mr-1"
               style={{ height: 18, width: 'auto' }}
             />
-          )}
-          Continue with {vendor.displayName}
-        </Button>
+          )}{renderTranslation(t("workshop-frontend.OAuthButtons.continue_with_2"), { displayName: vendor.displayName })}</Button>
       ))}
     </div>
   )

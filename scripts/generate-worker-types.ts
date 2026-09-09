@@ -3,7 +3,7 @@
  * Regenerate worker-configuration.d.ts for every package that has wrangler.jsonc.
  *
  * Post-processing (so we don't hand-edit the giant generated file):
- * 1. Point mainModule at ./src/* instead of gitignored .wrangler/validate/*
+ * 1. Point generated module/DO imports at ./src/* or ./workers/* instead of transformed output.
  * 2. If src/env.d.ts owns GlobalProps, drop the generated project header
  *    (runtime types only) so the two don't fight.
  * 3. workshop-backend: keep the manual `restore` export until wrangler emits it.
@@ -13,6 +13,7 @@
  * Cloudflare.Env & { ... }`), not in the generated file.
  *
  * `--check` is non-mutating: writes a sibling temp file, compares, deletes it.
+ * `--package <directory>` limits generation to one deployable package.
  */
 import { spawnSync } from "node:child_process";
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -64,8 +65,8 @@ async function ownsGlobalProps(pkgDir: string): Promise<boolean> {
 
 function rewriteMainModule(text: string): string {
   return text.replace(
-    /mainModule:\s*typeof import\("\.\/\.wrangler\/validate\/src\/([^"]+)"\)/g,
-    'mainModule: typeof import("./src/$1")',
+    /import\("\.\/\.wrangler\/validate\/(src|workers)\/([^"]+)"\)/g,
+    'import("./$1/$2")',
   );
 }
 
@@ -172,7 +173,10 @@ async function generateOne(pkgDir: string): Promise<void> {
   }
 }
 
-const dirs = await packageDirs();
+const selectedPackage = process.argv.includes("--package")
+  ? process.argv[process.argv.indexOf("--package") + 1]
+  : undefined;
+const dirs = (await packageDirs()).filter(dir => !selectedPackage || dir === join(packagesDir, selectedPackage));
 if (dirs.length === 0) {
   console.error("no packages with wrangler.jsonc found");
   process.exit(1);

@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import {
   useState,
   useEffect,
@@ -161,6 +162,7 @@ export const ChatComposer = ({
   /** Called after a gatekeeper is connected via the attach flow, so the parent can refresh the
    * pre-approval catalog and proactively offer to pre-approve its actions. */
 }) => {
+  const { t } = useTranslation();
   const toasts = useKumoToastManager();
   const {
     attachments: pendingAttachments,
@@ -461,15 +463,15 @@ export const ChatComposer = ({
 
     if (!inputValue.trim() && !selectedSlashCommand && readyAttachments.length === 0) return;
     if (hasUploadingAttachment) {
-      toasts.add({ title: "Please wait for attachment uploads to finish", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.please_wait_for_attachment_uploads_to_finish"), variant: "error" });
       return;
     }
     if (hasFailedAttachment) {
-      toasts.add({ title: "Remove failed attachment uploads before sending", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.remove_failed_attachment_uploads_before_sending"), variant: "error" });
       return;
     }
     if (isCreatingResource) {
-      toasts.add({ title: "Please wait for the resource connection to finish", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatComposer.please_wait_for_the_resource_connection_to_finish"), variant: "error" });
       return;
     }
 
@@ -482,7 +484,7 @@ export const ChatComposer = ({
         hasAttachments: readyAttachments.length > 0,
       });
       if (!submissionResult.ok) {
-        toasts.add({ title: "Slash commands cannot include resources or attachments", variant: "error" });
+        toasts.add({ title: t("workshop-frontend.ChatInterface.slash_commands_cannot_include_resources_or_attachments"), variant: "error" });
         return;
       }
       const { message, capsules: capsuleSpecifiers, formats: formatRefs } =
@@ -692,7 +694,7 @@ export const ChatComposer = ({
               <span className={`grid h-7 w-7 place-items-center rounded-full ${canAttachMore ? "bg-kumo-brand/12 text-kumo-brand" : "bg-kumo-warning/15 text-kumo-warning"}`}>
                 <FileIcon size={16} weight="duotone" />
               </span>
-              {canAttachMore ? "Drop files to attach" : "Messages are limited to 5 attachments"}
+              {canAttachMore ? t("workshop-frontend.ChatInterface.drop_files_to_attach") : t("workshop-frontend.ChatInterface.messages_are_limited_to_5_attachments")}
             </div>
           </div>
         )}
@@ -701,8 +703,8 @@ export const ChatComposer = ({
           <div className="px-4 pt-2 text-xs text-kumo-warning">
             {/* Composers without a chatKey (new-chat, home page) have no thread to check. */}
             {chatKey != null
-              ? "Connection hiccup — your message may not have been sent. Check the thread, then try again; if it keeps failing, reload the page."
-              : "Connection hiccup — your message may not have been sent. Try again; if it keeps failing, reload the page."}
+              ? t("workshop-frontend.ChatComposer.connection_hiccup_your_message_may_not_have_been_sent_check_the_t")
+              : t("workshop-frontend.ChatComposer.connection_hiccup_your_message_may_not_have_been_sent_try_again_i")}
           </div>
         )}
         {/* Textarea */}
@@ -712,7 +714,7 @@ export const ChatComposer = ({
           <div className="sr-only" aria-live="polite">
             {slashCommandPicker.status ||
               (selectedSlashCommand
-                ? `Slash command /${selectedSlashCommand.choice.name} from ${selectedSlashCommand.choice.providerLabel} is ready to send`
+                ? t("workshop-frontend.ChatComposer.slash_command_from_is_ready_to_send", { value1: selectedSlashCommand.choice.name, value2: selectedSlashCommand.choice.providerLabel })
                 : "")}
           </div>
           <div ref={wrapperRef} className={styles.capsuleInputWrapper}>
@@ -783,10 +785,10 @@ export const ChatComposer = ({
                 isBlocked
                   ? blockedReason
                   : isAgentActive
-                    ? "Waiting for agent…"
+                    ? t("workshop-frontend.ChatInterface.waiting_for_agent")
                     : newChat
-                      ? "Start a new conversation…"
-                      : "Ask a follow-up…"
+                      ? t("workshop-frontend.ChatInterface.start_a_new_conversation")
+                      : t("workshop-frontend.ChatInterface.ask_a_follow_up")
               }
               autoFocus={autoFocus}
               rows={minRows}
@@ -918,7 +920,7 @@ export const ChatComposer = ({
                   <button
                     type="button"
                     className="group flex h-10 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-lg text-kumo-inactive transition-[background-color,color,transform] duration-150 ease-out hover:bg-kumo-tint hover:text-kumo-subtle focus-visible:bg-kumo-tint focus-visible:text-kumo-subtle focus-visible:outline-none active:scale-[0.96] data-[popup-open]:bg-kumo-tint data-[popup-open]:text-kumo-subtle sm:h-8 sm:w-8"
-                    aria-label="More chat options"
+                    aria-label={t("workshop-frontend.ChatComposer.more_chat_options")}
                   >
                     <DotsThree size={18} weight="bold" />
                   </button>
@@ -942,7 +944,7 @@ export const ChatComposer = ({
                       <Brain size={14} />
                     </span>
                     <span className="flex-1">
-                      {showThinkingTraces ? "Hide thinking" : "Show thinking"}
+                      {showThinkingTraces ? t("workshop-frontend.ChatInterface.hide_thinking") : t("workshop-frontend.ChatInterface.show_thinking")}
                     </span>
                   </DropdownMenu.Item>
                 )}
@@ -962,7 +964,7 @@ export const ChatComposer = ({
                   onClick={onStop}
                   tone="primary"
                   className="!h-10 !w-10 sm:!h-8 sm:!w-8"
-                  aria-label="Stop agent"
+                  aria-label={t("workshop-frontend.ChatInterface.stop_agent")}
                 >
                   <svg
                     width="14"
@@ -979,7 +981,7 @@ export const ChatComposer = ({
                   disabled={!canSend}
                   tone="primary"
                   className="!h-10 !w-10 disabled:cursor-not-allowed disabled:opacity-30 sm:!h-8 sm:!w-8"
-                  aria-label="Send message"
+                  aria-label={t("workshop-frontend.ChatInterface.send_message")}
                 >
                   {/* Arrow-up icon */}
                   <svg

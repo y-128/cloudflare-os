@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   SpotifyPlaylistConfiguratorRpc,
@@ -17,11 +18,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Playlist" description="Search your playlists, or paste a Spotify playlist URL or link.">
+      <Field label={t("gatekeeper-spotify.playlist-configurator-ui.playlist")} description={t("gatekeeper-spotify.playlist-configurator-ui.search_your_playlists_or_paste_a_spotify_playlist_url_or_link")}>
         <Autocomplete
           name="playlistId"
           value={values.playlistId}
-          placeholder="Search playlists or paste a URL..."
+          placeholder={t("gatekeeper-spotify.playlist-configurator-ui.search_playlists_or_paste_a_url")}
           loadOptions={query => ui.listPlaylists(query)}
           onChange={playlistId => setValues({ playlistId })}
         />

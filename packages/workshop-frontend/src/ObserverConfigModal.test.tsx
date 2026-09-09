@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -197,7 +198,7 @@ describe('ObserverConfigModal account selection', () => {
     })
 
     const connect = [...rendered.querySelectorAll('button')]
-      .find(button => button.textContent === 'Connect')
+      .find(button => button.textContent === t("workshop-frontend.ObserverConfigModal.connect"))
     expect(connect).toBeDefined()
     await act(async () => connect!.click())
 
@@ -219,12 +220,12 @@ describe('ObserverConfigModal account selection', () => {
     })
 
     const verify = [...rendered.querySelectorAll('button')]
-      .find(button => button.textContent === 'Verify and open')
+      .find(button => button.textContent === t("workshop-frontend.ObserverConfigModal.verify_and_open"))
     const grant = [...rendered.querySelectorAll('button')]
-      .find(button => button.textContent === 'Grant the access needed to verify this resource')
+      .find(button => button.textContent === t("workshop-frontend.ObserverConfigModal.grant_the_access_needed_to_verify_this_resource"))
     expect(verify?.disabled).toBe(true)
     expect(grant).toBeDefined()
-    expect(rendered.textContent).not.toContain('Ready')
+    expect(rendered.textContent).not.toContain(t("workshop-frontend.Inbox.mailbox_ready"))
 
     await act(async () => grant!.click())
 
@@ -232,7 +233,7 @@ describe('ObserverConfigModal account selection', () => {
     expect(window.open).toHaveBeenCalledWith(
       'https://accounts.google.test/oauth', '_blank', 'noopener,noreferrer',
     )
-    expect(rendered.textContent).not.toContain('Ready')
+    expect(rendered.textContent).not.toContain(t("workshop-frontend.Inbox.mailbox_ready"))
     expect(verify?.disabled).toBe(true)
   })
 
@@ -247,9 +248,9 @@ describe('ObserverConfigModal account selection', () => {
     })
 
     const verify = [...rendered.querySelectorAll('button')]
-      .find(button => button.textContent === 'Verify and open')
+      .find(button => button.textContent === t("workshop-frontend.ObserverConfigModal.verify_and_open"))
     const grant = [...rendered.querySelectorAll('button')]
-      .find(button => button.textContent === 'Grant the access needed to verify this resource')
+      .find(button => button.textContent === t("workshop-frontend.ObserverConfigModal.grant_the_access_needed_to_verify_this_resource"))
     expect(verify?.disabled).toBe(true)
     expect(grant).toBeDefined()
 
@@ -271,13 +272,13 @@ describe('ObserverConfigModal account selection', () => {
     })
 
     const grant = [...rendered.querySelectorAll('button')]
-      .find(button => button.textContent === 'Grant the access needed to verify this resource')
+      .find(button => button.textContent === t("workshop-frontend.ObserverConfigModal.grant_the_access_needed_to_verify_this_resource"))
     await act(async () => grant!.click())
 
     const verify = [...rendered.querySelectorAll('button')]
-      .find(button => button.textContent === 'Verify and open')
+      .find(button => button.textContent === t("workshop-frontend.ObserverConfigModal.verify_and_open"))
     expect(ensureAccountResources).toHaveBeenCalledWith(1, [DOC_RESOURCE.urlPattern])
-    expect(rendered.textContent).toContain('Ready')
+    expect(rendered.textContent).toContain(t("workshop-frontend.Inbox.mailbox_ready"))
     expect(verify?.disabled).toBe(false)
   })
 
@@ -287,9 +288,9 @@ describe('ObserverConfigModal account selection', () => {
     const rendered = await render([granted], { onConfirm })
 
     const verify = [...rendered.querySelectorAll('button')]
-      .find(button => button.textContent === 'Verify and open')
+      .find(button => button.textContent === t("workshop-frontend.ObserverConfigModal.verify_and_open"))
     expect(verify?.disabled).toBe(false)
-    expect(rendered.textContent).toContain('Ready')
+    expect(rendered.textContent).toContain(t("workshop-frontend.Inbox.mailbox_ready"))
 
     await act(async () => verify!.click())
     expect(onConfirm).toHaveBeenCalledWith([{ gatekeeperId: 12, accountId: 1 }])

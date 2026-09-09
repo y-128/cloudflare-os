@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { GitHubRepoConfiguratorRpc, GitHubRepoConfiguratorValues } from "./github-repo-configurator-types";
 
@@ -19,11 +20,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Repository" description="Search your repositories, or enter a GitHub URL.">
+      <Field label={t("gatekeeper-github.github-repo-configurator-ui.repository")} description={t("gatekeeper-github.github-repo-configurator-ui.search_your_repositories_or_enter_a_github_url")}>
         <Autocomplete
           name="repoFullName"
           value={values.repoFullName}
-          placeholder="Search or paste a repository URL..."
+          placeholder={t("gatekeeper-github.github-repo-configurator-ui.search_or_paste_a_repository_url")}
           loadOptions={query => ui.listRepos(query)}
           onChange={repoFullName => setValues({ repoFullName })}
         />

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -135,7 +136,7 @@ describe('useWorkspaceOpen', () => {
     expect(document.title).toBe('Quarterly planning - Cloudflare OS')
 
     await act(async () => root!.render(<WorkspaceProbe authenticatedApi={api(deniedOverseer)} />))
-    expect(container.textContent).toContain("You don't have access to this workspace")
+    expect(container.textContent).toContain(t("workshop-frontend.WorkspaceOpenErrorPage.you_don_t_have_access_to_this_workspace"))
     expect(container.textContent).not.toContain('Quarterly planning')
     expect(document.title).toBe('Cloudflare OS')
     expect(firstSubscriptionDispose).toHaveBeenCalledOnce()

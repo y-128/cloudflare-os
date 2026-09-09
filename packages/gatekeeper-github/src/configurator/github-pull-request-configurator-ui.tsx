@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { GitHubPullRequestConfiguratorRpc, GitHubPullRequestConfiguratorValues } from "./github-pull-request-configurator-types";
 
@@ -21,21 +22,21 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Repository" description="Search your repositories, or enter a GitHub URL.">
+      <Field label={t("gatekeeper-github.github-pull-request-configurator-ui.repository")} description={t("gatekeeper-github.github-pull-request-configurator-ui.search_your_repositories_or_enter_a_github_url")}>
         <Autocomplete
           name="repoFullName"
           value={values.repoFullName}
-          placeholder="Search or paste a repository URL..."
+          placeholder={t("gatekeeper-github.github-pull-request-configurator-ui.search_or_paste_a_repository_url")}
           loadOptions={query => ui.listRepos(query)}
           onChange={repoFullName => setValues({ repoFullName, pullNumber: null })}
         />
       </Field>
 
-      <Field label="Pull Request" description="Choose a pull request in the selected repository.">
+      <Field label={t("gatekeeper-github.github-pull-request-configurator-ui.pull_request")} description={t("gatekeeper-github.github-pull-request-configurator-ui.choose_a_pull_request_in_the_selected_repository")}>
         <Autocomplete
           name="pullNumber"
           value={values.pullNumber}
-          placeholder={values.repoFullName ? "Search pull requests..." : "Choose a repository first"}
+          placeholder={values.repoFullName ? t("gatekeeper-github.github-pull-request-configurator-ui.search_pull_requests") : t("gatekeeper-github.github-pull-request-configurator-ui.choose_a_repository_first")}
           disabled={!values.repoFullName}
           loadOptions={query => ui.listPullRequests(values.repoFullName, query)}
           onChange={pullNumber => setValues({ pullNumber })}

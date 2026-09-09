@@ -1,3 +1,4 @@
+import { t, useTranslation, renderTranslation } from "@gadgets/i18n";
 import { Checkbox } from '@cloudflare/kumo'
 import type { RpcStub } from 'capnweb'
 import { GatekeeperIcon } from './GatekeeperIcon'
@@ -16,14 +17,14 @@ export function suggestValueLabel(spec: GatekeeperCreationSpec, title?: string):
   const displayTitle = title?.trim()
   switch (spec.type) {
     case 'gatekeeper':
-      return displayTitle ? `Suggest "${displayTitle}" by default` : 'Suggest this resource by default'
+      return displayTitle ? t("workshop-frontend.BlueprintBindingCard.suggest_by_default", { value1: displayTitle }) : t("workshop-frontend.BlueprintBindingCard.suggest_this_resource_by_default")
     case 'aiModel':
-      return displayTitle ? `Suggest "${displayTitle}" by default` : 'Suggest this model by default'
+      return displayTitle ? t("workshop-frontend.BlueprintBindingCard.suggest_by_default", { value1: displayTitle }) : t("workshop-frontend.BlueprintBindingCard.suggest_this_model_by_default")
     case 'agentSpawner':
-      return displayTitle ? `Suggest "${displayTitle}" by default` : 'Suggest this agent setup by default'
+      return displayTitle ? t("workshop-frontend.BlueprintBindingCard.suggest_by_default", { value1: displayTitle }) : t("workshop-frontend.BlueprintBindingCard.suggest_this_agent_setup_by_default")
     case 'ambient':
       // Ambient resources are auto-provided and excluded from blueprints, so this never renders.
-      return 'Suggest this by default'
+      return t("workshop-frontend.BlueprintBindingCard.suggest_this_by_default")
   }
 }
 
@@ -39,6 +40,7 @@ export function BlueprintBindingCard({
   /** When true, render without the outer card chrome (border, background, divider). */
   flat?: boolean
 }) {
+  const { t } = useTranslation();
   const { bindingName, resourceTitle, vendorId, creationSpec, annotation } = data
   const titleId = `blueprint-binding-title-${bindingName}`
   const descriptionId = `blueprint-binding-desc-${bindingName}`
@@ -60,28 +62,27 @@ export function BlueprintBindingCard({
       <div className={headerClass}>
         <GatekeeperIcon vendorId={vendorId} fallbackText={resourceTitle || bindingName} />
         <div className="min-w-0 flex-1">
-          <label htmlFor={titleId} className="sr-only">Connection name</label>
+          <label htmlFor={titleId} className="sr-only">{t("workshop-frontend.BlueprintBindingCard.connection_name")}</label>
           <WorkshopInput
             id={titleId}
-            aria-label={`Name for ${bindingName}`}
+            aria-label={t("workshop-frontend.BlueprintBindingCard.name_for", { value1: bindingName })}
             value={annotation.title}
             onChange={(e) => onChange({ ...annotation, title: e.target.value })}
-            placeholder="Connection name"
+            placeholder={t("workshop-frontend.BlueprintBindingCard.connection_name")}
             className="!h-8 w-full bg-kumo-base text-[13px] leading-5 font-medium tracking-[-0.25px]"
           />
           <p className="mt-1 text-[11px] leading-4 tracking-[-0.1px] text-kumo-inactive">
-            Referenced in code as: <span className="font-mono text-kumo-subtle">{bindingName}</span>
-          </p>
+            {renderTranslation(t("workshop-frontend.Connections.referenced_in_code_as_2"), { value: <span className="font-mono text-kumo-subtle">{bindingName}</span> })}</p>
         </div>
       </div>
 
       <div className={descriptionWrapperClass}>
         <WorkshopInputArea
           id={descriptionId}
-          aria-label={`Help text for ${displayTitle}`}
+          aria-label={t("workshop-frontend.BlueprintBindingCard.help_text_for", { value1: displayTitle })}
           value={annotation.description}
           onChange={(e) => onChange({ ...annotation, description: e.target.value })}
-          placeholder="What should people connect here?"
+          placeholder={t("workshop-frontend.BlueprintBindingCard.what_should_people_connect_here")}
           rows={2}
           autoFocus={autoFocusDescription}
           className="w-full resize-none"

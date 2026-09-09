@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   LinearWorkspaceConfiguratorRpc,
@@ -22,11 +23,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Workspace" description="The Linear workspace this account is connected to.">
+      <Field label={t("gatekeeper-linear.linear-workspace-configurator-ui.workspace")} description={t("gatekeeper-linear.linear-workspace-configurator-ui.the_linear_workspace_this_account_is_connected_to")}>
         <Autocomplete
           name="workspaceUrlKey"
           value={values.workspaceUrlKey}
-          placeholder="Select your workspace..."
+          placeholder={t("gatekeeper-linear.linear-workspace-configurator-ui.select_your_workspace")}
           loadOptions={() => ui.listWorkspaces()}
           onChange={workspaceUrlKey => setValues({ workspaceUrlKey })}
         />

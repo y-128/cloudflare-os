@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { classifyRpcError, logRpcFailure } from "../rpcErrors";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -36,11 +37,13 @@ export const Route = createFileRoute("/")({
 // in the AppShell rail, so this page focuses on a single thing: composing the first message of a
 // new gadget — a centered column with a hero, the prompt composer, and a few task suggestions.
 function HomePage() {
+  useTranslation();
   return <HomePageContent prompt={Route.useSearch().prompt} />;
 }
 
 export function HomePageContent({ prompt }: HomeSearch) {
-  useDocumentTitle("Home");
+  const { t } = useTranslation();
+  useDocumentTitle(t("workshop-frontend.index.home"));
 
   const { authenticatedApi, currentUser } = useAuthenticatedApi();
   const navigate = useNavigate();
@@ -70,7 +73,7 @@ export function HomePageContent({ prompt }: HomeSearch) {
         // Toast unless it's a connection error (reconnect refetches); a do-reset here already
         // survived the Worker's same-colo retry, so the user should hear about it.
         if (classifyRpcError(err) !== "connection") {
-          toasts.add({ title: "Couldn't load AI models", variant: "error" });
+          toasts.add({ title: t("workshop-frontend.index.couldn_t_load_ai_models"), variant: "error" });
         }
       });
     return () => {
@@ -130,7 +133,7 @@ export function HomePageContent({ prompt }: HomeSearch) {
           provisionalOverseerRef.current = null;
         }
         if (!transient) {
-          toasts.add({ title: "Failed to create workspace", variant: "error" });
+          toasts.add({ title: t("workshop-frontend.index.failed_to_create_workspace"), variant: "error" });
         }
         throw err;
       }
@@ -173,11 +176,9 @@ export function HomePageContent({ prompt }: HomeSearch) {
         {/* Hero */}
         <header className="text-center">
           <h1 className="text-3xl font-semibold tracking-tight leading-tight text-kumo-default sm:text-4xl">
-            What are we working on?
-          </h1>
+            {t("workshop-frontend.index.what_are_we_working_on")}</h1>
           <p className="mx-auto mt-3 max-w-md text-[14px] leading-5 tracking-[-0.25px] text-kumo-subtle">
-            Ask a question, create an output, or create an app that works with your tools and data.
-          </p>
+            {t("workshop-frontend.index.ask_a_question_create_an_output_or_create_an_app_that_works_with")}</p>
         </header>
 
         {/* Composer */}

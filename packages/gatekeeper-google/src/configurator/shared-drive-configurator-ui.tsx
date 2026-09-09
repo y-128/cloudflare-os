@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { SharedDriveConfiguratorRpc, SharedDriveConfiguratorValues } from "./shared-drive-configurator-types";
 
@@ -11,11 +12,11 @@ export default {
     `https://drive.google.com/drive/folders/${encodeURIComponent(values.driveId ?? "")}`,
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Google Workspace shared drive" description="Choose a shared drive owned by an organization rather than an individual. Search its files and read native Google Docs and Sheets.">
+      <Field label={t("gatekeeper-google.shared-drive-configurator-ui.google_workspace_shared_drive")} description={t("gatekeeper-google.shared-drive-configurator-ui.choose_a_shared_drive_owned_by_an_organization_rather_than_an_ind")}>
         <Autocomplete
           name="driveId"
           value={values.driveId}
-          placeholder="Search shared drives..."
+          placeholder={t("gatekeeper-google.shared-drive-configurator-ui.search_shared_drives")}
           loadOptions={query => ui.listSharedDrives(query)}
           onChange={driveId => setValues({ driveId })}
         />

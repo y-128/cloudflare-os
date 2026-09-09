@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import { Link } from '@tanstack/react-router'
 import {
   Blueprint as BlueprintIcon,
@@ -35,12 +36,12 @@ const ACTION_BUTTON =
 function formatRelativeTime(date: Date): string {
   const diff = Date.now() - date.getTime()
   const minutes = Math.floor(diff / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 1) return t("workshop-frontend.ShareModal.just_now")
+  if (minutes < 60) return t("gatekeeper-context.ContextLibraryPage.m_ago", { n: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return t("gatekeeper-context.ContextLibraryPage.h_ago", { n: hours })
   const days = Math.floor(hours / 24)
-  return `${days}d ago`
+  return t("gatekeeper-context.ContextLibraryPage.d_ago", { n: days })
 }
 
 function sortItems(items: BlueprintItem[]): BlueprintItem[] {
@@ -60,6 +61,7 @@ function BlueprintRow({
   onTogglePin: (b: BlueprintItem) => void
   onRemoveFromLibrary: (b: BlueprintItem) => void
 }) {
+  const { t } = useTranslation();
   return (
     <Link
       to="/blueprint/$id"
@@ -75,7 +77,7 @@ function BlueprintRow({
         <div className="flex items-center gap-2">
           {item.pinned && <Star size={12} weight="fill" className="flex-shrink-0 text-kumo-brand" />}
           <h3 className="truncate text-sm font-medium text-kumo-default">
-            {item.title || 'Untitled blueprint'}
+            {item.title || t("workshop-frontend.BlueprintList.untitled_blueprint")}
           </h3>
         </div>
         {item.description && (
@@ -105,13 +107,11 @@ function BlueprintRow({
           <DropdownMenu.Content className={MENU_CONTENT}>
             <DropdownMenu.Item onClick={() => onTogglePin(item)} className={MENU_ITEM}>
               <Star size={13} className="mr-2" weight={item.pinned ? 'fill' : 'regular'} />
-              {item.pinned ? 'Unfavorite' : 'Favorite'}
+              {item.pinned ? t("workshop-frontend.BlueprintList.unfavorite") : t("workshop-frontend.BlueprintList.favorite")}
             </DropdownMenu.Item>
             {item.inLibrary && (
               <DropdownMenu.Item variant="danger" onClick={() => onRemoveFromLibrary(item)} className={MENU_ITEM_DANGER}>
-                <Trash size={13} className="mr-2" />
-                Remove from library
-              </DropdownMenu.Item>
+                <Trash size={13} className="mr-2" />{t("workshop-frontend.BlueprintLandingPage.remove_from_library")}</DropdownMenu.Item>
             )}
           </DropdownMenu.Content>
         </DropdownMenu>
@@ -121,6 +121,7 @@ function BlueprintRow({
 }
 
 export default function BlueprintList() {
+  const { t } = useTranslation();
   const { authenticatedApi } = useAuthenticatedApi()
   const toasts = useKumoToastManager()
 
@@ -146,7 +147,7 @@ export default function BlueprintList() {
         const ensure = (id: string): BlueprintItem => {
           let it = map.get(id)
           if (!it) {
-            it = { id, title: 'Untitled blueprint', description: '', recency: 0, pinned: false, inLibrary: false, isOwn: false }
+            it = { id, title: t("workshop-frontend.BlueprintList.untitled_blueprint"), description: '', recency: 0, pinned: false, inLibrary: false, isOwn: false }
             map.set(id, it)
           }
           return it
@@ -193,11 +194,11 @@ export default function BlueprintList() {
     setUploading(true)
     try {
       await authenticatedApi.importBlueprint(file.stream() as ReadableStream<Uint8Array>)
-      toasts.add({ title: 'Blueprint uploaded', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.BlueprintList.blueprint_uploaded"), variant: 'success' })
       load()
     } catch (err) {
       console.error('Failed to upload blueprint:', err)
-      toasts.add({ title: 'Failed to upload blueprint', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.BlueprintList.failed_to_upload_blueprint"), variant: 'error' })
     } finally {
       setUploading(false)
     }
@@ -216,7 +217,7 @@ export default function BlueprintList() {
     } catch (err) {
       console.error('Failed to update blueprint pin:', err)
       setItems((prev) => sortItems(prev.map((b) => (b.id === item.id ? { ...b, pinned: item.pinned } : b))))
-      toasts.add({ title: 'Failed to update favorite', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.BlueprintList.failed_to_update_favorite"), variant: 'error' })
     } finally {
       pinsInFlight.current.delete(item.id)
     }
@@ -232,10 +233,10 @@ export default function BlueprintList() {
           .map((b) => (b.id === item.id ? { ...b, inLibrary: false } : b))
           .filter((b) => b.inLibrary || b.isOwn),
       )
-      toasts.add({ title: 'Removed from library', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.BlueprintList.removed_from_library"), variant: 'success' })
     } catch (err) {
       console.error('Failed to remove blueprint from library:', err)
-      toasts.add({ title: 'Failed to remove blueprint', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.BlueprintList.failed_to_remove_blueprint"), variant: 'error' })
     }
   }
 
@@ -266,7 +267,7 @@ export default function BlueprintList() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search blueprints…"
+              placeholder={t("workshop-frontend.BlueprintList.search_blueprints")}
               className="h-9 w-full rounded-lg border border-kumo-line bg-kumo-base pl-9 pr-4 text-[13px] tracking-[-0.25px] text-kumo-default placeholder:text-kumo-inactive transition-[border-color,box-shadow] duration-150 ease-out focus:border-kumo-ring focus:outline-none focus:ring-[3px] focus:ring-kumo-ring/15"
             />
           </div>
@@ -274,18 +275,16 @@ export default function BlueprintList() {
               size each to its own label. */}
           <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:shrink-0">
             <Link to="/explore" className={ACTION_BUTTON}>
-              <Compass size={14} />
-              Explore
-            </Link>
+              <Compass size={14} />{t("workshop-frontend.BlueprintsPage.explore")}</Link>
             <button
               type="button"
               onClick={() => uploadInputRef.current?.click()}
               disabled={uploading}
-              title="Upload a .gadget archive"
+              title={t("workshop-frontend.BlueprintList.upload_a_gadget_archive")}
               className={ACTION_BUTTON}
             >
               <UploadSimple size={14} weight="bold" />
-              {uploading ? 'Uploading…' : 'Upload'}
+              {uploading ? t("workshop-frontend.BlueprintList.uploading") : t("workshop-frontend.BlueprintList.upload")}
             </button>
           </div>
         </div>
@@ -302,28 +301,25 @@ export default function BlueprintList() {
           </div>
         ) : loadError ? (
           <div className="py-12 text-center text-sm">
-            <p className="text-kumo-danger">Something went wrong loading your blueprints.</p>
-            <button type="button" onClick={load} className="mt-1 text-kumo-brand underline">Try again</button>
+            <p className="text-kumo-danger">{t("workshop-frontend.BlueprintList.something_went_wrong_loading_your_blueprints")}</p>
+            <button type="button" onClick={load} className="mt-1 text-kumo-brand underline">{t("workshop-frontend.BlueprintList.try_again")}</button>
           </div>
         ) : filtered.length === 0 ? (
           search ? (
-            <div className="py-12 text-center text-sm text-kumo-inactive">No blueprints found</div>
+            <div className="py-12 text-center text-sm text-kumo-inactive">{t("workshop-frontend.BlueprintList.no_blueprints_found")}</div>
           ) : (
             <div className="flex flex-col items-center gap-3 px-3 py-16 text-center">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-kumo-fill text-kumo-subtle">
                 <BlueprintIcon size={18} />
               </div>
               <div>
-                <p className="text-sm font-medium text-kumo-default">No blueprints yet</p>
+                <p className="text-sm font-medium text-kumo-default">{t("workshop-frontend.BlueprintList.no_blueprints_yet")}</p>
                 <p className="mt-1 text-[13px] leading-[18px] text-kumo-subtle">
-                  Publish a workspace as a blueprint, or add one from Explore.
-                </p>
+                  {t("workshop-frontend.BlueprintList.publish_a_workspace_as_a_blueprint_or_add_one_from_explore")}</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <Link to="/explore" className={ACTION_BUTTON}>
-                  <Compass size={14} />
-                  Explore blueprints
-                </Link>
+                  <Compass size={14} />{t("workshop-frontend.BlueprintList.explore_blueprints")}</Link>
                 <button
                   type="button"
                   onClick={() => uploadInputRef.current?.click()}
@@ -331,7 +327,7 @@ export default function BlueprintList() {
                   className={ACTION_BUTTON}
                 >
                   <UploadSimple size={14} weight="bold" />
-                  {uploading ? 'Uploading…' : 'Upload .gadget'}
+                  {uploading ? t("workshop-frontend.BlueprintList.uploading") : t("workshop-frontend.BlueprintList.upload_gadget")}
                 </button>
               </div>
             </div>

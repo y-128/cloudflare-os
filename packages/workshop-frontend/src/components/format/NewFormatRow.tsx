@@ -1,10 +1,12 @@
+import { useTranslation } from "@gadgets/i18n";
 // "Start with a format": one click per standard output the deployment offers. Renders nothing when
 // it promotes none, which is the default.
 
 import { FormatGlyph } from './FormatVisuals'
 import { useOutputFormats } from './useOutputFormats'
 
-export default function NewFormatRow({ label = 'Start with' }: { label?: string }) {
+export default function NewFormatRow({ label }: { label?: string }) {
+  const { t } = useTranslation();
   const { formats, creating, create } = useOutputFormats()
 
   if (formats.length === 0) return null
@@ -12,7 +14,7 @@ export default function NewFormatRow({ label = 'Start with' }: { label?: string 
   return (
     <div className="flex flex-col items-center gap-2.5">
       <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-kumo-inactive">
-        {label}
+        {label ?? t("workshop-frontend.ComposerFormatMenuItems.start_with")}
       </span>
       <div className="flex flex-wrap items-center justify-center gap-2">
         {formats.map((format) => (
@@ -29,7 +31,7 @@ export default function NewFormatRow({ label = 'Start with' }: { label?: string 
               size="md"
               className={creating === format.blueprintId ? 'animate-pulse' : 'text-kumo-subtle'}
             />
-            {creating === format.blueprintId ? `Creating…` : `New ${format.output.noun}`}
+            {creating === format.blueprintId ? t("workshop-frontend.NewFormatRow.creating") : t("workshop-frontend.AdminFormatsPanel.new_2", { value1: format.output.noun })}
           </button>
         ))}
       </div>

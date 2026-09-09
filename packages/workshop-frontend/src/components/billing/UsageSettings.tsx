@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation } from "@gadgets/i18n";
 import { useCallback, useEffect, useState } from 'react'
 import { CloudflareUsageInfo, CloudflareAccountOption } from '@gadgets/workshop-shared/api'
 import { Button, useKumoToastManager } from '@cloudflare/kumo'
@@ -13,6 +14,7 @@ import ResetCountdown from './ResetCountdown'
  * Renders nothing unless the Cloudflare limits flow is enabled server-side.
  */
 export default function UsageSettings() {
+  const { t } = useTranslation();
   const limitsEnabled = useCloudflareLimitsEnabled()
   const { authenticatedApi } = useAuthenticatedApi()
   const toasts = useKumoToastManager()
@@ -63,7 +65,7 @@ export default function UsageSettings() {
       const { url } = await authenticatedApi.connectAccount('cloudflare', [])
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch {
-      toasts.add({ title: 'Failed to start Cloudflare connection', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.UsageSettings.failed_to_start_cloudflare_connection"), variant: 'error' })
     } finally {
       setBusy(false)
     }
@@ -73,11 +75,11 @@ export default function UsageSettings() {
     setSelecting(accountId)
     try {
       await authenticatedApi.selectCloudflareAccount(accountId)
-      toasts.add({ title: 'Cloudflare account selected', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.UsageSettings.cloudflare_account_selected"), variant: 'success' })
       setAccounts(null)
       refresh()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to select account'
+      const msg = err instanceof Error ? err.message : t("workshop-frontend.UsageSettings.failed_to_select_account")
       toasts.add({ title: msg, variant: 'error' })
     } finally {
       setSelecting(null)
@@ -87,47 +89,37 @@ export default function UsageSettings() {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="px-1 text-[12px] font-medium uppercase tracking-[0.08em] text-kumo-inactive">
-        Usage &amp; billing
-      </h2>
+        {t("workshop-frontend.UsageSettings.usage_billing")}</h2>
       <div className="rounded-xl border border-kumo-line bg-kumo-base p-5">
       {loading || !usage ? (
-        <p className="text-sm text-kumo-subtle">Loading usage…</p>
+        <p className="text-sm text-kumo-subtle">{t("workshop-frontend.UsageSettings.loading_usage")}</p>
       ) : (
         <div className="space-y-6">
           {/* Free daily allowance */}
           <div>
-            <p className="text-xs font-medium text-kumo-subtle mb-1">Free daily allowance</p>
+            <p className="text-xs font-medium text-kumo-subtle mb-1">{t("workshop-frontend.UsageSettings.free_daily_allowance")}</p>
             <p className="text-sm text-kumo-default">
-              {usage.remaining} of {usage.dailyLimit}{' '}
-              {usage.dailyLimit === 1 ? 'request' : 'requests'} remaining today
-            </p>
+              {renderTranslation(t("workshop-frontend.UsageSettings.of_requests_remaining_today"), { remaining: usage.remaining, n: usage.dailyLimit })}</p>
             {usage.resetAt && (
               <p className="text-xs text-kumo-subtle mt-1">
-                Resets at 00:00 UTC, in{' '}
-                <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />.
-              </p>
+                <ResetCountdown resetAt={usage.resetAt} onElapsed={refresh} />{t("workshop-frontend.UsageSettings.resets_at_00_00_utc_in_2")}</p>
             )}
           </div>
 
           {/* Cloudflare connection / credits */}
           <div>
-            <p className="text-xs font-medium text-kumo-subtle mb-1">Cloudflare account</p>
+            <p className="text-xs font-medium text-kumo-subtle mb-1">{t("workshop-frontend.UsageSettings.cloudflare_account")}</p>
             {!usage.connected ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-kumo-subtle">
                   <CloudflareLogo size={16} />
-                  <span>Not connected</span>
+                  <span>{t("workshop-frontend.UsageSettings.not_connected")}</span>
                 </div>
                 <p className="text-sm text-kumo-subtle">
-                  Connect your Cloudflare account to keep building once your free allowance runs
-                  out. Usage beyond the free tier is billed to your own Cloudflare AI Gateway
-                  credits.
-                </p>
+                  {t("workshop-frontend.UsageSettings.connect_your_cloudflare_account_to_keep_building_once_your_free_a")}</p>
                 <div className="pt-1">
                   <Button variant="primary" size="sm" onClick={connect} loading={busy}>
-                    <Lightning size={14} weight="bold" className="mr-1" />
-                    Connect Cloudflare
-                  </Button>
+                    <Lightning size={14} weight="bold" className="mr-1" />{t("workshop-frontend.OutOfCreditsModal.connect_cloudflare")}</Button>
                 </div>
               </div>
             ) : usage.needsAccountSelection ? (
@@ -135,18 +127,15 @@ export default function UsageSettings() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-kumo-default">
                   <Warning size={18} weight="bold" className="text-kumo-warning" />
-                  <span>Choose which Cloudflare account to bill</span>
+                  <span>{t("workshop-frontend.UsageSettings.choose_which_cloudflare_account_to_bill")}</span>
                 </div>
                 <p className="text-sm text-kumo-subtle">
-                  Your connection has access to multiple Cloudflare accounts. Select the one whose
-                  AI Gateway credits should be used.
-                </p>
+                  {t("workshop-frontend.UsageSettings.your_connection_has_access_to_multiple_cloudflare_accounts_select")}</p>
                 {accounts === null ? (
-                  <p className="text-sm text-kumo-subtle">Loading accounts…</p>
+                  <p className="text-sm text-kumo-subtle">{t("workshop-frontend.UsageSettings.loading_accounts")}</p>
                 ) : accounts.length === 0 ? (
                   <p className="text-sm text-kumo-subtle">
-                    No accounts available on this connection.
-                  </p>
+                    {t("workshop-frontend.UsageSettings.no_accounts_available_on_this_connection")}</p>
                 ) : (
                   <div className="flex flex-col gap-2">
                     {accounts.map((a) => (
@@ -170,18 +159,14 @@ export default function UsageSettings() {
                 <div className="flex items-center gap-2 text-sm text-kumo-default">
                   <CloudCheck size={18} weight="bold" className="text-kumo-success" />
                   <span>
-                    Connected
-                    {usage.accountName && <> — {usage.accountName}</>}
-                  </span>
+                    {renderTranslation(t("workshop-frontend.UsageSettings.connected_2"), { value: usage.accountName && <> — {usage.accountName}</> })}</span>
                 </div>
                 <p className="text-sm text-kumo-default">
-                  Account balance:{' '}
-                  {usage.balance !== null ? (
+                  {renderTranslation(t("workshop-frontend.UsageSettings.account_balance_2"), { value: usage.balance !== null ? (
                     <strong>${usage.balance.toFixed(2)}</strong>
                   ) : (
-                    <span className="text-kumo-subtle">unknown</span>
-                  )}
-                </p>
+                    <span className="text-kumo-subtle">{t("workshop-frontend.UsageSettings.unknown")}</span>
+                  ) })}</p>
 
                 <div className="flex items-center gap-2 pt-1">
                   <Button
@@ -189,26 +174,20 @@ export default function UsageSettings() {
                     size="sm"
                     onClick={() => window.open(buildAddCreditsUrl(usage.accountId), '_blank')}
                   >
-                    <Lightning size={14} weight="bold" className="mr-1" />
-                    Add credits
-                  </Button>
+                    <Lightning size={14} weight="bold" className="mr-1" />{t("workshop-frontend.UsageSettings.add_credits")}</Button>
                 </div>
               </div>
             )}
           </div>
 
           <p className="text-xs text-kumo-subtle border-t border-kumo-line pt-3">
-            Learn more about{' '}
-            <a
+            {renderTranslation(t("workshop-frontend.OutOfCreditsModal.learn_more_about_2"), { link: <a
               href="https://developers.cloudflare.com/ai-gateway/features/unified-billing/"
               target="_blank"
               rel="noreferrer"
               className="underline"
             >
-              AI Gateway unified billing
-            </a>
-            .
-          </p>
+              {t("workshop-frontend.UsageSettings.ai_gateway_unified_billing")}</a> })}</p>
         </div>
       )}
       </div>

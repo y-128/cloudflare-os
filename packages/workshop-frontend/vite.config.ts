@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -71,7 +73,8 @@ export default defineConfig(({ mode }) => {
     // no such property, but the excess-property check doesn't reach spreads.
     ...runConfig,
     plugins: [
-      TanStackRouterVite({ target: 'react', autoCodeSplitting: true }),
+      // Keep route-generator scratch files outside the workspace and its task fingerprints.
+      TanStackRouterVite({ target: 'react', autoCodeSplitting: true, tmpDir: join(tmpdir(), 'cfos-router') }),
       react(),
       tailwindcss(),
       tsconfigPaths(),
@@ -80,6 +83,7 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: true,
       proxy: {
+        '/api/inbox': `http://${backendHost}`,
         '/api/client-errors': `http://${backendHost}`,
         '/blueprint-screenshot': `http://${backendHost}`,
         '/api/site-logo': `http://${backendHost}`,

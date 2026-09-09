@@ -21,16 +21,17 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "jsonc-parser";
 import { resolveBinEntry } from "./bin-entry.ts";
-import { getDevServerConfig } from "./dev-server-config.ts";
+import { getDevServerConfig, getInboxDevConfig } from "./dev-server-config.ts";
 import { killProcessTree } from "./kill-process-tree.ts";
 import { pnpmCommand } from "./pnpm-command.ts";
-import type { ServiceBinding, WranglerBuild } from "./release/manifest-lib.ts";
+import type { ServiceBinding, WranglerBuild, WranglerConfig } from "./release/manifest-lib.ts";
 import { vpRunEnv } from "./vp/concurrency.ts";
 
 const SCRIPTS_DIR = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(SCRIPTS_DIR, "..");
 const PACKAGES_DIR = join(ROOT, "packages");
 const WORKSHOP_BACKEND_DIR = join(PACKAGES_DIR, "workshop-backend");
+const INBOX_DIR = join(PACKAGES_DIR, "inbox");
 
 /** A gatekeeper package as {@link findGatekeepers} discovers it. */
 interface Gatekeeper {
@@ -439,13 +440,32 @@ function devBuildConfig(build: WranglerBuild | undefined, pkgDir: string): Wrang
 }
 
 // ---------------------------------------------------------------------------
-// Generate wrangler.dev.jsonc (dev-router with gatekeeper service bindings).
+// Generate the inbox config through the same multi-worker build and launch path as gatekeepers.
+// WORKSHOP_AUTH stays bound: local mail access still requires a Workshop administrator session.
+// ---------------------------------------------------------------------------
+const inboxConfigPath = join(INBOX_DIR, "wrangler.dev.jsonc");
+let inboxConfig: WranglerConfig;
+try {
+  inboxConfig = getInboxDevConfig(
+      parse(readFileSync(join(INBOX_DIR, "wrangler.jsonc"), "utf8")), process.env, useWorkersAi);
+  if (!inboxConfig.name) throw new Error("Inbox wrangler.jsonc must declare a service name.");
+  inboxConfig.build = devBuildConfig(inboxConfig.build, INBOX_DIR);
+  writeFileSync(inboxConfigPath, JSON.stringify(inboxConfig, null, 2) + "\n");
+  console.log(`generated: ${inboxConfigPath}`);
+} catch (err) {
+  console.error("[generateInboxDevConfig] failed", { context: { package: "inbox" }, err });
+  throw err;
+}
+
+// ---------------------------------------------------------------------------
+// Generate wrangler.dev.jsonc (dev-router with inbox and gatekeeper service bindings).
 // ---------------------------------------------------------------------------
 {
   const srcPath = join(ROOT, "wrangler.jsonc");
   const config = parse(readFileSync(srcPath, "utf8"));
 
   config.services = config.services || [];
+  config.services.push({ binding: "MAIL_INBOX", service: inboxConfig.name });
   for (const gk of gatekeepers) {
     config.services.push({ binding: bindingName(gk), service: gk.name });
   }
@@ -599,6 +619,7 @@ for (const gk of gatekeepers) {
 const configs = [
   "wrangler.dev.jsonc",
   join("packages", "workshop-backend", "wrangler.dev.jsonc"),
+  inboxConfigPath,
   ...gatekeepers.map(gk => join(gk.dir, "wrangler.dev.jsonc")),
 ];
 

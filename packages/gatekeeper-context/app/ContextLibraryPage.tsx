@@ -1,3 +1,4 @@
+import { t, useTranslation, renderTranslation, getLocale } from "@gadgets/i18n";
 import { Button, Dialog, DropdownMenu, Input, InputArea, useKumoToastManager } from "@cloudflare/kumo";
 import {
   BookOpen,
@@ -67,7 +68,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { yaml } from "@codemirror/lang-yaml";
-import { tags as t } from "@lezer/highlight";
+import { tags as highlightTags } from "@lezer/highlight";
 import type { Extension } from "@codemirror/state";
 import { useContextApi, usePresentWhileOpen, useResolvedThemeMode } from "./bridge";
 import { extractDescription } from "../src/description-extractors";
@@ -110,9 +111,7 @@ function stripFrontmatter(source: string): string {
   return source.replace(/^\uFEFF?---\r?\n[\s\S]*?\r?\n---[ \t]*\r?\n?/, "");
 }
 
-function pluralize(count: number, noun: string): string {
-  return `${count} ${noun}${count !== 1 ? "s" : ""}`;
-}
+
 
 // Bounded-concurrency helper for bulk RPC operations.
 async function runWithConcurrency<T>(
@@ -172,6 +171,7 @@ function IconPickerButton({
   // shared input pill.
   variant?: "boxed" | "inline";
 }) {
+  const { t } = useTranslation();
   const themeMode = useResolvedThemeMode();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -257,7 +257,7 @@ function IconPickerButton({
         ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
-        title="Choose an icon"
+        title={t("gatekeeper-context.ContextLibraryPage.choose_an_icon")}
         className={
           inline
             ? "grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-kumo-tint text-[18px] leading-none text-kumo-subtle transition-colors hover:bg-kumo-fill"
@@ -304,18 +304,19 @@ function IconPickerButton({
 // Provenance for a row, framed as authorship: public collections are admin-published (and always
 // on), the rest are ones the user created.
 function CollectionProvenance({ source }: { source: EnabledCollectionInfo["source"] }) {
+  const { t } = useTranslation();
   const isPublic = source === "public";
   return (
     <span
       className="flex w-52 items-center gap-1 whitespace-nowrap"
       title={
         isPublic
-          ? "Provided by your organization for everyone"
-          : "A collection you created"
+          ? t("gatekeeper-context.ContextLibraryPage.provided_by_your_organization_for_everyone")
+          : t("gatekeeper-context.ContextLibraryPage.a_collection_you_created")
       }
     >
       {isPublic ? <Buildings size={11} /> : <User size={11} />}
-      {isPublic ? "Required by your organization" : "Created by you"}
+      {isPublic ? t("gatekeeper-context.ContextLibraryPage.required_by_your_organization") : t("gatekeeper-context.ContextLibraryPage.created_by_you")}
     </span>
   );
 }
@@ -334,6 +335,7 @@ function CollectionIconTile({
   icon?: string;
   size?: keyof typeof ICON_TILE_SIZES;
 }) {
+  useTranslation();
   const { tile, book } = ICON_TILE_SIZES[size];
   return (
     <div
@@ -347,12 +349,12 @@ function CollectionIconTile({
 function formatRelativeTime(date: Date): string {
   const diff = Date.now() - date.getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("workshop-frontend.ShareModal.just_now");
+  if (minutes < 60) return t("gatekeeper-context.ContextLibraryPage.m_ago", { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("gatekeeper-context.ContextLibraryPage.h_ago", { n: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t("gatekeeper-context.ContextLibraryPage.d_ago", { n: days });
 }
 
 function handleCardKeyDown(e: React.KeyboardEvent, onClick: () => void) {
@@ -370,6 +372,7 @@ function CollectionRow({
   collection: EnabledCollectionInfo;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const hasDescription = collection.description.trim().length > 0;
   return (
     <div
@@ -389,7 +392,7 @@ function CollectionRow({
             hasDescription ? "text-kumo-subtle" : "italic text-kumo-inactive"
           }`}
         >
-          {hasDescription ? collection.description : "No description"}
+          {hasDescription ? collection.description : t("gatekeeper-context.ContextLibraryPage.no_description")}
         </p>
       </div>
       {/* Fixed-width meta columns so rows line up like a table. */}
@@ -405,6 +408,7 @@ function CollectionRow({
 }
 
 function CollectionsSkeleton() {
+  useTranslation();
   return (
     <div className="flex flex-col gap-0.5">
       {[1, 2, 3, 4, 5].map((i) => (
@@ -451,6 +455,7 @@ function WorkshopButton({
 }: Omit<ComponentProps<typeof Button>, "variant" | "shape"> & {
   tone?: keyof typeof wsButtonTone;
 }) {
+  useTranslation();
   const variant = buttonVariantForTone(tone);
   return (
     <Button
@@ -469,6 +474,7 @@ function WorkshopIconButton({
   children: ReactNode;
   "aria-label": string;
 }) {
+  useTranslation();
   return (
     <Button
       {...props}
@@ -482,6 +488,7 @@ function WorkshopIconButton({
 }
 
 function WorkshopInput({ className = "", ...props }: ComponentProps<typeof Input>) {
+  useTranslation();
   return (
     <Input
       {...props}
@@ -491,6 +498,7 @@ function WorkshopInput({ className = "", ...props }: ComponentProps<typeof Input
 }
 
 function WorkshopInputArea({ className = "", ...props }: ComponentProps<typeof InputArea>) {
+  useTranslation();
   return (
     <InputArea
       {...props}
@@ -506,10 +514,11 @@ function FieldLabel({
   children: ReactNode;
   optional?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <label className="mb-1.5 flex items-center gap-1.5 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-subtle">
       <span>{children}</span>
-      {optional ? <span className="font-normal text-kumo-inactive">Optional</span> : null}
+      {optional ? <span className="font-normal text-kumo-inactive">{t("gatekeeper-context.ContextLibraryPage.optional")}</span> : null}
     </label>
   );
 }
@@ -533,6 +542,7 @@ function KebabMenu({
   stopPropagation?: boolean;
   children: ReactNode;
 }) {
+  useTranslation();
   const stop = stopPropagation
     ? (e: React.MouseEvent) => e.stopPropagation()
     : undefined;
@@ -568,9 +578,10 @@ function CollectionNameField({
   onEnter?: () => void;
   autoFocus?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <>
-      <FieldLabel>Name</FieldLabel>
+      <FieldLabel>{t("gatekeeper-context.ContextLibraryPage.name")}</FieldLabel>
       {/* Icon tile + name share one focus-within pill so the emoji reads as part of the input. */}
       <div className="flex items-center gap-2 rounded-xl border-2 border-kumo-line bg-kumo-base p-1.5 transition-[border-color,box-shadow] duration-150 ease-out focus-within:border-kumo-ring focus-within:ring-1 focus-within:ring-kumo-ring/15">
         <IconPickerButton value={icon} onChange={onIconChange} variant="inline" />
@@ -580,7 +591,7 @@ function CollectionNameField({
           onKeyDown={(e) => {
             if (e.key === "Enter") onEnter?.();
           }}
-          placeholder="A short name, e.g., Brand guidelines"
+          placeholder={t("gatekeeper-context.ContextLibraryPage.a_short_name_e_g_brand_guidelines")}
           autoFocus={autoFocus}
           className="h-9 min-w-0 flex-1 appearance-none border-0 bg-transparent p-0 pr-2 text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-default outline-none placeholder:text-kumo-inactive"
         />
@@ -596,14 +607,15 @@ function CollectionDescriptionField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <>
-      <FieldLabel optional>Description</FieldLabel>
+      <FieldLabel optional>{t("gatekeeper-context.ContextLibraryPage.description")}</FieldLabel>
       {/* `ring-0` drops Kumo InputArea's base ring so it matches the name pill's single border. */}
       <WorkshopInputArea
         value={value}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
-        placeholder="What it contains and when to use it, e.g., voice and tone rules for customer-facing writing"
+        placeholder={t("gatekeeper-context.ContextLibraryPage.what_it_contains_and_when_to_use_it_e_g_voice_and_tone_rules_for")}
         rows={4}
         className="w-full border-2 ring-0 !rounded-xl transition-[border-color,box-shadow] duration-150 ease-out"
       />
@@ -618,6 +630,7 @@ function ModalHeader({
   title: string;
   description?: ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-start justify-between gap-4 border-b border-kumo-line px-4 py-5 sm:px-6">
       <div className="min-w-0">
@@ -632,7 +645,7 @@ function ModalHeader({
       </div>
       <Dialog.Close
         render={(props) => (
-          <WorkshopIconButton {...props} aria-label="Close">
+          <WorkshopIconButton {...props} aria-label={t("gatekeeper-context.ContextLibraryPage.close")}>
             <X size={18} />
           </WorkshopIconButton>
         )}
@@ -650,19 +663,10 @@ function DeletePermanentlyDescription({
   name: ReactNode;
   documents?: number;
 }) {
+  const { t } = useTranslation();
   return (
     <>
-      This permanently deletes{" "}
-      <span className="font-medium text-kumo-default">{name}</span>
-      {documents !== undefined ? (
-        <>
-          {" "}and all{" "}
-          <span className="font-medium text-kumo-danger">{pluralize(documents, "document")}</span>{" "}
-          inside it
-        </>
-      ) : null}
-      . This cannot be undone.
-    </>
+      {documents !== undefined ? renderTranslation(t("gatekeeper-context.ContextLibraryPage.this_permanently_deletes_and_all_documents_inside_it_this_cannot_"), { name: name, n: documents }) : renderTranslation(t("gatekeeper-context.ContextLibraryPage.this_permanently_deletes_this_cannot_be_undone"), { name: name })}</>
   );
 }
 
@@ -671,14 +675,14 @@ const VISIBILITY_OPTIONS = [
   {
     value: "private" as const,
     Icon: Lock,
-    title: "Only me",
-    description: "Private to your account. Only you can view and edit it.",
+    get title() { return t("gatekeeper-context.ContextLibraryPage.only_me"); },
+    get description() { return t("gatekeeper-context.ContextLibraryPage.private_to_your_account_only_you_can_view_and_edit_it"); },
   },
   {
     value: "public" as const,
     Icon: Buildings,
-    title: "Everyone",
-    description: "Shared across your organization and turned on for all users.",
+    get title() { return t("gatekeeper-context.ContextLibraryPage.everyone"); },
+    get description() { return t("gatekeeper-context.ContextLibraryPage.shared_across_your_organization_and_turned_on_for_all_users"); },
   },
 ];
 
@@ -686,14 +690,14 @@ const CONTENT_SOURCE_OPTIONS = [
   {
     value: "web" as const,
     Icon: PencilSimple,
-    title: "Editable documents",
-    description: "Create, edit, and delete files through the Cloudflare OS UI.",
+    get title() { return t("gatekeeper-context.ContextLibraryPage.editable_documents"); },
+    get description() { return t("gatekeeper-context.ContextLibraryPage.create_edit_and_delete_files_through_the_cloudflare_os_ui"); },
   },
   {
     value: "git" as const,
     Icon: GitBranch,
-    title: "Git mirror",
-    description: "Push content from git using repository mirroring. All changes must be made through git.",
+    get title() { return t("gatekeeper-context.ContextLibraryPage.git_mirror"); },
+    get description() { return t("gatekeeper-context.ContextLibraryPage.push_content_from_git_using_repository_mirroring_all_changes_mus"); },
   },
 ];
 
@@ -706,6 +710,7 @@ function CreateCollectionView({
   onCancel: () => void;
   onCreated: (collectionId: string) => void;
 }) {
+  const { t } = useTranslation();
   const context = useContextApi();
   const toasts = useKumoToastManager();
   const [title, setTitle] = useState("");
@@ -750,10 +755,10 @@ function CreateCollectionView({
         icon,
         source,
       );
-      toasts.add({ title: "Collection created", variant: "success" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.collection_created"), variant: "success" });
       onCreated(metadata.id);
     } catch {
-      toasts.add({ title: "Failed to create collection", variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_create_collection"), variant: "error" });
       setCreating(false);
     }
   };
@@ -766,15 +771,11 @@ function CreateCollectionView({
           onClick={onCancel}
           className="press mb-3 -ml-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[13px] font-medium tracking-[-0.25px] text-kumo-subtle transition-colors hover:text-kumo-default"
         >
-          <CaretLeft size={14} />
-          Context &amp; Skills
-        </button>
+          <CaretLeft size={14} />{t("gatekeeper-context.ContextLibraryPage.context_skills")}</button>
         <h1 className="text-2xl font-semibold tracking-tight text-kumo-default">
-          New collection
-        </h1>
+          {t("gatekeeper-context.ContextLibraryPage.new_collection")}</h1>
         <p className="mt-1 max-w-2xl text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-          A collection of documents, skills, and other files your agents can use.
-        </p>
+          {t("gatekeeper-context.ContextLibraryPage.a_collection_of_documents_skills_and_other_files_your_agents_can")}</p>
       </header>
 
       <div className="ctx-scroll min-h-0 flex-1 overflow-y-auto pb-8 pt-1">
@@ -795,8 +796,8 @@ function CreateCollectionView({
             </div>
             {supportsGitCollections && (
               <div className="ctx-rise" style={{ animationDelay: "160ms" }}>
-                <FieldLabel>Type</FieldLabel>
-                <div role="radiogroup" aria-label="Collection type" className="grid gap-2">
+                <FieldLabel>{t("gatekeeper-context.ContextLibraryPage.type")}</FieldLabel>
+                <div role="radiogroup" aria-label={t("gatekeeper-context.ContextLibraryPage.collection_type")} className="grid gap-2">
                   {CONTENT_SOURCE_OPTIONS.map(({
                     value,
                     Icon,
@@ -843,8 +844,8 @@ function CreateCollectionView({
             )}
             {isAdmin && (
               <div className="ctx-rise" style={{ animationDelay: "200ms" }}>
-                <FieldLabel>Visibility</FieldLabel>
-                <div role="radiogroup" aria-label="Visibility" className="grid gap-2">
+                <FieldLabel>{t("gatekeeper-context.ContextLibraryPage.visibility")}</FieldLabel>
+                <div role="radiogroup" aria-label={t("gatekeeper-context.ContextLibraryPage.visibility")} className="grid gap-2">
                   {VISIBILITY_OPTIONS.map(({
                     value,
                     Icon,
@@ -902,8 +903,7 @@ function CreateCollectionView({
               disabled={creating}
               className="!h-9"
             >
-              Cancel
-            </WorkshopButton>
+              {t("gatekeeper-context.ContextLibraryPage.cancel")}</WorkshopButton>
             {/* Orange brand "create" button (page CTA, not a modal primary). The disabled overrides
                 keep the inactive state grey rather than faded orange. */}
             <WorkshopButton
@@ -913,8 +913,7 @@ function CreateCollectionView({
               disabled={!title.trim()}
               className="press !bg-kumo-brand text-white enabled:hover:!bg-kumo-brand-hover disabled:!bg-kumo-fill disabled:!text-kumo-inactive disabled:!opacity-100"
             >
-              Create collection
-            </WorkshopButton>
+              {t("gatekeeper-context.ContextLibraryPage.create_collection")}</WorkshopButton>
           </div>
         </div>
       </div>
@@ -927,6 +926,7 @@ function CreateCollectionView({
 // ---------------------------------------------------------------------------
 
 export default function ContextLibraryPage() {
+  const { t } = useTranslation();
   const context = useContextApi();
 
   // Iframe-local selection state (no router/URL).
@@ -1016,11 +1016,9 @@ export default function ContextLibraryPage() {
       <header className="flex items-end justify-between gap-4 px-3 pb-3 pt-10">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight text-kumo-default">
-            Context &amp; Skills
-          </h1>
+            {t("gatekeeper-context.ContextLibraryPage.context_skills")}</h1>
           <p className="mt-1 max-w-2xl text-[13px] leading-[18px] tracking-[-0.25px] text-kumo-subtle">
-            Collections of documents, skills, and other files your agents can use.
-          </p>
+            {t("gatekeeper-context.ContextLibraryPage.collections_of_documents_skills_and_other_files_your_agents_can")}</p>
         </div>
         {enabled.length > 0 && (
           <button
@@ -1028,9 +1026,7 @@ export default function ContextLibraryPage() {
             onClick={() => setCreating(true)}
             className="press inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-kumo-brand px-3.5 text-[13px] font-medium tracking-[-0.25px] text-white transition-colors hover:bg-kumo-brand-hover"
           >
-            <Plus size={14} weight="bold" />
-            New collection
-          </button>
+            <Plus size={14} weight="bold" />{t("gatekeeper-context.ContextLibraryPage.new_collection")}</button>
         )}
       </header>
 
@@ -1045,7 +1041,7 @@ export default function ContextLibraryPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search collections…"
+              placeholder={t("gatekeeper-context.ContextLibraryPage.search_collections")}
               className="h-9 w-full rounded-lg border border-kumo-line bg-kumo-base pl-9 pr-4 text-[13px] tracking-[-0.25px] text-kumo-default placeholder:text-kumo-inactive transition-[border-color,box-shadow] duration-150 ease-out focus:border-kumo-ring focus:outline-none focus:ring-[3px] focus:ring-kumo-ring/15"
             />
           </div>
@@ -1062,12 +1058,12 @@ export default function ContextLibraryPage() {
             </div>
             <div>
               <p className="text-sm font-medium text-kumo-default">
-                {search ? "No collections match" : "No collections yet"}
+                {search ? t("gatekeeper-context.ContextLibraryPage.no_collections_match") : t("gatekeeper-context.ContextLibraryPage.no_collections_yet")}
               </p>
               <p className="mx-auto mt-1 max-w-sm text-[13px] leading-[18px] text-kumo-subtle">
                 {search
-                  ? "Try a different search term."
-                  : "Create a collection to give your agents context to work with."}
+                  ? t("gatekeeper-context.ContextLibraryPage.try_a_different_search_term")
+                  : t("gatekeeper-context.ContextLibraryPage.create_a_collection_to_give_your_agents_context_to_work_with")}
               </p>
             </div>
             {!search && (
@@ -1076,9 +1072,7 @@ export default function ContextLibraryPage() {
                 onClick={() => setCreating(true)}
                 className="press mt-1 inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-kumo-brand px-3.5 text-[13px] font-medium tracking-[-0.25px] text-white transition-colors hover:bg-kumo-brand-hover"
               >
-                <Plus size={14} weight="bold" />
-                New collection
-              </button>
+                <Plus size={14} weight="bold" />{t("gatekeeper-context.ContextLibraryPage.new_collection")}</button>
             )}
           </div>
         ) : (
@@ -1110,6 +1104,7 @@ function MetaField({
   children: ReactNode;
   align?: "left" | "right";
 }) {
+  useTranslation();
   return (
     <div className={`flex flex-col gap-1 ${align === "right" ? "items-end text-right" : ""}`}>
       <span className="text-[11px] leading-none font-medium tracking-[-0.1px] text-kumo-inactive">
@@ -1143,6 +1138,7 @@ function CollectionOverview({
   onManageGitTokens: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const isPublic = metadata.visibility === "public";
   const isSynced = metadata.content.source === "git";
   return (
@@ -1157,8 +1153,7 @@ function CollectionOverview({
                   {metadata.title}
                 </h1>
                 <p className="mt-1 text-[13px] leading-[18px] tracking-[-0.2px] text-kumo-subtle">
-                  Context collection
-                </p>
+                  {t("gatekeeper-context.ContextLibraryPage.context_collection")}</p>
               </div>
             </div>
             {canWrite && (
@@ -1170,8 +1165,7 @@ function CollectionOverview({
                     onClick={onRefreshSource}
                     loading={refreshingSource}
                   >
-                    Refresh
-                  </WorkshopButton>
+                    {t("gatekeeper-context.ContextLibraryPage.refresh")}</WorkshopButton>
                 )}
                 <CollectionOptionsMenu
                   isSynced={isSynced}
@@ -1185,17 +1179,17 @@ function CollectionOverview({
           </div>
 
           <div className="mt-9 grid grid-cols-2 gap-x-8 gap-y-5 @xl:grid-cols-4">
-            <MetaField label="Source">
+            <MetaField label={t("gatekeeper-context.ContextLibraryPage.source")}>
               <span className="inline-flex items-center gap-1.5">
                 {isPublic ? <Buildings size={12} className="shrink-0" /> : <User size={12} className="shrink-0" />}
-                {isPublic ? "Your organization" : "You"}
+                {isPublic ? t("gatekeeper-context.ContextLibraryPage.your_organization") : t("gatekeeper-context.ContextLibraryPage.you")}
               </span>
             </MetaField>
-            <MetaField label="Access">
-              {isPublic ? "Everyone (required)" : "Private to you"}
+            <MetaField label={t("gatekeeper-context.ContextLibraryPage.access")}>
+              {isPublic ? t("gatekeeper-context.ContextLibraryPage.everyone_required") : t("gatekeeper-context.ContextLibraryPage.private_to_you")}
             </MetaField>
-            <MetaField label="Documents">{metadata.documentCount}</MetaField>
-            <MetaField label={isSynced ? "Refreshed" : "Updated"} align="right">
+            <MetaField label={t("gatekeeper-context.ContextLibraryPage.documents")}>{metadata.documentCount}</MetaField>
+            <MetaField label={isSynced ? t("gatekeeper-context.ContextLibraryPage.refreshed") : t("gatekeeper-context.ContextLibraryPage.updated")} align="right">
               {metadata.content.source === "git"
                 ? formatRelativeTime(metadata.content.lastRefreshedAt)
                 : formatRelativeTime(metadata.lastUpdated)}
@@ -1206,26 +1200,22 @@ function CollectionOverview({
         {isSynced && !supportsGitCollections && (
           <section className="mt-8 rounded-xl border border-kumo-line bg-kumo-elevated/60 px-5 py-4">
             <p className="text-[13px] font-medium tracking-[-0.2px] text-kumo-default">
-              Git synchronization unavailable
-            </p>
+              {t("gatekeeper-context.ContextLibraryPage.git_synchronization_unavailable")}</p>
             <p className="mt-1 text-[13px] leading-5 tracking-[-0.2px] text-kumo-subtle">
-              Git content is read-only and shows its most recently cached version.
-            </p>
+              {t("gatekeeper-context.ContextLibraryPage.git_content_is_read_only_and_shows_its_most_recently_cached_vers")}</p>
           </section>
         )}
 
         <section className="mt-9 border-t border-kumo-line pt-8">
           <p className="mb-3 text-[13px] font-medium leading-none tracking-[-0.2px] text-kumo-subtle">
-            Description
-          </p>
+            {t("gatekeeper-context.ContextLibraryPage.description")}</p>
           {metadata.description ? (
             <p className="max-w-3xl text-[15px] leading-7 tracking-[-0.2px] text-kumo-default">
               {metadata.description}
             </p>
           ) : (
             <p className="text-[13px] italic leading-5 text-kumo-inactive">
-              No description yet.
-            </p>
+              {t("gatekeeper-context.ContextLibraryPage.no_description_yet")}</p>
           )}
         </section>
 
@@ -1237,16 +1227,15 @@ function CollectionOverview({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-medium tracking-[-0.2px] text-kumo-default">
-                  No files in this collection
-                </p>
+                  {t("gatekeeper-context.ContextLibraryPage.no_files_in_this_collection")}</p>
                 <p className="mt-1 max-w-xl text-[13px] leading-5 tracking-[-0.2px] text-kumo-subtle">
                   {isSynced
                     ? supportsGitCollections
-                      ? "This git mirror is empty. Mirror content from git, then refresh."
-                      : "No Git content was cached before synchronization became unavailable."
+                      ? t("gatekeeper-context.ContextLibraryPage.this_git_mirror_is_empty_mirror_content_from_git_then_refresh")
+                      : t("gatekeeper-context.ContextLibraryPage.no_git_content_was_cached_before_synchronization_became_unavaila")
                     : canWrite
-                    ? "Use the + in the Files panel to create or upload skills or files. Agents use the names and descriptions to decide what to read."
-                    : "This collection is empty."}
+                    ? t("gatekeeper-context.ContextLibraryPage.use_the_in_the_files_panel_to_create_or_upload_skills_or_files_a")
+                    : t("gatekeeper-context.ContextLibraryPage.this_collection_is_empty")}
                 </p>
               </div>
             </div>
@@ -1270,12 +1259,13 @@ function CollectionOptionsMenu({
   onManageGitTokens: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <KebabMenu
       trigger={
         <WorkshopIconButton
-          aria-label="Collection options"
-          title="Options"
+          aria-label={t("gatekeeper-context.ContextLibraryPage.collection_options")}
+          title={t("gatekeeper-context.ContextLibraryPage.options")}
           className="!h-9 !w-9 data-[popup-open]:bg-kumo-tint data-[popup-open]:text-kumo-default"
         >
           <DotsThree size={18} weight="bold" />
@@ -1287,16 +1277,14 @@ function CollectionOptionsMenu({
         onClick={onEditDetails}
         className={MENU_ITEM}
       >
-        Edit details
-      </DropdownMenu.Item>
+        {t("gatekeeper-context.ContextLibraryPage.edit_details")}</DropdownMenu.Item>
       {isSynced && supportsGitCollections && (
         <DropdownMenu.Item
           icon={<Key size={13} className="mr-2" />}
           onClick={onManageGitTokens}
           className={MENU_ITEM}
         >
-          Manage git tokens
-        </DropdownMenu.Item>
+          {t("gatekeeper-context.ContextLibraryPage.manage_git_tokens")}</DropdownMenu.Item>
       )}
       <DropdownMenu.Separator />
       <DropdownMenu.Item
@@ -1304,8 +1292,7 @@ function CollectionOptionsMenu({
         onClick={onDelete}
         className={`${MENU_ITEM_DANGER} text-kumo-danger`}
       >
-        Delete collection
-      </DropdownMenu.Item>
+        {t("gatekeeper-context.ContextLibraryPage.delete_collection")}</DropdownMenu.Item>
     </KebabMenu>
   );
 }
@@ -1334,6 +1321,7 @@ function CollectionSettingsModal({
   onUpdated: () => void;
   onDeleted: () => void;
 }) {
+  const { t } = useTranslation();
   const context = useContextApi();
   const toasts = useKumoToastManager();
   const { presenting, onOpenChangeComplete } = usePresentWhileOpen(open);
@@ -1391,17 +1379,17 @@ function CollectionSettingsModal({
       return;
     }
     if (!title.trim()) {
-      toasts.add({ title: "Name can't be empty", variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.name_can_t_be_empty"), variant: "error" });
       return;
     }
     setSaving(true);
     try {
       await context.updateContextCollection(collectionId, updates);
-      toasts.add({ title: "Collection updated", variant: "success" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.collection_updated"), variant: "success" });
       onUpdated();
       onClose();
     } catch {
-      toasts.add({ title: "Failed to update collection", variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_update_collection"), variant: "error" });
       setSaving(false);
     }
   };
@@ -1410,10 +1398,10 @@ function CollectionSettingsModal({
     setDeleting(true);
     try {
       await context.deleteContextCollection(collectionId);
-      toasts.add({ title: "Collection deleted", variant: "success" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.collection_deleted"), variant: "success" });
       onDeleted();
     } catch {
-      toasts.add({ title: "Failed to delete collection", variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_delete_collection"), variant: "error" });
       setDeleting(false);
     }
   };
@@ -1434,7 +1422,7 @@ function CollectionSettingsModal({
       >
         {mode === "edit" ? (
           <>
-            <ModalHeader title="Edit collection" />
+            <ModalHeader title={t("gatekeeper-context.ContextLibraryPage.edit_collection")} />
 
             <div className="space-y-5 px-4 py-5 sm:px-6">
               <div>
@@ -1452,7 +1440,7 @@ function CollectionSettingsModal({
               </div>
               {metadata.content.source === "git" && supportsGitCollections && (
                 <div>
-                  <FieldLabel>Git branch</FieldLabel>
+                  <FieldLabel>{t("gatekeeper-context.ContextLibraryPage.git_branch")}</FieldLabel>
                   <WorkshopInput
                     value={branch}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBranch(e.target.value)}
@@ -1463,30 +1451,27 @@ function CollectionSettingsModal({
                     className="w-full"
                   />
                   <p className="mt-1 text-[12px] leading-4 text-kumo-subtle">
-                    This branch to pull from when refreshing the collection.
-                  </p>
+                    {t("gatekeeper-context.ContextLibraryPage.this_branch_to_pull_from_when_refreshing_the_collection")}</p>
                 </div>
               )}
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-kumo-line px-4 py-3 sm:px-6">
               <WorkshopButton tone="secondary" className="!h-9" disabled={saving} onClick={onClose}>
-                Cancel
-              </WorkshopButton>
+                {t("gatekeeper-context.ContextLibraryPage.cancel")}</WorkshopButton>
               <WorkshopButton
                 tone="primary"
                 onClick={handleSave}
                 loading={saving}
                 disabled={!hasChanges || !title.trim()}
               >
-                Save
-              </WorkshopButton>
+                {t("gatekeeper-context.ContextLibraryPage.save")}</WorkshopButton>
             </div>
           </>
         ) : (
           <>
             <ModalHeader
-              title="Delete collection"
+              title={t("gatekeeper-context.ContextLibraryPage.delete_collection")}
               description={
                 <DeletePermanentlyDescription
                   name={metadata.title}
@@ -1497,12 +1482,9 @@ function CollectionSettingsModal({
 
             <div className="px-4 py-5 sm:px-6">
               <FieldLabel>
-                Type{" "}
-                <span className="font-mono text-kumo-default">
+                {renderTranslation(t("gatekeeper-context.ContextLibraryPage.type_to_confirm"), { value: <span className="font-mono text-kumo-default">
                   {metadata.title}
-                </span>{" "}
-                to confirm
-              </FieldLabel>
+                </span> })}</FieldLabel>
               <WorkshopInput
                 value={confirmText}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -1523,8 +1505,7 @@ function CollectionSettingsModal({
                 disabled={!canDelete}
                 loading={deleting}
               >
-                Delete collection
-              </WorkshopButton>
+                {t("gatekeeper-context.ContextLibraryPage.delete_collection")}</WorkshopButton>
             </div>
           </>
         )}
@@ -1544,6 +1525,7 @@ function GitTokenManagementModal({
   branch: string;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const context = useContextApi();
   const toasts = useKumoToastManager();
   const toastsRef = useRef(toasts);
@@ -1574,7 +1556,7 @@ function GitTokenManagementModal({
       const result = await context.listContextCollectionGitTokens(collectionId);
       setGitTokens(result.tokens);
     } catch (err) {
-      toastsRef.current.add({ title: `Failed to load Git tokens: ${(err as Error).message}`, variant: "error" });
+      toastsRef.current.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_load_git_tokens", { value1: (err as Error).message }), variant: "error" });
     } finally {
       setLoadingTokens(false);
     }
@@ -1590,9 +1572,9 @@ function GitTokenManagementModal({
       const token = await context.createContextCollectionGitToken(collectionId);
       setNewGitToken(token);
       await loadGitTokens();
-      toasts.add({ title: "Git token created", variant: "success" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.git_token_created"), variant: "success" });
     } catch (err) {
-      toasts.add({ title: `Failed to create Git token: ${(err as Error).message}`, variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_create_git_token", { value1: (err as Error).message }), variant: "error" });
     } finally {
       setCreatingToken(false);
     }
@@ -1603,9 +1585,9 @@ function GitTokenManagementModal({
     try {
       await context.revokeContextCollectionGitToken(collectionId, tokenId);
       await loadGitTokens();
-      toasts.add({ title: "Git token revoked", variant: "success" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.git_token_revoked"), variant: "success" });
     } catch (err) {
-      toasts.add({ title: `Failed to revoke Git token: ${(err as Error).message}`, variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_revoke_git_token", { value1: (err as Error).message }), variant: "error" });
     } finally {
       setRevokingToken(null);
     }
@@ -1632,14 +1614,13 @@ function GitTokenManagementModal({
         size="sm"
       >
         <ModalHeader
-          title="Manage git tokens"
+          title={t("gatekeeper-context.ContextLibraryPage.manage_git_tokens")}
         />
 
         <div className="space-y-3 px-4 py-5 sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <p className="max-w-sm text-[12px] leading-4 text-kumo-subtle">
-              Create a token to mirror content from an external git repository.
-            </p>
+              {t("gatekeeper-context.ContextLibraryPage.create_a_token_to_mirror_content_from_an_external_git_repository")}</p>
             <WorkshopButton
               tone="secondary"
               className="h-8!"
@@ -1647,21 +1628,19 @@ function GitTokenManagementModal({
               loading={creatingToken}
               disabled={busy}
             >
-              Create token
-            </WorkshopButton>
+              {t("gatekeeper-context.ContextLibraryPage.create_token")}</WorkshopButton>
           </div>
 
           {newGitToken && (
             <div className="space-y-3 rounded-lg border border-green-500/30 bg-green-500/5 px-3 py-3 text-[12px] leading-5 text-kumo-subtle">
               <div>
-                <div className="font-medium text-kumo-default">Token created</div>
+                <div className="font-medium text-kumo-default">{t("gatekeeper-context.ContextLibraryPage.token_created")}</div>
                 <p className="mt-0.5">
-                  Use these credentials to push content to your collection. The password is only shown once.
-                </p>
+                  {t("gatekeeper-context.ContextLibraryPage.use_these_credentials_to_push_content_to_your_collection_the_pas")}</p>
               </div>
               <div className="space-y-2">
                 <div>
-                  <FieldLabel>Remote URL</FieldLabel>
+                  <FieldLabel>{t("gatekeeper-context.ContextLibraryPage.remote_url")}</FieldLabel>
                   <div className="mt-1 flex gap-2">
                     <input
                       readOnly
@@ -1673,12 +1652,11 @@ function GitTokenManagementModal({
                       className="h-8!"
                       onClick={() => copyToClipboard(newGitToken.remote, "Remote URL copied", "Failed to copy remote URL")}
                     >
-                      Copy
-                    </WorkshopButton>
+                      {t("gatekeeper-context.ContextLibraryPage.copy")}</WorkshopButton>
                   </div>
                 </div>
                 <div>
-                  <FieldLabel>Password</FieldLabel>
+                  <FieldLabel>{t("gatekeeper-context.ContextLibraryPage.password")}</FieldLabel>
                   <div className="mt-1 flex gap-2">
                     <input
                       readOnly
@@ -1691,27 +1669,25 @@ function GitTokenManagementModal({
                       className="h-8!"
                       onClick={() => copyToClipboard(newGitToken.plaintext, "Password copied", "Failed to copy password")}
                     >
-                      Copy
-                    </WorkshopButton>
+                      {t("gatekeeper-context.ContextLibraryPage.copy")}</WorkshopButton>
                   </div>
                 </div>
               </div>
               <div className="border-t border-green-500/20 pt-3">
-                <div className="font-medium text-kumo-default">Configure GitLab mirroring</div>
+                <div className="font-medium text-kumo-default">{t("gatekeeper-context.ContextLibraryPage.configure_gitlab_mirroring")}</div>
                 <p className="mt-0.5">
-                  These steps are specific to GitLab. Other git providers may use different setup flows.
-                </p>
+                  {t("gatekeeper-context.ContextLibraryPage.these_steps_are_specific_to_gitlab_other_git_providers_may_use_d")}</p>
                 <ol className="mt-2 list-decimal space-y-1.5 pl-4">
-                  <li>Open your GitLab project and go to Settings &gt; Repository &gt; Mirroring repositories</li>
-                  <li>Click "Add new" button to open setup flow</li>
-                  <li>Set Git repository URL to the remote URL above</li>
-                  <li>Set Mirror direction to Push</li>
-                  <li>Set Authentication method to Username and Password</li>
-                  <li>Set Username to "gitlab"</li>
-                  <li>Set Password to the password above</li>
-                  <li>Select Mirror specific branches and type in "{branch}"</li>
-                  <li>Click "Mirror repository" button to finish</li>
-                  <li>Click "Update now" button to trigger an initial push</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.open_your_gitlab_project_and_go_to_settings_repository_mirroring")}</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.click_add_new_button_to_open_setup_flow")}</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.set_git_repository_url_to_the_remote_url_above")}</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.set_mirror_direction_to_push")}</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.set_authentication_method_to_username_and_password")}</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.set_username_to_gitlab")}</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.set_password_to_the_password_above")}</li>
+                  <li>{renderTranslation(t("gatekeeper-context.ContextLibraryPage.select_mirror_specific_branches_and_type_in"), { branch: branch })}</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.click_mirror_repository_button_to_finish")}</li>
+                  <li>{t("gatekeeper-context.ContextLibraryPage.click_update_now_button_to_trigger_an_initial_push")}</li>
                 </ol>
               </div>
             </div>
@@ -1719,9 +1695,9 @@ function GitTokenManagementModal({
 
           <div className="rounded-lg border border-kumo-line bg-kumo-base">
             {loadingTokens ? (
-              <div className="px-3 py-2 text-[12px] text-kumo-subtle">Loading tokens...</div>
+              <div className="px-3 py-2 text-[12px] text-kumo-subtle">{t("gatekeeper-context.ContextLibraryPage.loading_tokens")}</div>
             ) : gitTokens.length === 0 ? (
-              <div className="px-3 py-2 text-[12px] text-kumo-subtle">No Git tokens yet.</div>
+              <div className="px-3 py-2 text-[12px] text-kumo-subtle">{t("gatekeeper-context.ContextLibraryPage.no_git_tokens_yet")}</div>
             ) : (
               <div className="divide-y divide-kumo-line">
                 {gitTokens.map((token) => (
@@ -1732,8 +1708,7 @@ function GitTokenManagementModal({
                     <div className="min-w-0">
                       <div className="truncate font-mono text-[11px] text-kumo-default">{token.id}</div>
                       <div className="text-kumo-subtle">
-                        expires {new Date(token.expiresAt).toLocaleDateString()}
-                      </div>
+                        {renderTranslation(t("gatekeeper-context.ContextLibraryPage.expires_2"), { value: new Date(token.expiresAt).toLocaleDateString(getLocale()) })}</div>
                     </div>
                     <WorkshopButton
                       tone="secondary"
@@ -1742,8 +1717,7 @@ function GitTokenManagementModal({
                       loading={revokingToken === token.id}
                       disabled={revokingToken !== null}
                     >
-                      Revoke
-                    </WorkshopButton>
+                      {t("gatekeeper-context.ContextLibraryPage.revoke")}</WorkshopButton>
                   </div>
                 ))}
               </div>
@@ -1753,8 +1727,7 @@ function GitTokenManagementModal({
 
         <div className="flex items-center justify-end gap-2 border-t border-kumo-line px-4 py-3 sm:px-6">
           <WorkshopButton tone="secondary" className="h-9!" disabled={busy} onClick={onClose}>
-            Close
-          </WorkshopButton>
+            {t("gatekeeper-context.ContextLibraryPage.close")}</WorkshopButton>
         </div>
       </Dialog>
     </Dialog.Root>
@@ -1867,6 +1840,7 @@ function TreeInlineInput({
   className?: string;
   stopClickPropagation?: boolean;
 }) {
+  useTranslation();
   return (
     <input
       autoFocus
@@ -1890,6 +1864,7 @@ function TreeInlineInput({
 }
 
 function CreateRow({ depth, ctx }: { depth: number; ctx: TreeCtx }) {
+  const { t } = useTranslation();
   const isFolder = ctx.creating!.kind === "folder";
   return (
     <div
@@ -1906,7 +1881,7 @@ function CreateRow({ depth, ctx }: { depth: number; ctx: TreeCtx }) {
         onChange={ctx.setCreatingName}
         onCommit={ctx.commitCreate}
         onCancel={ctx.cancelCreate}
-        placeholder={isFolder ? "folder-name" : "file-name.md"}
+        placeholder={isFolder ? t("gatekeeper-context.ContextLibraryPage.folder_name") : t("gatekeeper-context.ContextLibraryPage.file_name_md")}
       />
     </div>
   );
@@ -1921,6 +1896,7 @@ function FolderView({
   depth: number;
   ctx: TreeCtx;
 }) {
+  const { t } = useTranslation();
   const sortedFolders = [...folder.folders.values()].toSorted((a, b) =>
     a.name.localeCompare(b.name),
   );
@@ -1999,11 +1975,10 @@ function FolderView({
                 </span>
                 {isSkill && (
                   <span
-                    title="Contains a valid Agent Skill"
+                    title={t("gatekeeper-context.ContextLibraryPage.contains_a_valid_agent_skill")}
                     className="shrink-0 text-[10px] font-medium uppercase leading-none tracking-[0.4px] text-kumo-inactive"
                   >
-                    skill
-                  </span>
+                    {t("gatekeeper-context.ContextLibraryPage.skill")}</span>
                 )}
               </>
             )}
@@ -2013,7 +1988,7 @@ function FolderView({
               stopPropagation
               trigger={
                 <WorkshopIconButton
-                  aria-label={`Actions for ${folder.name}`}
+                  aria-label={t("gatekeeper-context.ContextLibraryPage.actions_for", { value1: folder.name })}
                   onClick={(e: React.MouseEvent) => e.stopPropagation()}
                   className={TREE_ROW_TRIGGER}
                 >
@@ -2026,22 +2001,19 @@ function FolderView({
                 onClick={() => ctx.startCreate(folder.path, "file")}
                 className={MENU_ITEM}
               >
-                New file
-              </DropdownMenu.Item>
+                {t("gatekeeper-context.ContextLibraryPage.new_file")}</DropdownMenu.Item>
               <DropdownMenu.Item
                 icon={<FolderPlus size={12} className="mr-2" />}
                 onClick={() => ctx.startCreate(folder.path, "folder")}
                 className={MENU_ITEM}
               >
-                New folder
-              </DropdownMenu.Item>
+                {t("gatekeeper-context.ContextLibraryPage.new_folder")}</DropdownMenu.Item>
               <DropdownMenu.Item
                 icon={<PencilSimple size={12} className="mr-2" />}
                 onClick={() => ctx.startRename(folder.path)}
                 className={MENU_ITEM}
               >
-                Rename
-              </DropdownMenu.Item>
+                {t("gatekeeper-context.ContextLibraryPage.rename")}</DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item
                 icon={<Trash size={12} className="mr-2" />}
@@ -2049,8 +2021,7 @@ function FolderView({
                 onClick={() => ctx.deletePath(folder.path, true)}
                 className={MENU_ITEM_DANGER}
               >
-                Delete
-              </DropdownMenu.Item>
+                {t("gatekeeper-context.ContextLibraryPage.delete")}</DropdownMenu.Item>
             </KebabMenu>
           )}
         </div>
@@ -2097,6 +2068,7 @@ function FileView({
   depth: number;
   ctx: TreeCtx;
 }) {
+  const { t } = useTranslation();
   const Icon = isImageContentType(doc.contentType) ? ImageIcon : FileText;
   const selected = ctx.selectedPath === doc.path;
   const isRenaming = ctx.renaming === doc.path;
@@ -2139,7 +2111,7 @@ function FileView({
           stopPropagation
           trigger={
             <WorkshopIconButton
-              aria-label={`Actions for ${baseName(doc.path)}`}
+              aria-label={t("gatekeeper-context.ContextLibraryPage.actions_for", { value1: baseName(doc.path) })}
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
               className={TREE_ROW_TRIGGER}
             >
@@ -2152,16 +2124,14 @@ function FileView({
             onClick={() => ctx.startRename(doc.path)}
             className={MENU_ITEM}
           >
-            Rename
-          </DropdownMenu.Item>
+            {t("gatekeeper-context.ContextLibraryPage.rename")}</DropdownMenu.Item>
           <DropdownMenu.Item
             icon={<Trash size={12} className="mr-2" />}
             variant="danger"
             onClick={() => ctx.deletePath(doc.path, false)}
             className={MENU_ITEM_DANGER}
           >
-            Delete
-          </DropdownMenu.Item>
+            {t("gatekeeper-context.ContextLibraryPage.delete")}</DropdownMenu.Item>
         </KebabMenu>
       )}
     </div>
@@ -2183,6 +2153,7 @@ function CollectionEditor({
   onSelectPath: (path: string | null) => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const context = useContextApi();
   const toasts = useKumoToastManager();
   const [docs, setDocs] = useState<ContextDocumentSummary[]>([]);
@@ -2279,9 +2250,9 @@ function CollectionEditor({
     try {
       await context.syncContextCollectionArtifactSource(collectionId);
       await loadDocs();
-      toasts.add({ title: "Collection refreshed", variant: "success" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.collection_refreshed"), variant: "success" });
     } catch (err) {
-      toasts.add({ title: `Failed to refresh: ${(err as Error).message}`, variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_refresh", { value1: (err as Error).message }), variant: "error" });
     } finally {
       setRefreshingSource(false);
     }
@@ -2347,7 +2318,7 @@ function CollectionEditor({
       setEditOnOpenPath(filePath);
       setSelectedPath(filePath);
     } catch {
-      toasts.add({ title: "Failed to create file", variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_create_file"), variant: "error" });
     }
   };
 
@@ -2391,7 +2362,7 @@ function CollectionEditor({
       await relocate(renaming, dest);
     } catch (err) {
       toasts.add({
-        title: `Failed to rename: ${(err as Error).message}`,
+        title: t("gatekeeper-context.ContextLibraryPage.failed_to_rename", { value1: (err as Error).message }),
         variant: "error",
       });
     } finally {
@@ -2408,7 +2379,7 @@ function CollectionEditor({
       await relocate(from, dest);
     } catch (err) {
       toasts.add({
-        title: `Failed to move: ${(err as Error).message}`,
+        title: t("gatekeeper-context.ContextLibraryPage.failed_to_move", { value1: (err as Error).message }),
         variant: "error",
       });
     }
@@ -2459,7 +2430,7 @@ function CollectionEditor({
       setPendingDelete(null);
     } catch {
       toasts.add({
-        title: isDir ? "Failed to delete folder" : "Failed to delete document",
+        title: isDir ? t("gatekeeper-context.ContextLibraryPage.failed_to_delete_folder") : t("gatekeeper-context.ContextLibraryPage.failed_to_delete_document"),
         variant: "error",
       });
     } finally {
@@ -2491,7 +2462,7 @@ function CollectionEditor({
       }
     });
     toasts.add({
-      title: `Uploaded ${pluralize(ok, "file")}${failed ? `, ${failed} failed` : ""}`,
+      title: t("gatekeeper-context.ContextLibraryPage.uploaded_files_failed", { n: ok, failed: failed }),
       variant: failed ? "error" : "success",
     });
     await loadDocs();
@@ -2541,17 +2512,13 @@ function CollectionEditor({
             onClick={onBack}
             className="press -ml-1 mb-4 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[13px] font-medium tracking-[-0.25px] text-kumo-subtle transition-colors hover:text-kumo-default"
           >
-            <CaretLeft size={14} />
-            Context &amp; Skills
-          </button>
+            <CaretLeft size={14} />{t("gatekeeper-context.ContextLibraryPage.context_skills")}</button>
           <div className="rounded-xl border border-kumo-line bg-kumo-base px-5 py-10 text-center shadow-[0_1px_2px_rgba(20,17,16,0.03)]">
             <BookOpen size={32} className="mx-auto mb-3 text-kumo-subtle" />
             <p className="m-0 text-[15px] leading-5 font-medium tracking-[-0.25px] text-kumo-default">
-              This collection is no longer available
-            </p>
+              {t("gatekeeper-context.ContextLibraryPage.this_collection_is_no_longer_available")}</p>
             <p className="mt-1 text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-              It may have been deleted.
-            </p>
+              {t("gatekeeper-context.ContextLibraryPage.it_may_have_been_deleted")}</p>
           </div>
         </div>
       </div>
@@ -2601,7 +2568,7 @@ function CollectionEditor({
           size="sm"
         >
           <ModalHeader
-            title={pendingDelete?.isDir ? "Delete folder" : "Delete document"}
+            title={pendingDelete?.isDir ? t("gatekeeper-context.ContextLibraryPage.delete_folder") : t("gatekeeper-context.ContextLibraryPage.delete_document")}
             description={
               <DeletePermanentlyDescription
                 name={pendingDelete ? baseName(pendingDelete.path) : ""}
@@ -2620,15 +2587,14 @@ function CollectionEditor({
               disabled={deletingPath}
               onClick={() => setPendingDelete(null)}
             >
-              Cancel
-            </WorkshopButton>
+              {t("gatekeeper-context.ContextLibraryPage.cancel")}</WorkshopButton>
             <WorkshopButton
               tone="danger"
               className="!h-9"
               onClick={performDeletePath}
               loading={deletingPath}
             >
-              {pendingDelete?.isDir ? "Delete folder" : "Delete document"}
+              {pendingDelete?.isDir ? t("gatekeeper-context.ContextLibraryPage.delete_folder") : t("gatekeeper-context.ContextLibraryPage.delete_document")}
             </WorkshopButton>
           </div>
         </Dialog>
@@ -2647,9 +2613,7 @@ function CollectionEditor({
             onClick={onBack}
             className="press -ml-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[13px] font-medium tracking-[-0.25px] text-kumo-subtle transition-colors hover:text-kumo-default"
           >
-            <CaretLeft size={14} />
-            Context &amp; Skills
-          </button>
+            <CaretLeft size={14} />{t("gatekeeper-context.ContextLibraryPage.context_skills")}</button>
         </div>
           {metadata && (
             <div className="px-3 py-2.5">
@@ -2660,7 +2624,7 @@ function CollectionEditor({
               >
                 <button
                   onClick={() => setSelectedPath(null)}
-                  title="Collection overview"
+                  title={t("gatekeeper-context.ContextLibraryPage.collection_overview")}
                   aria-current={selectedPath ? undefined : "page"}
                   className="flex min-w-0 flex-1 transform-none items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring/30 active:scale-100"
                 >
@@ -2686,15 +2650,14 @@ function CollectionEditor({
 
           <div className="flex h-8 shrink-0 items-center justify-between gap-2 px-5">
             <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-kumo-inactive">
-              Files
-            </span>
+              {t("gatekeeper-context.ContextLibraryPage.files")}</span>
             {canEditDocuments && (
               <>
             <KebabMenu
               trigger={
                 <WorkshopIconButton
-                  aria-label="Add"
-                  title="Add file or folder"
+                  aria-label={t("gatekeeper-context.ContextLibraryPage.add")}
+                  title={t("gatekeeper-context.ContextLibraryPage.add_file_or_folder")}
                   className="!h-6 !w-6 text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default data-[popup-open]:bg-kumo-tint data-[popup-open]:text-kumo-default"
                 >
                   <Plus size={14} weight="bold" />
@@ -2706,30 +2669,26 @@ function CollectionEditor({
                 onClick={() => startCreate("", "file")}
                 className={MENU_ITEM}
               >
-                New file
-              </DropdownMenu.Item>
+                {t("gatekeeper-context.ContextLibraryPage.new_file")}</DropdownMenu.Item>
               <DropdownMenu.Item
                 icon={<FolderPlus size={13} className="mr-2" />}
                 onClick={() => startCreate("", "folder")}
                 className={MENU_ITEM}
               >
-                New folder
-              </DropdownMenu.Item>
+                {t("gatekeeper-context.ContextLibraryPage.new_folder")}</DropdownMenu.Item>
               <DropdownMenu.Separator />
               <DropdownMenu.Item
                 icon={<UploadSimple size={13} className="mr-2" />}
                 onClick={() => fileInputRef.current?.click()}
                 className={MENU_ITEM}
               >
-                Upload files
-              </DropdownMenu.Item>
+                {t("gatekeeper-context.ContextLibraryPage.upload_files")}</DropdownMenu.Item>
               <DropdownMenu.Item
                 icon={<Folder size={13} className="mr-2" />}
                 onClick={() => dirInputRef.current?.click()}
                 className={MENU_ITEM}
               >
-                Upload folder
-              </DropdownMenu.Item>
+                {t("gatekeeper-context.ContextLibraryPage.upload_folder")}</DropdownMenu.Item>
             </KebabMenu>
             <input
               ref={fileInputRef}
@@ -2758,14 +2717,14 @@ function CollectionEditor({
           </div>
           <div className="ctx-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3.5 pb-6 pt-0.5">
             {loading ? (
-              <p className="px-2 py-2 text-[13px] text-kumo-subtle">Loading…</p>
+              <p className="px-2 py-2 text-[13px] text-kumo-subtle">{t("gatekeeper-context.ContextLibraryPage.loading")}</p>
             ) : docs.length === 0 && pendingFolders.size === 0 && !creating ? (
               <p className="px-2 py-2 text-[12px] leading-5 text-kumo-inactive">
                 {metadata?.content.source === "git"
                   ? supportsGitCollections
-                    ? "No files yet. Mirror content from git, then refresh."
-                    : "No Git content was cached before synchronization became unavailable."
-                  : canWrite ? "No files yet. Use + to create or upload skills or files." : "No files yet."}
+                    ? t("gatekeeper-context.ContextLibraryPage.no_files_yet_mirror_content_from_git_then_refresh")
+                    : t("gatekeeper-context.ContextLibraryPage.no_git_content_was_cached_before_synchronization_became_unavaila")
+                  : canWrite ? t("gatekeeper-context.ContextLibraryPage.no_files_yet_use_to_create_or_upload_skills_or_files") : t("gatekeeper-context.ContextLibraryPage.no_files_yet")}
               </p>
             ) : (
               <FolderView folder={tree} depth={0} ctx={ctx} />
@@ -2782,9 +2741,7 @@ function CollectionEditor({
                 onClick={() => setSelectedPath(null)}
                 className="flex sm:hidden flex-shrink-0 items-center gap-1 border-b border-kumo-line px-4 py-2.5 text-[13px] text-kumo-subtle transition-colors hover:text-kumo-default"
               >
-                <CaretLeft size={14} />
-                Files
-              </button>
+                <CaretLeft size={14} />{t("gatekeeper-context.ContextLibraryPage.files")}</button>
               <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
                 <DocumentEditor
                   key={selectedPath}
@@ -2839,6 +2796,7 @@ function MarkdownImage({
   src?: string;
   alt?: string;
 }) {
+  useTranslation();
   const context = useContextApi();
   const [resolvedSrc, setResolvedSrc] = useState(src);
 
@@ -2879,6 +2837,7 @@ function MarkdownPreview({
   collectionId: string;
   documentPath: string;
 }) {
+  const { t } = useTranslation();
   const content = useMemo(() => stripFrontmatter(body).trim(), [body]);
   const imageCache = useRef(new Map<string, string>());
   const components = useMemo(
@@ -2907,7 +2866,7 @@ function MarkdownPreview({
               {content}
             </ReactMarkdown>
           ) : (
-            <p className="italic text-kumo-inactive">This document is empty.</p>
+            <p className="italic text-kumo-inactive">{t("gatekeeper-context.ContextLibraryPage.this_document_is_empty")}</p>
           )}
         </div>
       </div>
@@ -2957,9 +2916,7 @@ function renderDocumentBody({
   if (!isText) {
     return (
       <div className="p-4 text-[13px] text-kumo-subtle">
-        Binary document ({contentType}, {Math.round((body.length * 3) / 4 / 1024)} KB). Use Replace to
-        update it.
-      </div>
+        {renderTranslation(t("gatekeeper-context.ContextLibraryPage.binary_document_kb_use_replace_to_update_it"), { contentType: contentType, value: Math.round((body.length * 3) / 4 / 1024) })}</div>
     );
   }
 
@@ -3008,6 +2965,7 @@ function DocumentEditor({
   onRequestDelete: () => void;
   onDirtyChange: (dirty: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const context = useContextApi();
   const toasts = useKumoToastManager();
   // File name is the title; editing it renames the document.
@@ -3065,7 +3023,7 @@ function DocumentEditor({
       if (cancelled) return;
       setLoading(false);
       toasts.add({
-        title: `Failed to load document: ${(err as Error).message}`,
+        title: t("gatekeeper-context.ContextLibraryPage.failed_to_load_document", { value1: (err as Error).message }),
         variant: "error",
       });
     });
@@ -3101,10 +3059,10 @@ function DocumentEditor({
       };
       setSkillName(saved?.skillName ?? null);
       setDirty(false);
-      toasts.add({ title: "Saved", variant: "success" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.saved"), variant: "success" });
       onChanged();
     } catch {
-      toasts.add({ title: "Failed to save", variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.failed_to_save"), variant: "error" });
     } finally {
       setSaving(false);
     }
@@ -3118,7 +3076,7 @@ function DocumentEditor({
       return;
     }
     if (trimmed.includes("/")) {
-      toasts.add({ title: "File name can't contain '/'", variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.file_name_can_t_contain"), variant: "error" });
       setFilename(baseName(path));
       return;
     }
@@ -3129,7 +3087,7 @@ function DocumentEditor({
       await context.moveContextDocument(collectionId, path, newPath);
       onRenamed(newPath);
     } catch (err) {
-      toasts.add({ title: `Rename failed: ${(err as Error).message}`, variant: "error" });
+      toasts.add({ title: t("gatekeeper-context.ContextLibraryPage.rename_failed", { value1: (err as Error).message }), variant: "error" });
       setFilename(baseName(path));
     } finally {
       setRenaming(false);
@@ -3146,8 +3104,7 @@ function DocumentEditor({
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-kumo-subtle">
-        Loading…
-      </div>
+        {t("gatekeeper-context.ContextLibraryPage.loading")}</div>
     );
   }
 
@@ -3170,8 +3127,8 @@ function DocumentEditor({
               else if (e.key === "Escape") { setFilename(baseName(path)); e.currentTarget.blur(); }
             }}
             className="w-full bg-transparent text-[18px] font-semibold leading-6 tracking-[-0.4px] text-kumo-default focus:outline-none"
-            placeholder="file-name.md"
-            title="File name — edit to rename (the extension sets the type)"
+            placeholder={t("gatekeeper-context.ContextLibraryPage.file_name_md")}
+            title={t("gatekeeper-context.ContextLibraryPage.file_name_edit_to_rename_the_extension_sets_the_type")}
           />
 
         </div>
@@ -3186,13 +3143,11 @@ function DocumentEditor({
             loading={saving}
             disabled={!dirty}
           >
-            Save
-          </WorkshopButton>
+            {t("gatekeeper-context.ContextLibraryPage.save")}</WorkshopButton>
         )}
         {!readOnly && !isText && mode === "edit" && (
           <label className="press flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-kumo-line px-2.5 text-[12px] font-medium text-kumo-subtle transition-colors hover:bg-kumo-tint hover:text-kumo-default">
-            <UploadSimple size={14} /> Replace
-            <input
+            <UploadSimple size={14} /><input
               type="file"
               className="hidden"
               onChange={(e) => {
@@ -3200,14 +3155,13 @@ function DocumentEditor({
                 if (f) replaceFile(f);
                 e.target.value = "";
               }}
-            />
-          </label>
+            />{t("gatekeeper-context.ContextLibraryPage.replace")}</label>
         )}
         {showModeToggle && (
           <div className="inline-flex h-8 shrink-0 items-center rounded-lg border border-kumo-line bg-kumo-fill p-0.5">
             {[
-              { m: "read" as const, Icon: Eye, label: "View" },
-              { m: "edit" as const, Icon: readOnly ? Code : PencilSimple, label: readOnly ? "Source" : "Edit" },
+              { m: "read" as const, Icon: Eye, label: t("gatekeeper-context.ContextLibraryPage.view") },
+              { m: "edit" as const, Icon: readOnly ? Code : PencilSimple, label: readOnly ? t("gatekeeper-context.ContextLibraryPage.source") : t("gatekeeper-context.ContextLibraryPage.edit") },
             ].map(({ m, Icon, label }) => (
               <button
                 key={m}
@@ -3233,7 +3187,7 @@ function DocumentEditor({
           <span className="mx-0.5 h-5 w-px shrink-0 bg-kumo-line" aria-hidden="true" />
           <button
             onClick={onRequestDelete}
-            title="Delete document"
+            title={t("gatekeeper-context.ContextLibraryPage.delete_document")}
             className="press flex h-8 w-8 items-center justify-center rounded-md text-kumo-subtle transition-colors hover:bg-kumo-tint hover:text-kumo-danger"
           >
             <Trash size={16} />
@@ -3246,23 +3200,19 @@ function DocumentEditor({
           declare their own description show it read-only; otherwise the author writes it. */}
       <div className="border-b border-kumo-line px-6 py-3.5 sm:px-10">
         <label className="mb-1.5 block text-[12px] font-medium tracking-[-0.15px] text-kumo-subtle">
-          When to use this
-          {skillName && (
+          {renderTranslation(t("gatekeeper-context.ContextLibraryPage.when_to_use_this_2"), { value: skillName && (
             <span className="ml-1 font-mono text-kumo-brand">· /{skillName}</span>
-          )}
-          {extractedDescription !== null && (
+          ), value1: extractedDescription !== null && (
             <span
               className="ml-1 text-kumo-inactive"
-              title="Defined in this file; edit it in the document below."
+              title={t("gatekeeper-context.ContextLibraryPage.defined_in_this_file_edit_it_in_the_document_below")}
             >
-              · from file
-            </span>
-          )}
-        </label>
+              {t("gatekeeper-context.ContextLibraryPage.from_file")}</span>
+          ) })}</label>
         {extractedDescription !== null ? (
           <p className="max-w-3xl text-[14px] leading-5 tracking-[-0.2px] text-kumo-default">
             {effectiveDescription || (
-              <span className="italic text-kumo-inactive">No description in this file yet.</span>
+              <span className="italic text-kumo-inactive">{t("gatekeeper-context.ContextLibraryPage.no_description_in_this_file_yet")}</span>
             )}
           </p>
         ) : descriptionIsEditable ? (
@@ -3273,13 +3223,13 @@ function DocumentEditor({
               setDescription(nextDescription);
               setDirty(documentIsDirty(nextDescription, body));
             }}
-            placeholder="Describe what this document contains and when an agent should use it…"
+            placeholder={t("gatekeeper-context.ContextLibraryPage.describe_what_this_document_contains_and_when_an_agent_should_us")}
             className="w-full bg-transparent text-[14px] leading-5 tracking-[-0.2px] text-kumo-default placeholder:text-kumo-inactive focus:outline-none"
           />
         ) : (
           <p className="max-w-3xl text-[14px] leading-5 tracking-[-0.2px] text-kumo-default">
             {description || (
-              <span className="italic text-kumo-inactive">No description yet.</span>
+              <span className="italic text-kumo-inactive">{t("gatekeeper-context.ContextLibraryPage.no_description_yet")}</span>
             )}
           </p>
         )}
@@ -3317,34 +3267,34 @@ const monoFont =
 // Token colors matching the Workshop's Monaco theme, including its subdued markdown (headers use
 // keyword purple, URLs green, the rest default).
 const gadgetsHighlightStyleLight = HighlightStyle.define([
-  { tag: t.comment, color: "#a39990", fontStyle: "italic" },
+  { tag: highlightTags.comment, color: "#a39990", fontStyle: "italic" },
   {
     tag: [
-      t.keyword,
-      t.moduleKeyword,
-      t.controlKeyword,
-      t.operatorKeyword,
-      t.definitionKeyword,
-      t.modifier,
-      t.self,
+      highlightTags.keyword,
+      highlightTags.moduleKeyword,
+      highlightTags.controlKeyword,
+      highlightTags.operatorKeyword,
+      highlightTags.definitionKeyword,
+      highlightTags.modifier,
+      highlightTags.self,
     ],
     color: "#8e3aa6",
   },
-  { tag: t.operator, color: "#6b6157" },
-  { tag: [t.string, t.special(t.string), t.regexp, t.escape], color: "#4d8a44" },
-  { tag: [t.number, t.bool, t.null, t.atom], color: "#b56a1f" },
-  { tag: [t.typeName, t.className, t.namespace], color: "#b56a1f" },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#3a72c9" },
-  { tag: [t.variableName, t.propertyName], color: "#1f1d1a" },
-  { tag: t.constant(t.variableName), color: "#b56a1f" },
-  { tag: t.standard(t.variableName), color: "#3a72c9" },
-  { tag: [t.punctuation, t.separator, t.bracket, t.paren, t.brace], color: "#6b6157" },
-  { tag: t.tagName, color: "#c14438" },
-  { tag: t.attributeName, color: "#b56a1f" },
-  { tag: t.attributeValue, color: "#4d8a44" },
+  { tag: highlightTags.operator, color: "#6b6157" },
+  { tag: [highlightTags.string, highlightTags.special(highlightTags.string), highlightTags.regexp, highlightTags.escape], color: "#4d8a44" },
+  { tag: [highlightTags.number, highlightTags.bool, highlightTags.null, highlightTags.atom], color: "#b56a1f" },
+  { tag: [highlightTags.typeName, highlightTags.className, highlightTags.namespace], color: "#b56a1f" },
+  { tag: [highlightTags.function(highlightTags.variableName), highlightTags.function(highlightTags.propertyName)], color: "#3a72c9" },
+  { tag: [highlightTags.variableName, highlightTags.propertyName], color: "#1f1d1a" },
+  { tag: highlightTags.constant(highlightTags.variableName), color: "#b56a1f" },
+  { tag: highlightTags.standard(highlightTags.variableName), color: "#3a72c9" },
+  { tag: [highlightTags.punctuation, highlightTags.separator, highlightTags.bracket, highlightTags.paren, highlightTags.brace], color: "#6b6157" },
+  { tag: highlightTags.tagName, color: "#c14438" },
+  { tag: highlightTags.attributeName, color: "#b56a1f" },
+  { tag: highlightTags.attributeValue, color: "#4d8a44" },
   // Markdown: match Monaco (headers = keyword purple, URLs green, the rest default).
-  { tag: t.heading, color: "#8e3aa6" },
-  { tag: t.url, color: "#4d8a44" },
+  { tag: highlightTags.heading, color: "#8e3aa6" },
+  { tag: highlightTags.url, color: "#4d8a44" },
 ]);
 
 const gadgetsEditorThemeLight = EditorView.theme(
@@ -3386,33 +3336,33 @@ const gadgetsEditorThemeLight = EditorView.theme(
 );
 
 const gadgetsHighlightStyleDark = HighlightStyle.define([
-  { tag: t.comment, color: "#858396", fontStyle: "italic" },
+  { tag: highlightTags.comment, color: "#858396", fontStyle: "italic" },
   {
     tag: [
-      t.keyword,
-      t.moduleKeyword,
-      t.controlKeyword,
-      t.operatorKeyword,
-      t.definitionKeyword,
-      t.modifier,
-      t.self,
+      highlightTags.keyword,
+      highlightTags.moduleKeyword,
+      highlightTags.controlKeyword,
+      highlightTags.operatorKeyword,
+      highlightTags.definitionKeyword,
+      highlightTags.modifier,
+      highlightTags.self,
     ],
     color: "#d8b4fe",
   },
-  { tag: t.operator, color: "#b9b5c8" },
-  { tag: [t.string, t.special(t.string), t.regexp, t.escape], color: "#86efac" },
-  { tag: [t.number, t.bool, t.null, t.atom], color: "#fbbf24" },
-  { tag: [t.typeName, t.className, t.namespace], color: "#fbbf24" },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#93c5fd" },
-  { tag: [t.variableName, t.propertyName], color: "#e8e6f0" },
-  { tag: t.constant(t.variableName), color: "#fbbf24" },
-  { tag: t.standard(t.variableName), color: "#93c5fd" },
-  { tag: [t.punctuation, t.separator, t.bracket, t.paren, t.brace], color: "#b9b5c8" },
-  { tag: t.tagName, color: "#fca5a5" },
-  { tag: t.attributeName, color: "#fbbf24" },
-  { tag: t.attributeValue, color: "#86efac" },
-  { tag: t.heading, color: "#d8b4fe" },
-  { tag: t.url, color: "#86efac" },
+  { tag: highlightTags.operator, color: "#b9b5c8" },
+  { tag: [highlightTags.string, highlightTags.special(highlightTags.string), highlightTags.regexp, highlightTags.escape], color: "#86efac" },
+  { tag: [highlightTags.number, highlightTags.bool, highlightTags.null, highlightTags.atom], color: "#fbbf24" },
+  { tag: [highlightTags.typeName, highlightTags.className, highlightTags.namespace], color: "#fbbf24" },
+  { tag: [highlightTags.function(highlightTags.variableName), highlightTags.function(highlightTags.propertyName)], color: "#93c5fd" },
+  { tag: [highlightTags.variableName, highlightTags.propertyName], color: "#e8e6f0" },
+  { tag: highlightTags.constant(highlightTags.variableName), color: "#fbbf24" },
+  { tag: highlightTags.standard(highlightTags.variableName), color: "#93c5fd" },
+  { tag: [highlightTags.punctuation, highlightTags.separator, highlightTags.bracket, highlightTags.paren, highlightTags.brace], color: "#b9b5c8" },
+  { tag: highlightTags.tagName, color: "#fca5a5" },
+  { tag: highlightTags.attributeName, color: "#fbbf24" },
+  { tag: highlightTags.attributeValue, color: "#86efac" },
+  { tag: highlightTags.heading, color: "#d8b4fe" },
+  { tag: highlightTags.url, color: "#86efac" },
 ]);
 
 const gadgetsEditorThemeDark = EditorView.theme(
@@ -3483,6 +3433,7 @@ function SourceEditor({
   readOnly?: boolean;
   path: string;
 }) {
+  useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   // Keep the latest onChange without recreating the editor.

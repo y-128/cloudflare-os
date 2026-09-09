@@ -43,6 +43,7 @@ export default defineConfig({
         compatibilityDate: '2026-09-04',
         compatibilityFlags: ['experimental', 'nodejs_compat'],
         durableObjects: {
+          TEST_LINK_DIRECTORY: { className: 'LinkDirectoryDurableObject', useSQLite: true },
           TEST_OVERSEER: { className: 'OverseerDurableObject', useSQLite: true },
         },
       },

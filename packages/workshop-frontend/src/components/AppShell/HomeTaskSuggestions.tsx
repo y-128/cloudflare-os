@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import { useMemo } from 'react'
 import {
   AppWindow,
@@ -24,43 +25,38 @@ type TaskSuggestion = {
 const SUGGESTIONS: TaskSuggestion[] = [
   {
     id: 'one-on-one',
-    label: 'Write a 1:1 pre-read',
-    description: 'A doc with a snapshot, things to inspect, and one ask',
+    get label() { return t("workshop-frontend.HomeTaskSuggestions.write_a_1_1_pre_read"); },
+    get description() { return t("workshop-frontend.HomeTaskSuggestions.a_doc_with_a_snapshot_things_to_inspect_and_one_ask"); },
     icon: FileText,
-    prompt:
-      'Create a document to prepare for my next 1:1 with a direct report: a current snapshot, a coaching frame, things to inspect, carryover items from last time, and one clear ask.',
+    get prompt() { return t("workshop-frontend.HomeTaskSuggestions.create_a_document_to_prepare_for_my_next_1_1_with_a_direct_report"); },
   },
   {
     id: 'team-meeting',
-    label: 'Build a team meeting deck',
-    description: 'Slides with progress, risks, and what needs a decision',
+    get label() { return t("workshop-frontend.HomeTaskSuggestions.build_a_team_meeting_deck"); },
+    get description() { return t("workshop-frontend.HomeTaskSuggestions.slides_with_progress_risks_and_what_needs_a_decision"); },
     icon: Presentation,
-    prompt:
-      'Create a slide deck for my next team meeting: where things stand, what shipped, risks and blockers, and the decisions I need from the room. Ask me what the team is working on first.',
+    get prompt() { return t("workshop-frontend.HomeTaskSuggestions.create_a_slide_deck_for_my_next_team_meeting_where_things_stand_w"); },
   },
   {
     id: 'insights',
-    label: 'Find insights in my data',
-    description: 'Turn a spreadsheet or CSV into trends and recommendations',
+    get label() { return t("workshop-frontend.HomeTaskSuggestions.find_insights_in_my_data"); },
+    get description() { return t("workshop-frontend.HomeTaskSuggestions.turn_a_spreadsheet_or_csv_into_trends_and_recommendations"); },
     icon: ChartLineUp,
-    prompt:
-      'Turn a dataset I will share (a spreadsheet, CSV, or pasted table) into a narrative analysis: key trends, anomalies, the "so what", and concrete recommendations.',
+    get prompt() { return t("workshop-frontend.HomeTaskSuggestions.turn_a_dataset_i_will_share_a_spreadsheet_csv_or_pasted_table_int"); },
   },
   {
     id: 'workflow',
-    label: 'Automate a workflow',
-    description: 'Trigger an agent when a new email arrives',
+    get label() { return t("workshop-frontend.HomeTaskSuggestions.automate_a_workflow"); },
+    get description() { return t("workshop-frontend.HomeTaskSuggestions.trigger_an_agent_when_a_new_email_arrives"); },
     icon: Lightning,
-    prompt:
-      'Create an agent workflow that runs automatically when a new email arrives: read the message, decide what to do, and take action or draft a reply. Ask me which inbox to watch and what it should handle.',
+    get prompt() { return t("workshop-frontend.HomeTaskSuggestions.create_an_agent_workflow_that_runs_automatically_when_a_new_email"); },
   },
   {
     id: 'app',
-    label: 'Build a quick tool',
-    description: 'A small interactive app, calculator, or dashboard',
+    get label() { return t("workshop-frontend.HomeTaskSuggestions.build_a_quick_tool"); },
+    get description() { return t("workshop-frontend.HomeTaskSuggestions.a_small_interactive_app_calculator_or_dashboard"); },
     icon: AppWindow,
-    prompt:
-      'Build a small interactive tool I can use right here — a calculator, dashboard, or explorer. Ask me what it should do, then create it.',
+    get prompt() { return t("workshop-frontend.HomeTaskSuggestions.build_a_small_interactive_tool_i_can_use_right_here_a_calculator_"); },
   },
 ]
 
@@ -76,6 +72,7 @@ function SuggestionRow({
   description: string
   onClick: () => void
 }) {
+  useTranslation();
   return (
     <li>
       <button
@@ -118,14 +115,14 @@ export default function HomeTaskSuggestions({
 }: {
   onPick: (prompt: string) => void
 }) {
+  const { t } = useTranslation();
   // Chosen once per mount: re-rolling on every render would shuffle the list under the pointer.
   const visible = useMemo(pickSuggestions, [])
 
   return (
-    <section aria-label="Example tasks" className="flex flex-col gap-1">
+    <section aria-label={t("workshop-frontend.HomeTaskSuggestions.example_tasks")} className="flex flex-col gap-1">
       <h3 className="px-1 pb-1 text-[12px] font-medium uppercase tracking-[0.06em] text-kumo-inactive">
-        Get started
-      </h3>
+        {t("workshop-frontend.HomeTaskSuggestions.get_started")}</h3>
       <ul className="flex flex-col gap-0.5">
         {visible.map((suggestion) => (
           <SuggestionRow

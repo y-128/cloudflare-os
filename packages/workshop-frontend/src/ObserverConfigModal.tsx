@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import { useState, useEffect, useRef } from 'react'
 import { Dialog, Select, Loader, Text, useKumoToastManager } from '@cloudflare/kumo'
 import { Warning, Plus, ArrowClockwise, CheckCircle } from '@phosphor-icons/react'
@@ -40,7 +41,7 @@ interface AccountInfo {
 // How to name one of the user's accounts in the UI. Falls back to the id, which is all we can show
 // for an account that has since been disconnected (so `accounts` no longer has it).
 function accountLabel(account: AccountInfo | undefined, accountId: number): string {
-  return account?.description.uniqueName || account?.description.displayName || `Account ${accountId}`
+  return account?.description.uniqueName || account?.description.displayName || t("workshop-frontend.ObserverConfigModal.account", { value1: accountId })
 }
 
 // Return the grantable resource type needed to verify one observer binding. Account metadata is
@@ -80,6 +81,7 @@ export default function ObserverConfigModal({
   onConfirm,
   onCancel,
 }: ObserverConfigModalProps) {
+  const { t } = useTranslation();
   const toasts = useKumoToastManager()
 
   const [accounts, setAccounts] = useState<Map<number, AccountInfo>>(new Map())
@@ -142,7 +144,7 @@ export default function ObserverConfigModal({
       // Loud on purpose: the modal has no retry path, so a quieted transient failure would
       // strand the user on a permanent loader.
       console.error('Failed to subscribe to connected accounts:', err)
-      toasts.add({ title: 'Failed to load your connected accounts', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.ObserverConfigModal.failed_to_load_your_connected_accounts"), variant: 'error' })
     })
 
     return () => {
@@ -219,7 +221,7 @@ export default function ObserverConfigModal({
       }
     } catch (err) {
       console.error('Failed to initiate connection:', err)
-      toasts.add({ title: 'Failed to start connection flow', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.ObserverConfigModal.failed_to_start_connection_flow"), variant: 'error' })
       connectingRef.current = null
       setConnecting(null)
     }
@@ -233,7 +235,7 @@ export default function ObserverConfigModal({
       // Subscription fires add() with credentialsValid:true on completion, clearing `reconnecting`.
     } catch (err) {
       console.error('Failed to initiate reconnection:', err)
-      toasts.add({ title: 'Failed to start re-authentication flow', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.ObserverConfigModal.failed_to_start_re_authentication_flow"), variant: 'error' })
       setReconnecting(null)
     }
   }
@@ -275,7 +277,7 @@ export default function ObserverConfigModal({
       }
     } catch (err) {
       console.error('Failed to request additional access:', err)
-      toasts.add({ title: 'Failed to request additional access', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.GatekeeperModal.failed_to_request_additional_access"), variant: 'error' })
       setGranting(null)
     }
   }
@@ -315,14 +317,12 @@ export default function ObserverConfigModal({
     <Dialog.Root open disablePointerDismissal onOpenChange={open => { if (!open) onCancel() }}>
       <Dialog className="responsive-dialog overflow-y-auto p-6" size="lg">
         <Dialog.Title className="mb-2 text-lg font-semibold">
-          {isRetry ? 'Verify your access again' : 'Verify your access'}
+          {isRetry ? t("workshop-frontend.ObserverConfigModal.verify_your_access_again") : t("workshop-frontend.ObserverConfigModal.verify_your_access")}
         </Dialog.Title>
         <Text variant="secondary" size="sm" as="p">
           {isRetry
-            ? 'We couldn’t confirm your access to everything this workspace has read. Re-authenticate ' +
-              'the account below, or choose a different one, then try again.'
-            : 'Before opening this workspace, confirm that your own accounts can access the connected ' +
-              'data it uses.'}
+            ? t("workshop-frontend.ObserverConfigModal.we_couldn_t_confirm_your_access_to_everything_this_workspace_has_")
+            : t("workshop-frontend.ObserverConfigModal.before_opening_this_workspace_confirm_that_your_own_accounts_can_")}
         </Text>
 
         {!ready || !vendorsReady ? (
@@ -365,7 +365,7 @@ export default function ObserverConfigModal({
                         onClick={() => handleConnect(need)}
                         disabled={connecting === need.vendorId}
                       >
-                        {connecting === need.vendorId ? 'Waiting for connection…' : 'Connect'}
+                        {connecting === need.vendorId ? t("workshop-frontend.ObserverConfigModal.waiting_for_connection") : t("workshop-frontend.ObserverConfigModal.connect")}
                       </WorkshopButton>
                     )}
                   </div>
@@ -390,15 +390,14 @@ export default function ObserverConfigModal({
                       {matching.length === 1 ? (
                         <div className="flex min-h-10 items-center gap-3 rounded-lg border border-kumo-line bg-kumo-elevated/50 px-3 py-2">
                           <div className="min-w-0 flex-1">
-                            <div className="text-[11px] leading-4 text-kumo-subtle">Using your account</div>
+                            <div className="text-[11px] leading-4 text-kumo-subtle">{t("workshop-frontend.ObserverConfigModal.using_your_account")}</div>
                             <div className="truncate text-sm font-medium text-kumo-default">
                               {accountLabel(matching[0], matching[0].id)}
                             </div>
                           </div>
                           {accountSatisfies(need, matching[0]) && (
                             <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-kumo-success">
-                              <CheckCircle size={15} weight="fill" /> Ready
-                            </span>
+                              <CheckCircle size={15} weight="fill" />{t("workshop-frontend.Inbox.mailbox_ready")}</span>
                           )}
                         </div>
                       ) : (
@@ -409,7 +408,7 @@ export default function ObserverConfigModal({
                               ? String(choices[need.gatekeeperId])
                               : undefined
                           }
-                          placeholder={`Choose a ${vendorName} account…`}
+                          placeholder={t("workshop-frontend.ObserverConfigModal.choose_a_account", { value1: vendorName })}
                           onValueChange={v =>
                             setChoices(prev => ({ ...prev, [need.gatekeeperId]: Number(v) }))
                           }
@@ -418,7 +417,7 @@ export default function ObserverConfigModal({
                           {matching.map(acct => (
                             <Select.Option key={acct.id} value={String(acct.id)}>
                               {accountLabel(acct, acct.id)}
-                              {!acct.credentialsValid ? ' (expired)' : ''}
+                              {!acct.credentialsValid ? t("workshop-frontend.ObserverConfigModal.expired") : ''}
                             </Select.Option>
                           ))}
                         </Select>
@@ -439,8 +438,8 @@ export default function ObserverConfigModal({
                             <Warning size={12} />
                           )}
                           {granting === chosen.id
-                            ? 'Waiting for access…'
-                            : 'Grant the access needed to verify this resource'}
+                            ? t("workshop-frontend.ObserverConfigModal.waiting_for_access")
+                            : t("workshop-frontend.ObserverConfigModal.grant_the_access_needed_to_verify_this_resource")}
                         </button>
                       )}
 
@@ -463,10 +462,10 @@ export default function ObserverConfigModal({
                             <Warning size={12} />
                           )}
                           {reconnecting === chosen.id
-                            ? 'Re-authenticating…'
+                            ? t("workshop-frontend.ObserverConfigModal.re_authenticating")
                             : chosen.credentialsValid
-                              ? 'Click to re-authenticate this account'
-                              : 'This account has expired — click to re-authenticate'}
+                              ? t("workshop-frontend.ObserverConfigModal.click_to_re_authenticate_this_account")
+                              : t("workshop-frontend.ObserverConfigModal.this_account_has_expired_click_to_re_authenticate")}
                         </button>
                       )}
 
@@ -478,7 +477,7 @@ export default function ObserverConfigModal({
                           className="flex items-center gap-1 text-xs text-kumo-subtle hover:text-kumo-default disabled:opacity-60 self-start"
                         >
                           <Plus size={11} />
-                          {connecting === need.vendorId ? 'Waiting for connection…' : 'Connect a different account'}
+                          {connecting === need.vendorId ? t("workshop-frontend.ObserverConfigModal.waiting_for_connection") : t("workshop-frontend.ObserverConfigModal.connect_a_different_account")}
                         </button>
                       )}
                     </div>
@@ -491,14 +490,13 @@ export default function ObserverConfigModal({
 
         <div className="flex justify-end gap-2 mt-6">
           <WorkshopButton tone="secondary" onClick={onCancel}>
-            Cancel
-          </WorkshopButton>
+            {t("workshop-frontend.ObserverConfigModal.cancel")}</WorkshopButton>
           <WorkshopButton
             tone="primary"
             onClick={handleConfirm}
             disabled={!ready || !vendorsReady || !allSatisfied}
           >
-            {isRetry ? 'Verify again' : 'Verify and open'}
+            {isRetry ? t("workshop-frontend.ObserverConfigModal.verify_again") : t("workshop-frontend.ObserverConfigModal.verify_and_open")}
           </WorkshopButton>
         </div>
       </Dialog>

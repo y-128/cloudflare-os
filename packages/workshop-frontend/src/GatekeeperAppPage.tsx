@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { useEffect, useState } from 'react'
 import type { GatekeeperUiFrame } from '@gadgets/workshop-shared/gatekeeper'
 import { useAuthenticatedApi } from './AuthContext'
@@ -14,6 +15,7 @@ function disposeFrame(frame: GatekeeperUiFrame | null) {
  * Fetches the app frame (iframe HTML + `ui` capability) from the backend and hosts it.
  */
 export default function GatekeeperAppPage({ appId }: { appId: string }) {
+  const { t } = useTranslation();
   const { authenticatedApi } = useAuthenticatedApi()
   // Wrap the frame in an object: it holds a `ui` RPC stub, and we never want useState's setter to
   // treat a stored value as an updater function.
@@ -27,7 +29,7 @@ export default function GatekeeperAppPage({ appId }: { appId: string }) {
       .getGatekeeperApp(appId)
       .then((frame) => {
         if (!frame) {
-          if (!cancelled) setError('This app is not available on this deployment.')
+          if (!cancelled) setError(t("workshop-frontend.GatekeeperAppPage.this_app_is_not_available_on_this_deployment"))
           return
         }
         if (cancelled) {
@@ -56,7 +58,7 @@ export default function GatekeeperAppPage({ appId }: { appId: string }) {
     )
   }
   if (!state) {
-    return <div className="px-4 py-16 text-center text-sm text-kumo-subtle">Loading…</div>
+    return <div className="px-4 py-16 text-center text-sm text-kumo-subtle">{t("workshop-frontend.GatekeeperAppPage.loading")}</div>
   }
 
   // Fill the routed area below the header so the embedded app can manage its own internal layout.

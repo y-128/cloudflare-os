@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { logRpcFailure } from '../rpcErrors'
 import { createFileRoute } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
@@ -58,6 +59,7 @@ function VendorIconTile({
   size?: number
   className?: string
 }) {
+  useTranslation();
   return (
     <div
       className={`relative grid shrink-0 place-items-center ${className}`}
@@ -103,6 +105,7 @@ function ConnectorCard({
   reconnectBusy = false,
   view = 'grid',
 }: ConnectorCardProps) {
+  const { t } = useTranslation();
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.currentTarget !== event.target) return
     if (event.key === 'Enter' || event.key === ' ') {
@@ -148,7 +151,7 @@ function ConnectorCard({
         className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-kumo-line bg-kumo-base px-3 text-[12px] leading-4 font-medium tracking-[-0.2px] text-kumo-default transition-[background-color,border-color,opacity,transform] duration-150 ease-out hover:border-kumo-fill hover:bg-kumo-tint active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
       >
         <ArrowsClockwise size={12} weight="bold" />
-        {reconnectBusy ? 'Opening...' : 'Reconnect'}
+        {reconnectBusy ? t("workshop-frontend.gatekeepers.opening") : t("workshop-frontend.gatekeepers.reconnect")}
       </button>
     ) : (
       <div className="grid h-7 w-7 place-items-center text-kumo-inactive transition-colors group-hover:text-kumo-default">
@@ -237,6 +240,7 @@ function ConnectorCard({
 }
 
 function SectionEyebrow({ label, count }: { label: string; count?: number }) {
+  useTranslation();
   return (
     <div className="mb-3.5 flex items-center gap-3 px-1">
       <h2 className="m-0 text-[11px] leading-4 font-semibold uppercase tracking-[0.9px] text-kumo-subtle">
@@ -261,6 +265,7 @@ function ConnectorsHeroDiagram({
   vendors: VendorEntry[]
   siteName: string
 }) {
+  const { t } = useTranslation();
   const [hoveredSource, setHoveredSource] = useState<number | null>(null)
   const seen = new Set<string>()
   const nodes = [
@@ -402,7 +407,7 @@ function ConnectorsHeroDiagram({
         <button
           type="button"
           className="themed-card-hover-shadow grid h-[52px] w-[52px] place-items-center rounded-2xl border border-kumo-line bg-kumo-base text-kumo-brand transition-[border-color,box-shadow] hover:border-kumo-fill focus:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring focus-visible:ring-offset-2 focus-visible:ring-offset-kumo-base"
-          aria-label="Gatekeeper keeps Gadget access limited to connected resources"
+          aria-label={t("workshop-frontend.gatekeepers.gatekeeper_keeps_gadget_access_limited_to_connected_resources")}
         >
           <ShieldCheck size={21} weight="duotone" />
         </button>
@@ -413,11 +418,9 @@ function ConnectorsHeroDiagram({
             </div>
             <div className="min-w-0">
               <p className="m-0 text-[12px] leading-4 font-semibold tracking-[-0.2px] text-kumo-default">
-                Gatekeeper
-              </p>
+                {t("workshop-frontend.gatekeepers.gatekeeper")}</p>
               <p className="mt-1 text-[11px] leading-4 font-normal tracking-[-0.1px] text-kumo-subtle">
-                Keeps each workspace limited to the resources you connect and ensures every user has the required permissions before accessing them.
-              </p>
+                {t("workshop-frontend.gatekeepers.keeps_each_workspace_limited_to_the_resources_you_connect_and_en")}</p>
             </div>
           </div>
           <span className="absolute left-1/2 bottom-[-5px] h-2.5 w-2.5 -translate-x-1/2 rotate-45 border-b border-r border-kumo-line bg-kumo-base" />
@@ -442,7 +445,8 @@ type ModalTarget =
   | null
 
 function ConnectorsPage() {
-  useDocumentTitle('Gatekeepers')
+  const { t } = useTranslation();
+  useDocumentTitle(t("workshop-frontend.gatekeepers.gatekeepers"))
   const siteName = useSiteName()
 
   const { authenticatedApi } = useAuthenticatedApi()
@@ -495,7 +499,7 @@ function ConnectorsPage() {
         const unavailable = vendorList.filter((v) => v.unavailable)
         if (unavailable.length > 0) {
           toasts.add({
-            title: `Some services are temporarily unavailable: ${unavailable.map((v) => v.id).join(', ')}`,
+            title: t("workshop-frontend.gatekeepers.some_services_are_temporarily_unavailable", { value1: unavailable.map((v) => v.id).join(', ') }),
             variant: 'warning',
           })
         }
@@ -582,7 +586,7 @@ function ConnectorsPage() {
       handleCloseModal()
     } catch (err) {
       console.error('Failed to connect account:', err)
-      toasts.add({ title: 'Failed to start connection', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.gatekeepers.failed_to_start_connection"), variant: 'error' })
     } finally {
       setConnecting(false)
     }
@@ -603,7 +607,7 @@ function ConnectorsPage() {
       // once `grantedResourceUrlPatterns` updates.
     } catch (err) {
       console.error('Failed to expand account access:', err)
-      toasts.add({ title: 'Failed to request additional access', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.gatekeepers.failed_to_request_additional_access"), variant: 'error' })
     } finally {
       setEnsuringResourceUrlPatterns((prev) =>
         prev.filter((p) => !resourceUrlPatterns.includes(p)),
@@ -624,7 +628,7 @@ function ConnectorsPage() {
       handleCloseModal()
     } catch (err) {
       console.error('Failed to disconnect account:', err)
-      toasts.add({ title: 'Failed to disconnect account', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.gatekeepers.failed_to_disconnect_account"), variant: 'error' })
     } finally {
       setDisconnecting(false)
     }
@@ -637,7 +641,7 @@ function ConnectorsPage() {
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
       console.error('Failed to reconnect account:', err)
-      toasts.add({ title: 'Failed to reconnect account', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.gatekeepers.failed_to_reconnect_account"), variant: 'error' })
     } finally {
       setReconnectingAccountId(null)
     }
@@ -720,12 +724,9 @@ function ConnectorsPage() {
         <header className="mb-8 grid gap-8 lg:grid-cols-[minmax(0,540px)_444px] lg:items-center lg:justify-between">
           <div>
             <h1 className="m-0 text-3xl font-semibold leading-tight tracking-tight text-kumo-default sm:text-[34px]">
-              Gatekeepers
-            </h1>
+              {t("workshop-frontend.gatekeepers.gatekeepers")}</h1>
             <p className="mt-2 text-[14px] leading-[20px] font-normal tracking-[-0.25px] text-kumo-subtle">
-              Add the apps and accounts your workspaces can use. Connect once, then wire
-              them into anything you build.
-            </p>
+              {t("workshop-frontend.gatekeepers.add_the_apps_and_accounts_your_workspaces_can_use_connect_once_th")}</p>
           </div>
           <ConnectorsHeroDiagram accounts={accounts} vendors={vendors} siteName={siteName} />
         </header>
@@ -740,7 +741,7 @@ function ConnectorsPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search gatekeepers…"
+              placeholder={t("workshop-frontend.gatekeepers.search_gatekeepers")}
               className="h-10 w-full rounded-lg border border-kumo-line bg-kumo-base pl-9 pr-4 text-[14px] leading-5 tracking-[-0.25px] text-kumo-default placeholder:text-kumo-inactive transition-[border-color,box-shadow] focus:border-kumo-ring focus:outline-none focus:ring-[3px] focus:ring-kumo-ring/15"
             />
           </div>
@@ -750,29 +751,26 @@ function ConnectorsPage() {
         {loadError && (
           <div className="rounded-2xl border border-kumo-line bg-kumo-base px-4 py-6 text-center">
             <p className="m-0 text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-danger">
-              Something went wrong loading your gatekeepers.
-            </p>
+              {t("workshop-frontend.gatekeepers.something_went_wrong_loading_your_gatekeepers")}</p>
             <p className="mt-1 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-              Check your connection and try refreshing the page.
-            </p>
+              {t("workshop-frontend.gatekeepers.check_your_connection_and_try_refreshing_the_page")}</p>
           </div>
         )}
 
         {initialLoading && (
           <div className="rounded-2xl border border-kumo-line bg-kumo-base px-4 py-8 text-center text-[13px] leading-[18px] font-normal tracking-[-0.25px] text-kumo-subtle">
-            Loading gatekeepers...
-          </div>
+            {t("workshop-frontend.gatekeepers.loading_gatekeepers")}</div>
         )}
 
         {filteredAccounts.length > 0 && (
           <section className="mb-10">
-            <SectionEyebrow label="Connected" count={filteredAccounts.length} />
+            <SectionEyebrow label={t("workshop-frontend.gatekeepers.connected")} count={filteredAccounts.length} />
             <div className={sectionGridClass}>
               {filteredAccounts.map((account) => {
                 const displayName =
                   account.accountDescription.displayName ??
                   account.accountDescription.uniqueName ??
-                  'Connected'
+                  t("workshop-frontend.gatekeepers.connected")
                 const tagline = account.vendorDescription.tagline
                 return (
                   <ConnectorCard
@@ -789,7 +787,7 @@ function ConnectorsPage() {
                       >
                         {account.credentialsValid
                           ? displayName
-                          : 'Credentials expired'}
+                          : t("workshop-frontend.gatekeepers.credentials_expired")}
                       </span>
                     }
                     tagline={tagline}
@@ -807,7 +805,7 @@ function ConnectorsPage() {
 
         {filteredAvailable.length > 0 && (
           <section className="mb-10">
-            <SectionEyebrow label="Available" />
+            <SectionEyebrow label={t("workshop-frontend.gatekeepers.available")} />
             <div className={sectionGridClass}>
 
               {filteredAvailable.map((vendor) => (
@@ -834,13 +832,13 @@ function ConnectorsPage() {
             <EmptyState
               title={
                 search
-                  ? 'No gatekeepers match'
-                  : 'No gatekeepers yet'
+                  ? t("workshop-frontend.gatekeepers.no_gatekeepers_match")
+                  : t("workshop-frontend.gatekeepers.no_gatekeepers_yet")
               }
               description={
                 search
-                  ? "We couldn't find anything matching your search."
-                  : 'Gatekeepers will appear here as they become available in your workspace.'
+                  ? t("workshop-frontend.gatekeepers.we_couldn_t_find_anything_matching_your_search")
+                  : t("workshop-frontend.gatekeepers.gatekeepers_will_appear_here_as_they_become_available_in_your_wo")
               }
               icon={Plugs}
             />

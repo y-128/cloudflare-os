@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import { useState, useEffect } from 'react'
 import { Dialog, Button, Input, Select, SensitiveInput, Collapsible, useKumoToastManager } from '@cloudflare/kumo'
 import { AiChatAuthorInfo, AiModelConfig, AiModelProvider, AiGatewayInfo, SUGGESTED_MODELS } from '@gadgets/workshop-shared/api'
@@ -30,7 +31,7 @@ const API_TOKEN_PLACEHOLDERS: Record<AiModelProvider, string> = {
   openai: 'sk-...',
   google: 'AIza...',
   cloudflare: 'Cloudflare API token',
-  ollama: '(optional)',
+  get ollama() { return t("workshop-frontend.AddModelModal.optional"); },
 }
 
 // Example used in the custom-model placeholders for providers that have no suggested models
@@ -81,7 +82,7 @@ function buildOptions(gatewayMode: boolean, enabledProviders: Set<string> | null
 
     options.push({
       value: encodeSelection(provider),
-      label: `Other ${PROVIDER_LABELS[provider] || provider}...`,
+      label: t("workshop-frontend.AddModelModal.other", { value1: PROVIDER_LABELS[provider] || provider }),
       provider,
     })
   }
@@ -90,6 +91,7 @@ function buildOptions(gatewayMode: boolean, enabledProviders: Set<string> | null
 }
 
 export default function AddModelModal({ visible, onCancel, onSuccess, authenticatedApi, aiConfig }: AddModelModalProps) {
+  const { t } = useTranslation();
   const toasts = useKumoToastManager()
 
   const [loading, setLoading] = useState(false)
@@ -151,12 +153,12 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
     const newErrors: Record<string, string> = {}
 
     if (!selection) {
-      newErrors.selection = gatewayMode ? 'Please select a provider' : 'Please select a model'
+      newErrors.selection = gatewayMode ? t("workshop-frontend.AddModelModal.please_select_a_provider") : t("workshop-frontend.AddModelModal.please_select_a_model")
     }
 
     if (selection?.type === 'custom') {
-      if (!modelId.trim()) newErrors.modelId = 'Please enter the model ID'
-      if (!displayName.trim()) newErrors.displayName = 'Please enter a display name'
+      if (!modelId.trim()) newErrors.modelId = t("workshop-frontend.AddModelModal.please_enter_the_model_id")
+      if (!displayName.trim()) newErrors.displayName = t("workshop-frontend.GatekeeperModal.please_enter_a_display_name")
     }
 
     const isOllama = selection?.provider === 'ollama'
@@ -164,15 +166,15 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
     const showCredentials = !gatewayMode
 
     if (showCredentials && selection && !isOllama && !apiToken.trim()) {
-      newErrors.apiToken = 'Please enter your API token'
+      newErrors.apiToken = t("workshop-frontend.AddModelModal.please_enter_your_api_token")
     }
 
     if (showCredentials && isCloudflare && !accountId.trim()) {
-      newErrors.accountId = 'Please enter your Cloudflare account ID'
+      newErrors.accountId = t("workshop-frontend.AddModelModal.please_enter_your_cloudflare_account_id")
     }
 
     if (showCredentials && isOllama && !apiUrl.trim()) {
-      newErrors.apiUrl = 'Please enter the Ollama API URL'
+      newErrors.apiUrl = t("workshop-frontend.AddModelModal.please_enter_the_ollama_api_url")
     }
 
     setErrors(newErrors)
@@ -203,11 +205,11 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
       }
 
       await authenticatedApi.addModel(profile, config)
-      toasts.add({ title: 'AI model added successfully', variant: 'success' })
+      toasts.add({ title: t("workshop-frontend.AddModelModal.ai_model_added_successfully"), variant: 'success' })
       onSuccess()
     } catch (error: any) {
       console.error('Failed to add model:', error)
-      toasts.add({ title: 'Failed to add model', variant: 'error' })
+      toasts.add({ title: t("workshop-frontend.AddModelModal.failed_to_add_model"), variant: 'error' })
     } finally {
       setLoading(false)
     }
@@ -235,15 +237,14 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
     <Dialog.Root open={visible} onOpenChange={(open) => { if (!open) onCancel() }}>
       <Dialog className="responsive-dialog overflow-y-auto p-6" size="lg">
         <Dialog.Title className="text-lg font-semibold mb-4">
-          Add AI Model
-        </Dialog.Title>
+          {t("workshop-frontend.AddModelModal.add_ai_model")}</Dialog.Title>
 
         <div className="space-y-4">
           {/* Model / Provider selection */}
           <Select
-            label={gatewayMode ? 'Select Provider' : 'Select Model'}
+            label={gatewayMode ? t("workshop-frontend.AddModelModal.select_provider") : t("workshop-frontend.AddModelModal.select_model")}
             className="w-full text-sm"
-            placeholder={gatewayMode ? 'Choose a provider...' : 'Choose an AI model...'}
+            placeholder={gatewayMode ? t("workshop-frontend.AddModelModal.choose_a_provider") : t("workshop-frontend.AddModelModal.choose_an_ai_model")}
             value={selectValue}
             onValueChange={(v) => handleModelSelect(v as string)}
             error={errors.selection}
@@ -273,9 +274,9 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
           {showCustomFields && (
             <>
               <Input
-                label="Model ID"
-                placeholder={`e.g., ${example!.modelId}`}
-                description={`The model identifier as specified by the provider (e.g., '${example!.modelId}')`}
+                label={t("workshop-frontend.AddModelModal.model_id")}
+                placeholder={t("workshop-frontend.AddModelModal.e_g", { value1: example!.modelId })}
+                description={t("workshop-frontend.AddModelModal.the_model_identifier_as_specified_by_the_provider_e_g", { value1: example!.modelId })}
                 value={modelId}
                 onChange={(e) => { setModelId(e.target.value); setErrors(prev => ({ ...prev, modelId: '' })) }}
                 error={errors.modelId}
@@ -283,9 +284,9 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
               />
 
               <Input
-                label="Display Name"
-                placeholder={`e.g., ${example!.name}`}
-                description="Human-readable name shown in the UI"
+                label={t("workshop-frontend.AddModelModal.display_name")}
+                placeholder={t("workshop-frontend.AddModelModal.e_g", { value1: example!.name })}
+                description={t("workshop-frontend.AddModelModal.human_readable_name_shown_in_the_ui")}
                 value={displayName}
                 onChange={(e) => { setDisplayName(e.target.value); setErrors(prev => ({ ...prev, displayName: '' })) }}
                 error={errors.displayName}
@@ -297,9 +298,9 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
           {/* Cloudflare account ID (the Workers AI REST endpoint is account-scoped) */}
           {showCredentials && isCloudflare && (
             <Input
-              label="Cloudflare Account ID"
-              placeholder="e.g., 0123456789abcdef0123456789abcdef"
-              description="The Cloudflare account to bill for Workers AI usage"
+              label={t("workshop-frontend.AddModelModal.cloudflare_account_id")}
+              placeholder={t("workshop-frontend.AddModelModal.e_g_0123456789abcdef0123456789abcdef")}
+              description={t("workshop-frontend.AddModelModal.the_cloudflare_account_to_bill_for_workers_ai_usage")}
               value={accountId}
               onChange={(e) => { setAccountId(e.target.value); setErrors(prev => ({ ...prev, accountId: '' })) }}
               error={errors.accountId}
@@ -310,14 +311,14 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
           {/* API Token */}
           {showCredentials && selection && (
             <SensitiveInput
-              label="API Token"
+              label={t("workshop-frontend.AddModelModal.api_token")}
               placeholder={API_TOKEN_PLACEHOLDERS[selection.provider]}
               description={
                 isOllama
-                  ? 'Optional for local Ollama access'
+                  ? t("workshop-frontend.AddModelModal.optional_for_local_ollama_access")
                   : isCloudflare
-                  ? 'An API token with Workers AI Read + Edit permissions (in the dashboard: Workers AI > Use REST API > Create a Workers AI API Token)'
-                  : `Your ${PROVIDER_LABELS[selection.provider]} API token for billing`
+                  ? t("workshop-frontend.AddModelModal.an_api_token_with_workers_ai_read_edit_permissions_in_the_dashbo")
+                  : t("workshop-frontend.AddModelModal.your_api_token_for_billing", { value1: PROVIDER_LABELS[selection.provider] })
               }
               value={apiToken}
               onValueChange={(v) => { setApiToken(v); setErrors(prev => ({ ...prev, apiToken: '' })) }}
@@ -331,7 +332,7 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
             <Input
               label="API URL"
               placeholder="http://localhost:11434"
-              description="URL of your Ollama server"
+              description={t("workshop-frontend.AddModelModal.url_of_your_ollama_server")}
               value={apiUrl}
               onChange={(e) => { setApiUrl(e.target.value); setErrors(prev => ({ ...prev, apiUrl: '' })) }}
               error={errors.apiUrl}
@@ -345,12 +346,12 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
               open={advancedOpen}
               onOpenChange={setAdvancedOpen}
             >
-              <Collapsible.DefaultTrigger>Advanced Settings</Collapsible.DefaultTrigger>
+              <Collapsible.DefaultTrigger>{t("workshop-frontend.AddModelModal.advanced_settings")}</Collapsible.DefaultTrigger>
               <Collapsible.DefaultPanel>
                 <Input
                   label="API URL"
                   placeholder="https://..."
-                  description="Override the default API endpoint (useful for proxies like Cloudflare AI Gateway)"
+                  description={t("workshop-frontend.AddModelModal.override_the_default_api_endpoint_useful_for_proxies_like_cloudf")}
                   value={apiUrl}
                   onChange={(e) => setApiUrl(e.target.value)}
                 />
@@ -363,8 +364,7 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
         <div className="mt-6 flex justify-end gap-2">
           <Dialog.Close render={(props) => (
             <Button variant="secondary" {...props} disabled={loading}>
-              Cancel
-            </Button>
+              {t("workshop-frontend.Inbox.cancel")}</Button>
           )} />
           <Button
             variant="primary"
@@ -372,8 +372,7 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
             loading={loading}
             disabled={!selection}
           >
-            Add Model
-          </Button>
+            {t("workshop-frontend.AddModelModal.add_model")}</Button>
         </div>
       </Dialog>
     </Dialog.Root>

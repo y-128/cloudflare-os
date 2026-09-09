@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation } from "@gadgets/i18n";
 import { useState, FormEvent } from 'react'
 import { Link } from '@tanstack/react-router'
 import { RpcStub } from 'capnweb'
@@ -18,6 +19,7 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -26,7 +28,7 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
   const serverConfigError = useServerConfigError()
   const siteName = useSiteName()
   const connectionLost = useConnectionLost()
-  useDocumentTitle('Sign in')
+  useDocumentTitle(t("workshop-frontend.LoginPage.sign_in"))
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -45,10 +47,10 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
           window.location.reload()
         }
       } else {
-        setError('Invalid username or password')
+        setError(t("workshop-frontend.LoginPage.invalid_username_or_password"))
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : t("workshop-frontend.LoginPage.login_failed"))
     } finally {
       setLoading(false)
     }
@@ -66,9 +68,8 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
           className="flex h-full min-h-0 flex-col items-center justify-center gap-4 overflow-y-auto bg-kumo-base px-4 py-8"
         >
           <p className="text-sm text-kumo-danger text-center">
-            Couldn&apos;t load deployment settings.
-          </p>
-          <Button variant="secondary" onClick={() => window.location.reload()}>Reload</Button>
+            {t("workshop-frontend.LoginPage.couldn_t_load_deployment_settings")}</p>
+          <Button variant="secondary" onClick={() => window.location.reload()}>{t("workshop-frontend.LoginPage.reload")}</Button>
         </div>
       )
     }
@@ -76,7 +77,7 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
       <div className="flex h-full min-h-0 flex-col items-center justify-center gap-4 overflow-y-auto bg-kumo-base px-4 py-8">
         <Loader size="lg" />
         <p className="text-sm text-kumo-subtle text-center">
-          {connectionLost ? "Can't reach the server. Retrying…" : 'Loading…'}
+          {connectionLost ? t("workshop-frontend.LoginPage.can_t_reach_the_server_retrying") : t("workshop-frontend.LoginPage.loading")}
         </p>
       </div>
     )
@@ -107,7 +108,7 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
             </div>
           </SiteLogo>
           <h1 className="text-xl font-semibold text-kumo-default">{siteName}</h1>
-          <p className="text-sm text-kumo-subtle mt-1">Sign in to your account</p>
+          <p className="text-sm text-kumo-subtle mt-1">{t("workshop-frontend.LoginPage.sign_in_to_your_account")}</p>
         </div>
 
         {passwordAuthEnabled && (
@@ -116,19 +117,19 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 className="w-full"
-                label="Username"
+                label={t("workshop-frontend.LoginPage.username")}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoFocus
                 autoComplete="username"
                 disabled={loading}
-                placeholder="your-username"
+                placeholder={t("workshop-frontend.LoginPage.your_username")}
               />
 
               <Input
                 className="w-full"
                 type="password"
-                label="Password"
+                label={t("workshop-frontend.LoginPage.password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
@@ -147,16 +148,12 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
                 loading={loading}
                 className="w-full justify-center"
               >
-                Sign in
-              </Button>
+                {t("workshop-frontend.LoginPage.sign_in")}</Button>
             </form>
 
             <p className="text-center text-sm text-kumo-subtle mt-6">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-kumo-brand hover:underline font-medium">
-                Create one
-              </Link>
-            </p>
+              {renderTranslation(t("workshop-frontend.LoginPage.don_t_have_an_account_2"), { value: <Link to="/signup" className="text-kumo-brand hover:underline font-medium">
+                {t("workshop-frontend.LoginPage.create_one")}</Link> })}</p>
           </>
         )}
 
@@ -166,7 +163,7 @@ export default function LoginPage({ rpcStub, onLoginSuccess }: LoginPageProps) {
             {passwordAuthEnabled && (
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-px flex-1 bg-kumo-line" />
-                <span className="text-xs text-kumo-subtle">or</span>
+                <span className="text-xs text-kumo-subtle">{t("workshop-frontend.LoginPage.or")}</span>
                 <div className="h-px flex-1 bg-kumo-line" />
               </div>
             )}

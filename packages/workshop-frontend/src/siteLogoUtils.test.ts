@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -65,7 +66,7 @@ describe('site logo dimensions', () => {
   })
 
   it('rejects empty image dimensions', () => {
-    expect(() => siteLogoDimensions(0, 100)).toThrow('dimensions')
+    expect(() => siteLogoDimensions(0, 100)).toThrow(t("workshop-frontend.siteLogoUtils.invalid_image_dimensions"))
   })
 })
 
@@ -98,7 +99,7 @@ describe('site logo preparation', () => {
       type: 'image/png',
     })
 
-    await expect(prepareSiteLogo(file)).rejects.toThrow('max 5 MB')
+    await expect(prepareSiteLogo(file)).rejects.toThrow(t("workshop-frontend.siteLogoUtils.logo_source_image_is_too_large_max_5_mb"))
     expect(decode).not.toHaveBeenCalled()
   })
 
@@ -112,7 +113,7 @@ describe('site logo preparation', () => {
       ['WebP', 'image/webp', webpHeader(100_000, 1)],
     ] as const) {
       await expect(prepareSiteLogo(new File([data], `logo.${name}`, { type })))
-        .rejects.toThrow('dimensions')
+        .rejects.toThrow(t("workshop-frontend.siteLogoUtils.logo_source_dimensions_are_too_large"))
     }
     expect(decode).not.toHaveBeenCalled()
   })
@@ -126,7 +127,7 @@ describe('site logo preparation', () => {
 
     await expect(prepareSiteLogo(new File([pngHeader(100, 100)], 'logo.png', {
       type: 'image/png',
-    }))).rejects.toThrow('upload limit')
+    }))).rejects.toThrow(t("workshop-frontend.siteLogoUtils.logo_is_too_complex_to_fit_within_the_upload_limit"))
     expect(close).toHaveBeenCalledOnce()
   })
 
@@ -161,7 +162,7 @@ describe('site logo preparation', () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:x="http://www.w3.org/2000/svg"><x:image href="d&#97;ta:image/png;base64,AA=="/></svg>'
 
     await expect(prepareSiteLogo(new File([svg], 'logo.svg', { type: 'image/svg+xml' })))
-      .rejects.toThrow('embedded images')
+      .rejects.toThrow(t("workshop-frontend.siteLogoUtils.svg_logos_cannot_contain_embedded_images_or_external_resources"))
     expect(createUrl).not.toHaveBeenCalled()
   })
 })

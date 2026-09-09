@@ -1,3 +1,4 @@
+import { translate } from "../../i18n/src/core.ts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
@@ -7,7 +8,8 @@ import type {
 
 // The real `h` and the controls throw: the sandbox runtime supplies them at load time. These tests
 // exercise the data flow in `render`, not the markup, so a plain tree is enough.
-vi.mock("@gadgets/configurator-ui", () => ({
+vi.mock("@gadgets/configurator-ui", async () => ({
+  t: (await import("../../i18n/src/core.ts")).translate.bind(null, "ja"),
   h: (component: unknown, props: unknown, ...children: unknown[]) =>
     ({ component, props, children }),
   Section: "Section",
@@ -92,7 +94,7 @@ describe("portal configurator", () => {
 
     // And it says so, instead of showing a tool list it could not populate.
     const rendered = JSON.stringify(app.render());
-    expect(rendered).toContain("Could not reach the portal");
+    expect(rendered).toContain(translate("ja", "gatekeeper-mcp-portal.server-configurator-ui.could_not_reach_the_portal_to_list_its_servers_close_this_and_try"));
     expect(rendered).not.toContain("CheckboxList");
   });
 
@@ -111,8 +113,8 @@ describe("portal configurator", () => {
     expect(app.values.server).toBeNull();
     expect(spec.isReady({ values: app.values })).toBe(false);
     const rendered = JSON.stringify(app.render());
-    expect(rendered).toContain("No grantable servers");
-    expect(rendered).not.toContain("Could not reach the portal");
+    expect(rendered).toContain(translate("ja", "gatekeeper-mcp-portal.server-configurator-ui.no_grantable_servers_are_available_through_this_connector_they_ma"));
+    expect(rendered).not.toContain(translate("ja", "gatekeeper-mcp-portal.server-configurator-ui.could_not_reach_the_portal_to_list_its_servers_close_this_and_try"));
   });
 
   it("clears a prefilled server that the filtered portal list does not offer", async () => {

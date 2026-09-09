@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   CloudflareWorkerConfiguratorRpc,
@@ -18,11 +19,11 @@ export default {
 
   render({ values, setValues, clearFields, ui }) {
     return <Section>
-      <Field label="Cloudflare account">
+      <Field label={t("workshop-frontend.AccountSelectionModal.cloudflare_account")}>
         <Autocomplete
           name="accountId"
           value={values.accountId}
-          placeholder="Choose an account"
+          placeholder={t("gatekeeper-cloudflare.cloudflare-account-configurator-ui.choose_an_account")}
           loadOptions={query => ui.listAccounts(query)}
           onChange={accountId => {
             // Both halves are required: `clearFields` only drops the Worker autocomplete's typed
@@ -33,11 +34,11 @@ export default {
           }}
         />
       </Field>
-      <Field label="Worker" description="Queries telemetry only for this Worker.">
+      <Field label="Worker" description={t("gatekeeper-cloudflare.cloudflare-worker-configurator-ui.queries_telemetry_only_for_this_worker")}>
         <Autocomplete
           name="workerName"
           value={values.workerName}
-          placeholder={values.accountId ? "Choose a Worker" : "Choose an account first"}
+          placeholder={values.accountId ? t("gatekeeper-cloudflare.cloudflare-worker-configurator-ui.choose_a_worker") : t("gatekeeper-cloudflare.cloudflare-worker-configurator-ui.choose_an_account_first")}
           loadOptions={query => values.accountId ? ui.listWorkers(values.accountId, query) : Promise.resolve([])}
           onChange={workerName => setValues({ workerName })}
           disabled={!values.accountId}

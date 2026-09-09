@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   CloudflareAccountConfiguratorValues,
@@ -17,11 +18,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Cloudflare account" description="Queries telemetry across every Worker in this account.">
+      <Field label={t("workshop-frontend.AccountSelectionModal.cloudflare_account")} description={t("gatekeeper-cloudflare.cloudflare-account-configurator-ui.queries_telemetry_across_every_worker_in_this_account")}>
         <Autocomplete
           name="accountId"
           value={values.accountId}
-          placeholder="Choose an account"
+          placeholder={t("gatekeeper-cloudflare.cloudflare-account-configurator-ui.choose_an_account")}
           loadOptions={query => ui.listAccounts(query)}
           onChange={accountId => setValues({ accountId })}
         />

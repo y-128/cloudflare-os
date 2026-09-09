@@ -44,3 +44,6 @@ wrangler.dev.jsonc
 .dev.vars.*
 **/.dev.vars
 **/.dev.vars.*
+
+# Reviewable inbox configuration template (never contains live credentials).
+!packages/inbox/.dev.vars.sample

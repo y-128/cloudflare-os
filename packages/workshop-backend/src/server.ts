@@ -1,3 +1,7 @@
+import { authorizeInboxRequest } from "./inbox-auth";
+import { LinkDirectoryApiImpl } from "./link-directory";
+import type { LinkDirectoryApi } from "@gadgets/workshop-shared/api";
+export { LinkDirectoryDurableObject } from "./link-directory";
 import { RpcStub, RpcTarget, newHttpBatchRpcResponse, newWebSocketRpcSession, RpcSessionOptions } from "capnweb";
 import { validateRpc } from "capnweb-validate";
 import type { JWTPayload } from "jose";
@@ -114,6 +118,11 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
     }
 
     return admins.includes(name);
+  }
+
+  /** Mints a directory capability scoped exclusively to the authenticated user. */
+  async getLinkDirectory(): Promise<LinkDirectoryApi> {
+    return new LinkDirectoryApiImpl(this.ctx.exports.LinkDirectoryDurableObject, this.#userId.toString());
   }
 
   whoami(): Promise<AiChatAuthorInfo> {
@@ -808,6 +817,17 @@ export default {
     // OAuth redirect lands on `/gatekeeper/<name>/oauth`); the result is bridged back to the waiting
     // browser via the `attempt` stub from PublicApi.startGatekeeperLogin(). So the backend no longer
     // hosts /auth/* callbacks.
+
+    if (url.pathname === "/api/inbox-auth") {
+      return authorizeInboxRequest(req, env, async ({ access, token }) => {
+        // Reuse the RPC account admission, session verification and admin authority unchanged.
+        const publicApi = new PublicApiImpl(ctx, env, () => {}, access);
+        const authenticated = access
+          ? await publicApi.authenticateFromCfAccess()
+          : await publicApi.authenticate(token!);
+        return authenticated.amIAdmin();
+      });
+    }
 
     if (url.pathname === "/api/client-errors") {
       return handleClientErrorRequest(req, env, ctx);

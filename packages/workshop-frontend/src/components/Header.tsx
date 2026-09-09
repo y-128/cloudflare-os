@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { Link } from '@tanstack/react-router'
 import { Hexagon, List, X } from '@phosphor-icons/react'
 import { useOptionalAuthenticatedApi } from '../AuthContext'
@@ -9,6 +10,7 @@ import TopBarNotice from '../TopBarNotice'
 import SiteLogo from './SiteLogo'
 
 export default function Header() {
+  const { t } = useTranslation();
   const auth = useOptionalAuthenticatedApi()
   const gatekeeperApps = useGatekeeperApps()
   const siteName = useSiteName()
@@ -62,23 +64,20 @@ export default function Header() {
               activeProps={{ className: navLinkActiveClass }}
               activeOptions={{ exact: true }}
             >
-              Home
-            </Link>
+              {t("workshop-frontend.Header.home")}</Link>
             <Link
               to="/gatekeepers"
               className={navLinkClass}
               activeProps={{ className: navLinkActiveClass }}
               activeOptions={{ exact: true }}
             >
-              Gatekeepers
-            </Link>
+              {t("workshop-frontend.Header.gatekeepers")}</Link>
             <Link
               to="/explore"
               className={navLinkClass}
               activeProps={{ className: navLinkActiveClass }}
             >
-              Explore
-            </Link>
+              {t("workshop-frontend.Header.explore")}</Link>
             {gatekeeperApps.map((app) => (
               <Link
                 key={app.id}
@@ -125,8 +124,7 @@ export default function Header() {
               activeProps={{ className: navLinkActiveClass }}
               activeOptions={{ exact: true }}
             >
-              Home
-            </Link>
+              {t("workshop-frontend.Header.home")}</Link>
             <Link
               to="/gatekeepers"
               onClick={closeMobileMenu}
@@ -134,16 +132,14 @@ export default function Header() {
               activeProps={{ className: navLinkActiveClass }}
               activeOptions={{ exact: true }}
             >
-              Gatekeepers
-            </Link>
+              {t("workshop-frontend.Header.gatekeepers")}</Link>
             <Link
               to="/explore"
               onClick={closeMobileMenu}
               className={navLinkClass}
               activeProps={{ className: navLinkActiveClass }}
             >
-              Explore
-            </Link>
+              {t("workshop-frontend.Header.explore")}</Link>
             {gatekeeperApps.map((app) => (
               <Link
                 key={app.id}
@@ -167,16 +163,14 @@ export default function Header() {
                   className={navLinkClass}
                   activeProps={{ className: navLinkActiveClass }}
                 >
-                  Profile
-                </Link>
+                  {t("workshop-frontend.Header.profile")}</Link>
                 <Link
                   to="/providers"
                   onClick={closeMobileMenu}
                   className={navLinkClass}
                   activeProps={{ className: navLinkActiveClass }}
                 >
-                  Providers
-                </Link>
+                  {t("workshop-frontend.Header.providers")}</Link>
                 {auth.isAdmin && (
                   <Link
                     to="/admin"
@@ -184,15 +178,13 @@ export default function Header() {
                     className={navLinkClass}
                     activeProps={{ className: navLinkActiveClass }}
                   >
-                    Admin
-                  </Link>
+                    {t("workshop-frontend.Header.admin")}</Link>
                 )}
                 <button
                   onClick={() => { closeMobileMenu(); auth.logout() }}
                   className="text-left text-sm px-3 py-1.5 rounded-md text-kumo-danger hover:bg-kumo-tint transition-colors"
                 >
-                  Sign out
-                </button>
+                  {t("workshop-frontend.Header.sign_out")}</button>
               </>
             )}
           </nav>

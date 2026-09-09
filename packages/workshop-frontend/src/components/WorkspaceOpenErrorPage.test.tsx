@@ -1,3 +1,4 @@
+import { t, setLocale } from "@gadgets/i18n";
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 
@@ -30,6 +31,7 @@ describe('WorkspaceOpenErrorPage', () => {
     container?.remove()
     root = undefined
     container = undefined
+    setLocale("ja")
   })
 
   async function render(kind: 'access-denied' | 'not-found' | 'unexpected') {
@@ -48,15 +50,26 @@ describe('WorkspaceOpenErrorPage', () => {
     return { container, onGoToWorkspaces, onRetry }
   }
 
+  it('updates module-defined headings when the language changes without remounting', async () => {
+    setLocale('ja')
+    const { container } = await render('access-denied')
+    const heading = container.querySelector('h1')!
+    expect(heading.textContent).toBe(t('workshop-frontend.WorkspaceOpenErrorPage.you_don_t_have_access_to_this_workspace'))
+    await act(async () => setLocale('en'))
+    expect(container.querySelector('h1')).toBe(heading)
+    expect(heading.textContent).toBe(t('workshop-frontend.WorkspaceOpenErrorPage.you_don_t_have_access_to_this_workspace'))
+    expect(heading.textContent).not.toContain('[missing:')
+  })
+
   it('explains how to recover when access is denied without exposing workspace metadata', async () => {
     const { container: renderedContainer, onGoToWorkspaces, onRetry } = await render('access-denied')
 
-    expect(renderedContainer.querySelector('h1')?.textContent).toBe("You don't have access to this workspace")
-    expect(renderedContainer.textContent).toContain('Ask the workspace owner to grant you access, then try again.')
+    expect(renderedContainer.querySelector('h1')?.textContent).toBe(t("workshop-frontend.WorkspaceOpenErrorPage.you_don_t_have_access_to_this_workspace"))
+    expect(renderedContainer.textContent).toContain(t("workshop-frontend.WorkspaceOpenErrorPage.ask_the_workspace_owner_to_grant_you_access_then_try_again"))
     expect(document.activeElement).toBe(renderedContainer.querySelector('h1'))
 
     const buttons = [...renderedContainer.querySelectorAll('button')]
-    expect(buttons.map(button => button.textContent)).toEqual(['Go to workspaces', 'Try again'])
+    expect(buttons.map(button => button.textContent)).toEqual([t("workshop-frontend.GadgetEditor.go_to_workspaces"), t("gatekeeper-scheduler.SchedulerPage.try_again")])
     act(() => buttons[0].dispatchEvent(new MouseEvent('click', { bubbles: true })))
     act(() => buttons[1].dispatchEvent(new MouseEvent('click', { bubbles: true })))
     expect(onGoToWorkspaces).toHaveBeenCalledOnce()
@@ -66,19 +79,19 @@ describe('WorkspaceOpenErrorPage', () => {
   it('gives a missing workspace a distinct, non-retryable state', async () => {
     const { container: renderedContainer } = await render('not-found')
 
-    expect(renderedContainer.querySelector('h1')?.textContent).toBe('Workspace not found')
-    expect(renderedContainer.textContent).toContain('The link may be incorrect, or the workspace may have been deleted.')
+    expect(renderedContainer.querySelector('h1')?.textContent).toBe(t("workshop-frontend.WorkspaceOpenErrorPage.workspace_not_found"))
+    expect(renderedContainer.textContent).toContain(t("workshop-frontend.WorkspaceOpenErrorPage.the_link_may_be_incorrect_or_the_workspace_may_have_been_deleted"))
     expect([...renderedContainer.querySelectorAll('button')].map(button => button.textContent))
-      .toEqual(['Go to workspaces'])
+      .toEqual([t("workshop-frontend.GadgetEditor.go_to_workspaces")])
   })
 
   it('keeps unexpected failures retryable', async () => {
     const { container: renderedContainer } = await render('unexpected')
 
-    expect(renderedContainer.querySelector('h1')?.textContent).toBe("We couldn't load this workspace")
-    expect(renderedContainer.textContent).toContain('Try again. If the problem continues, return to your workspaces.')
+    expect(renderedContainer.querySelector('h1')?.textContent).toBe(t("workshop-frontend.WorkspaceOpenErrorPage.we_couldn_t_load_this_workspace"))
+    expect(renderedContainer.textContent).toContain(t("workshop-frontend.WorkspaceOpenErrorPage.try_again_if_the_problem_continues_return_to_your_workspaces"))
     expect([...renderedContainer.querySelectorAll('button')].map(button => button.textContent))
-      .toEqual(['Go to workspaces', 'Try again'])
+      .toEqual([t("workshop-frontend.GadgetEditor.go_to_workspaces"), t("gatekeeper-scheduler.SchedulerPage.try_again")])
   })
 
   it('classifies stable open error codes without treating unexpected errors as expected', () => {

@@ -55,6 +55,11 @@
       // login back to the waiting browser.
       "tag": "v2",
       "new_sqlite_classes": [ "PendingLogin" ]
+    },
+    {
+      // Private links directories use the authenticated user DO id as their namespace key.
+      "tag": "v3",
+      "new_sqlite_classes": [ "LinkDirectoryDurableObject" ]
     }
   ],
 

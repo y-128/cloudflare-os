@@ -356,8 +356,106 @@ export const createAuthError = authErrors.create;
 /** Reads the machine-readable code from an authentication failure. */
 export const getAuthErrorCode = authErrors.getCode;
 
+/** Bounded directory fields and collection sizes keep RPC payloads and synchronous work small. */
+export const LINK_DIRECTORY_LIMITS = {
+  /** Maximum category name length. */
+  categoryName: 100,
+  /** Maximum link title length. */
+  title: 200,
+  /** Maximum serialized HTTP(S) URL length, including the derived favicon URL. */
+  url: 2048,
+  /** Maximum length of each tag. */
+  tag: 64,
+  /** Maximum tags on one link. */
+  tags: 20,
+  /** Maximum note length. */
+  note: 4000,
+  /** Maximum search query length. */
+  query: 200,
+  /** Maximum identifier length. */
+  id: 64,
+  /** Maximum categories per user. */
+  categories: 100,
+  /** Maximum links per user; keeps even escaped full snapshots within RPC message limits. */
+  links: 500,
+} as const;
+
+/** A category in the authenticated user's directory. */
+export type LinkCategory = {
+  /** Server-generated identifier. */
+  id: string;
+  /** User-defined display name. */
+  name: string;
+  /** Zero-based position among categories. */
+  order: number;
+};
+
+/** Editable fields of a directory link; favicon and ordering are managed by the server. */
+export type DirectoryLinkInput = {
+  /** Owning category identifier. */
+  categoryId: string;
+  /** User-defined display title. */
+  title: string;
+  /** Absolute HTTP(S) destination without embedded credentials. */
+  url: string;
+  /** Searchable labels. */
+  tags: string[];
+  /** Searchable plain-text note. */
+  note: string;
+};
+
+/** A saved link with a favicon derived from its destination origin. */
+export type DirectoryLink = DirectoryLinkInput & {
+  /** Server-generated identifier. */
+  id: string;
+  /** Same-origin /favicon.ico URL. */
+  icon: string;
+  /** Zero-based position within its category. */
+  order: number;
+};
+
+/** An ordered snapshot, with all categories and optionally filtered links. */
+export type LinkDirectory = {
+  /** All categories in display order. */
+  categories: LinkCategory[];
+  /** Links ordered by category and then their position. */
+  links: DirectoryLink[];
+};
+
+/** Matches a literal, case-insensitive query against title, URL, tags, or note. */
+export function matchesDirectoryLink(link: DirectoryLinkInput, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  return [link.title, link.url, ...link.tags, link.note]
+    .some(value => value.toLowerCase().includes(needle));
+}
+
+/** Capability for one authenticated user's private links; never injected into a gadget or agent. */
+export interface LinkDirectoryApi extends RpcTarget {
+  /** Lists categories and searches title, URL, tags and note; an empty query lists all links. */
+  list(query: string): Promise<LinkDirectory>;
+  /** Creates a category at the end of the directory. */
+  createCategory(name: string): Promise<LinkCategory>;
+  /** Renames an existing category. */
+  updateCategory(id: string, name: string): Promise<LinkCategory>;
+  /** Deletes an empty category; move or delete its links first. */
+  deleteCategory(id: string): Promise<void>;
+  /** Moves a category before another category, or to the end when beforeId is null. */
+  moveCategory(id: string, beforeId: string | null): Promise<void>;
+  /** Creates a link at the end of its category. */
+  createLink(input: DirectoryLinkInput): Promise<DirectoryLink>;
+  /** Replaces editable fields; changing category appends the link to that category. */
+  updateLink(id: string, input: DirectoryLinkInput): Promise<DirectoryLink>;
+  /** Deletes a link and closes the gap in its category's order. */
+  deleteLink(id: string): Promise<void>;
+  /** Atomically moves a link within or across categories, before another link or at the end. */
+  moveLink(id: string, categoryId: string, beforeId: string | null): Promise<void>;
+}
+
 /** Top-level API exposed to the user after they have authenticated. */
 export interface AuthenticatedApi extends RpcTarget {
+  /** Opens the authenticated user's private links directory capability. */
+  getLinkDirectory(): Promise<LinkDirectoryApi>;
+
   /** Get profile info for the user who is logged in. */
   whoami(): Promise<AiChatAuthorInfo>;
 

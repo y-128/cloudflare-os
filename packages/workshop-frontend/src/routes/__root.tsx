@@ -1,4 +1,6 @@
+import { useTranslation } from "@gadgets/i18n";
 import { logRpcFailure } from '../rpcErrors'
+
 import { useState, useEffect } from 'react'
 import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
 import { TooltipProvider, Toasty } from '@cloudflare/kumo'
@@ -18,7 +20,9 @@ export const Route = createRootRoute({
   component: RootComponent,
 })
 
+/** Renders localized startup states and the appropriate authenticated or public shell. */
 function RootComponent() {
+  const { t } = useTranslation()
   const rpcStub = useRpcStub()
   const connectionLost = useConnectionLost()
   const { isAuthenticated, authenticatedApi, isLoading, error, logout, login } = useAuth(rpcStub)
@@ -49,7 +53,7 @@ function RootComponent() {
     return (
       <div className="flex min-h-full items-center justify-center flex-col gap-4 bg-kumo-base">
         <div className="w-8 h-8 border-2 border-kumo-brand border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-kumo-subtle">{connectionLost ? 'Waiting for server…' : 'Loading...'}</p>
+        <p className="text-sm text-kumo-subtle">{connectionLost ? t('workshop-frontend.__root.waiting_for_server') : t('workshop-frontend.__root.loading')}</p>
       </div>
     )
   }
@@ -58,12 +62,12 @@ function RootComponent() {
   if (error && !standalone) {
     return (
       <div className="flex min-h-full items-center justify-center flex-col gap-4 bg-kumo-base p-6">
-        <p className="text-sm text-kumo-danger">Authentication error: {error}</p>
+        <p className="text-sm text-kumo-danger">{t('workshop-frontend.__root.authentication_error')} {error}</p>
         <button
           onClick={() => window.location.reload()}
           className="px-4 py-2 text-sm font-medium text-kumo-inverse bg-kumo-brand rounded-lg hover:bg-kumo-brand-hover transition-colors"
         >
-          Retry
+          {t('workshop-frontend.__root.retry')}
         </button>
       </div>
     )
@@ -74,7 +78,7 @@ function RootComponent() {
     return (
       <div className="flex min-h-full items-center justify-center flex-col gap-4 bg-kumo-base">
         <div className="w-8 h-8 border-2 border-kumo-brand border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-kumo-subtle">Authenticating...</p>
+        <p className="text-sm text-kumo-subtle">{t('workshop-frontend.__root.authenticating')}</p>
       </div>
     )
   }
@@ -133,6 +137,7 @@ function AuthenticatedShell({
   authenticatedApi: RpcStub<AuthenticatedApi>
   isWorkspaceEditor: boolean
 }) {
+  useTranslation();
   // null = still checking, true = needs onboarding, false = onboarding done
   const [onboardingNeeded, setOnboardingNeeded] = useState<boolean | null>(null)
 

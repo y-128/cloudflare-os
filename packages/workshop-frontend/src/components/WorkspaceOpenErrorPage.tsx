@@ -1,3 +1,4 @@
+import { t, useTranslation } from "@gadgets/i18n";
 import { Lock, MagnifyingGlass, WarningCircle } from '@phosphor-icons/react'
 import { useEffect, useId, useRef } from 'react'
 import {
@@ -10,20 +11,20 @@ export type WorkspaceOpenFailureKind = 'access-denied' | 'not-found' | 'unexpect
 
 const CONTENT = {
   'access-denied': {
-    title: "You don't have access to this workspace",
-    message: 'Ask the workspace owner to grant you access, then try again.',
+    get title() { return t("workshop-frontend.WorkspaceOpenErrorPage.you_don_t_have_access_to_this_workspace"); },
+    get message() { return t("workshop-frontend.WorkspaceOpenErrorPage.ask_the_workspace_owner_to_grant_you_access_then_try_again"); },
     Icon: Lock,
     retryable: true,
   },
   'not-found': {
-    title: 'Workspace not found',
-    message: 'The link may be incorrect, or the workspace may have been deleted.',
+    get title() { return t("workshop-frontend.WorkspaceOpenErrorPage.workspace_not_found"); },
+    get message() { return t("workshop-frontend.WorkspaceOpenErrorPage.the_link_may_be_incorrect_or_the_workspace_may_have_been_deleted"); },
     Icon: MagnifyingGlass,
     retryable: false,
   },
   unexpected: {
-    title: "We couldn't load this workspace",
-    message: 'Try again. If the problem continues, return to your workspaces.',
+    get title() { return t("workshop-frontend.WorkspaceOpenErrorPage.we_couldn_t_load_this_workspace"); },
+    get message() { return t("workshop-frontend.WorkspaceOpenErrorPage.try_again_if_the_problem_continues_return_to_your_workspaces"); },
     Icon: WarningCircle,
     retryable: true,
   },
@@ -47,6 +48,7 @@ type Props = {
 }
 
 export default function WorkspaceOpenErrorPage({ kind, onRetry, onGoToWorkspaces }: Props) {
+  const { t } = useTranslation();
   const { title, message, Icon, retryable } = CONTENT[kind]
   const titleId = useId()
   const descriptionId = useId()
@@ -88,12 +90,10 @@ export default function WorkspaceOpenErrorPage({ kind, onRetry, onGoToWorkspaces
             className="!h-9"
             onClick={onGoToWorkspaces}
           >
-            Go to workspaces
-          </WorkshopButton>
+            {t("workshop-frontend.GadgetEditor.go_to_workspaces")}</WorkshopButton>
           {retryable && (
             <WorkshopButton tone="primary" onClick={onRetry}>
-              Try again
-            </WorkshopButton>
+              {t("gatekeeper-scheduler.SchedulerPage.try_again")}</WorkshopButton>
           )}
         </div>
       </section>

@@ -1,3 +1,4 @@
+import { t, useTranslation, renderTranslation, getLocale } from "@gadgets/i18n";
 import { logRpcFailure } from "./rpcErrors";
 import {
   Fragment,
@@ -226,6 +227,7 @@ function CreatedGadgetChatCard({
   gadget: CreatedGadgetCardInfo;
   onOpen: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="group/createdApp relative w-full max-w-[440px]">
       <button
@@ -250,13 +252,12 @@ function CreatedGadgetChatCard({
             <span className="mt-0.5 flex items-center gap-1.5 text-[12px] text-kumo-subtle">
               {gadget.isPending && (
                 <span className="rounded-full bg-kumo-fill px-1.5 py-0.5 text-[10px] font-medium leading-none">
-                  Draft
-                </span>
+                  {t("workshop-frontend.ChatInterface.draft")}</span>
               )}
               <span>
                 {gadget.isPending
-                    ? `New ${formatOf(gadget.output).noun.toLowerCase()} · Click to preview`
-                    : `${formatOf(gadget.output).noun} · Click to open`}
+                    ? t("workshop-frontend.ChatInterface.new_click_to_preview", { value1: formatOf(gadget.output).noun.toLowerCase() })
+                    : t("workshop-frontend.ChatInterface.click_to_open", { value1: formatOf(gadget.output).noun })}
               </span>
             </span>
           </span>
@@ -295,9 +296,9 @@ type ChatChangeRowBuffer = {
 type ChatListScope = "direct" | "agents" | "all";
 
 const CHAT_LIST_SCOPE_LABELS: Record<ChatListScope, string> = {
-  all: "All",
-  direct: "Started by people",
-  agents: "Started by agents",
+  get all() { return t("gatekeeper-scheduler.SchedulerPage.all"); },
+  get direct() { return t("workshop-frontend.ChatInterface.started_by_people"); },
+  get agents() { return t("workshop-frontend.ChatInterface.started_by_agents"); },
 };
 
 const SHOW_THINKING_TRACES_KEY = "showThinkingTraces";
@@ -555,35 +556,35 @@ function getToolCallSummary(
 ): { verb: string; target?: string } {
   switch (tc.toolName) {
     case "readFile":
-      return { verb: "Read", target: tc.input.filename };
+      return { verb: t("workshop-frontend.DataTab.read"), target: tc.input.filename };
     case "writeFile":
-      return { verb: "Wrote", target: tc.input.filename };
+      return { verb: t("workshop-frontend.ChatInterface.wrote"), target: tc.input.filename };
     case "editFile":
-      return { verb: "Edited", target: tc.input.filename };
+      return { verb: t("workshop-frontend.ChatInterface.edited"), target: tc.input.filename };
     case "describeBinding":
-      return { verb: "Inspected", target: `${String(tc.input.name)} binding` };
+      return { verb: t("workshop-frontend.ChatInterface.inspected"), target: t("workshop-frontend.ChatInterface.binding", { name: String(tc.input.name) }) };
     case "setBindingHook":
       return {
-        verb: "Connected",
+        verb: t("workshop-frontend.OnboardingWizard.connected"),
         target: tc.input.entrypoint
           ? `${tc.input.bindingName} → ${tc.input.entrypoint}`
           : tc.input.bindingName,
       };
     case "setGadgetBinding":
       return {
-        verb: "Wired up",
+        verb: t("workshop-frontend.ChatInterface.wired_up"),
         target: formatGadgetBindingTarget(tc.input.gadget, tc.input.name ?? tc.input.source),
       };
     // Obsolete predecessor of `setGadgetBinding`; appears only in old chat logs.
     case "saveCapsuleAsBinding":
-      return { verb: "Saved resource", target: tc.input.bindingName };
+      return { verb: t("workshop-frontend.ChatInterface.saved_resource"), target: tc.input.bindingName };
     case "createGadget": {
 
       const output = outputOf?.(tc);
-      return { verb: `Created ${output?.noun ?? "gadget"}`, target: tc.input.title };
+      return { verb: t("workshop-frontend.ChatInterface.created", { name: output?.noun ?? "Gadget" }), target: tc.input.title };
     }
     case "createWorktree":
-      return { verb: "Created worktree", target: tc.input.title };
+      return { verb: t("workshop-frontend.ChatInterface.created_worktree"), target: tc.input.title };
     case "executeCode": {
       // Prefer the first non-empty line as a preview. `code` may be absent while the tool call's
       // input is still streaming in, so guard against undefined.
@@ -592,7 +593,7 @@ function getToolCallSummary(
         .map((line) => line.trim())
         .find((line) => line.length > 0);
       return {
-        verb: "Ran code",
+        verb: t("workshop-frontend.ChatInterface.ran_code"),
         target: firstLine
           ? firstLine.length > 60
             ? `${firstLine.slice(0, 57)}…`
@@ -601,7 +602,7 @@ function getToolCallSummary(
       };
     }
     case "giveUp":
-      return { verb: "Stopped" };
+      return { verb: t("workshop-frontend.ChatInterface.stopped") };
     case "webFetch": {
       let target = tc.input.url;
       try {
@@ -609,16 +610,16 @@ function getToolCallSummary(
       } catch {
         // Leave as the raw URL.
       }
-      return { verb: "Fetched", target };
+      return { verb: t("workshop-frontend.ChatInterface.fetched"), target };
     }
     case "observeUserChanges":
-      return { verb: "Observed user changes" };
+      return { verb: t("workshop-frontend.ChatInterface.observed_user_changes") };
     case "listBlueprints":
-      return { verb: "Listed blueprints" };
+      return { verb: t("workshop-frontend.ChatInterface.listed_blueprints") };
     case "listConnectableResources":
-      return { verb: "Listed connectable resources", target: tc.input.vendorId };
+      return { verb: t("workshop-frontend.ChatInterface.listed_connectable_resources"), target: tc.input.vendorId };
     case "requestConnection":
-      return { verb: "Requested connection", target: tc.input.vendorId };
+      return { verb: t("workshop-frontend.ChatInterface.requested_connection"), target: tc.input.vendorId };
   }
   // Compile-time exhaustiveness check.
   const _exhaustive: never = tc;
@@ -654,52 +655,48 @@ function lowerFirst(text: string): string {
   return text ? text[0].toLowerCase() + text.slice(1) : text;
 }
 
-function pluralize(count: number, singular: string, plural = `${singular}s`): string {
-  return `${count} ${count === 1 ? singular : plural}`;
-}
 
-function formatTimes(count: number): string {
-  return pluralize(count, "time");
-}
+
+
 
 function describeObservationCount(count: number): string {
-  return count === 1 ? "Read 1 resource" : `${count} resource reads`;
+  return count === 1 ? t("workshop-frontend.ChatInterface.read_1_resource") : t("workshop-frontend.ChatInterface.read_resources", { n: count });
 }
 
 function describeToolCallCount(toolName: AiToolCall["toolName"], count: number): string {
   switch (toolName) {
     case "readFile":
-      return `Read ${pluralize(count, "file")}`;
+      return t("workshop-frontend.ChatInterface.read_files", { n: count });
     case "writeFile":
-      return `Wrote ${pluralize(count, "file")}`;
+      return t("workshop-frontend.ChatInterface.wrote_files", { n: count });
     case "editFile":
-      return count === 1 ? "Made 1 edit" : `Made ${count} edits`;
+      return count === 1 ? t("workshop-frontend.ChatInterface.made_1_edit") : t("workshop-frontend.ChatInterface.made_edits", { n: count });
     case "webFetch":
-      return `Fetched ${pluralize(count, "page")}`;
+      return t("workshop-frontend.ChatInterface.fetched_pages", { n: count });
     case "executeCode":
-      return count === 1 ? "Ran code" : `Ran code ${formatTimes(count)}`;
+      return count === 1 ? t("workshop-frontend.ChatInterface.ran_code") : t("workshop-frontend.ChatInterface.ran_code_times", { n: count });
     case "describeBinding":
-      return `Inspected ${pluralize(count, "binding")}`;
+      return t("workshop-frontend.ChatInterface.inspected_bindings", { n: count });
     case "setBindingHook":
-      return `Connected ${pluralize(count, "binding")}`;
+      return t("workshop-frontend.ChatInterface.connected_bindings", { n: count });
     case "setGadgetBinding":
-      return `Wired up ${pluralize(count, "binding")}`;
+      return t("workshop-frontend.ChatInterface.wired_up_bindings", { n: count });
     case "saveCapsuleAsBinding":
-      return `Saved ${pluralize(count, "resource")}`;
+      return t("workshop-frontend.ChatInterface.saved_resources", { n: count });
     case "createGadget":
-      return `Created ${pluralize(count, "gadget")}`;
+      return t("workshop-frontend.ChatInterface.created_gadgets", { n: count });
     case "createWorktree":
-      return `Created ${pluralize(count, "worktree")}`;
+      return t("workshop-frontend.ChatInterface.created_worktrees", { n: count });
     case "observeUserChanges":
-      return `Observed ${pluralize(count, "change set")}`;
+      return t("workshop-frontend.ChatInterface.observed_change_sets", { n: count });
     case "giveUp":
-      return count === 1 ? "Stopped" : `Stopped ${count} times`;
+      return count === 1 ? t("workshop-frontend.ChatInterface.stopped") : t("workshop-frontend.ChatInterface.stopped_times", { n: count });
     case "listBlueprints":
-      return `Listed blueprints`;
+      return t("workshop-frontend.ChatInterface.listed_blueprints");
     case "listConnectableResources":
-      return `Listed connectable resources`;
+      return t("workshop-frontend.ChatInterface.listed_connectable_resources");
     case "requestConnection":
-      return count === 1 ? "Requested a connection" : `Requested ${count} connections`;
+      return count === 1 ? t("workshop-frontend.ChatInterface.requested_a_connection") : t("workshop-frontend.ChatInterface.requested_connections", { n: count });
   }
   const _exhaustive: never = toolName;
   return _exhaustive;
@@ -745,33 +742,33 @@ function getToolIcon(
 function getProvisionalToolLabel(toolName: AiToolCall["toolName"] | null | undefined) {
   switch (toolName) {
     case "readFile":
-      return "Reading file";
+      return t("workshop-frontend.ChatInterface.reading_file");
     case "writeFile":
-      return "Writing file";
+      return t("workshop-frontend.ChatInterface.writing_file");
     case "editFile":
-      return "Editing file";
+      return t("workshop-frontend.ChatInterface.editing_file");
     case "describeBinding":
-      return "Inspecting binding";
+      return t("workshop-frontend.ChatInterface.inspecting_binding");
     case "setBindingHook":
-      return "Connecting binding";
+      return t("workshop-frontend.ChatInterface.connecting_binding");
     case "setGadgetBinding":
-      return "Wiring up binding";
+      return t("workshop-frontend.ChatInterface.wiring_up_binding");
     case "saveCapsuleAsBinding":
-      return "Saving resource";
+      return t("workshop-frontend.ChatInterface.saving_resource");
     case "createGadget":
-      return "Creating gadget";
+      return t("workshop-frontend.ChatInterface.creating_gadget");
     case "createWorktree":
-      return "Creating worktree";
+      return t("workshop-frontend.ChatInterface.creating_worktree");
     case "executeCode":
-      return "Running code";
+      return t("workshop-frontend.ChatInterface.running_code");
     case "webFetch":
-      return "Fetching web page";
+      return t("workshop-frontend.ChatInterface.fetching_web_page");
     case "observeUserChanges":
-      return "Observing user changes";
+      return t("workshop-frontend.ChatInterface.observing_user_changes");
     case "giveUp":
-      return "Stopping";
+      return t("workshop-frontend.ChatInterface.stopping");
     default:
-      return "Using tool";
+      return t("workshop-frontend.ChatInterface.using_tool");
   }
 }
 
@@ -782,22 +779,22 @@ function getToolTarget(tc: AiToolCall): string | undefined {
 // Present-tense verb for an in-progress tool call.
 function getProvisionalToolVerb(toolName: AiToolCall["toolName"]): string {
   switch (toolName) {
-    case "readFile": return "Reading";
-    case "writeFile": return "Writing";
-    case "editFile": return "Editing";
-    case "describeBinding": return "Inspecting";
-    case "setBindingHook": return "Connecting";
-    case "setGadgetBinding": return "Wiring up";
-    case "saveCapsuleAsBinding": return "Saving";
-    case "createGadget": return "Creating gadget";
-    case "createWorktree": return "Creating worktree";
-    case "executeCode": return "Running code";
-    case "webFetch": return "Fetching";
-    case "observeUserChanges": return "Observing user changes";
-    case "giveUp": return "Stopping";
-    case "listBlueprints": return "Listing blueprints";
-    case "listConnectableResources": return "Listing connectable resources";
-    case "requestConnection": return "Requesting a connection";
+    case "readFile": return t("workshop-frontend.ChatInterface.reading");
+    case "writeFile": return t("workshop-frontend.ChatInterface.writing");
+    case "editFile": return t("workshop-frontend.ChatInterface.editing");
+    case "describeBinding": return t("workshop-frontend.ChatInterface.inspecting");
+    case "setBindingHook": return t("workshop-frontend.ChatInterface.connecting");
+    case "setGadgetBinding": return t("workshop-frontend.ChatInterface.wiring_up");
+    case "saveCapsuleAsBinding": return t("workshop-frontend.ChatInterface.saving");
+    case "createGadget": return t("workshop-frontend.ChatInterface.creating_gadget");
+    case "createWorktree": return t("workshop-frontend.ChatInterface.creating_worktree");
+    case "executeCode": return t("workshop-frontend.ChatInterface.running_code");
+    case "webFetch": return t("workshop-frontend.ChatInterface.fetching");
+    case "observeUserChanges": return t("workshop-frontend.ChatInterface.observing_user_changes");
+    case "giveUp": return t("workshop-frontend.ChatInterface.stopping");
+    case "listBlueprints": return t("workshop-frontend.ChatInterface.listing_blueprints");
+    case "listConnectableResources": return t("workshop-frontend.ChatInterface.listing_connectable_resources");
+    case "requestConnection": return t("workshop-frontend.ChatInterface.requesting_a_connection");
   }
   const _exhaustive: never = toolName;
   return _exhaustive;
@@ -807,22 +804,22 @@ function getProvisionalToolVerb(toolName: AiToolCall["toolName"]): string {
 function describeProvisionalToolCount(toolName: AiToolCall["toolName"], count: number): string {
   if (count <= 1) return getProvisionalToolLabel(toolName);
   switch (toolName) {
-    case "readFile": return `Reading ${pluralize(count, "file")}`;
-    case "writeFile": return `Writing ${pluralize(count, "file")}`;
-    case "editFile": return `Making ${count} edits`;
-    case "webFetch": return `Fetching ${pluralize(count, "page")}`;
-    case "executeCode": return count === 1 ? "Running code" : `Running code ${formatTimes(count)}`;
-    case "describeBinding": return `Inspecting ${pluralize(count, "binding")}`;
-    case "setBindingHook": return `Connecting ${pluralize(count, "binding")}`;
-    case "setGadgetBinding": return `Wiring up ${pluralize(count, "binding")}`;
-    case "saveCapsuleAsBinding": return `Saving ${pluralize(count, "resource")}`;
-    case "createGadget": return `Creating ${pluralize(count, "gadget")}`;
-    case "createWorktree": return `Creating ${pluralize(count, "worktree")}`;
-    case "observeUserChanges": return `Observing ${pluralize(count, "change set")}`;
-    case "giveUp": return "Stopping";
-    case "listBlueprints": return "Listing blueprints";
-    case "listConnectableResources": return "Listing connectable resources";
-    case "requestConnection": return `Requesting ${pluralize(count, "connection")}`;
+    case "readFile": return t("workshop-frontend.ChatInterface.reading_files", { n: count });
+    case "writeFile": return t("workshop-frontend.ChatInterface.writing_files", { n: count });
+    case "editFile": return t("workshop-frontend.ChatInterface.making_edits", { n: count });
+    case "webFetch": return t("workshop-frontend.ChatInterface.fetching_pages", { n: count });
+    case "executeCode": return count === 1 ? t("workshop-frontend.ChatInterface.running_code") : t("workshop-frontend.ChatInterface.running_code_times", { n: count });
+    case "describeBinding": return t("workshop-frontend.ChatInterface.inspecting_bindings", { n: count });
+    case "setBindingHook": return t("workshop-frontend.ChatInterface.connecting_bindings", { n: count });
+    case "setGadgetBinding": return t("workshop-frontend.ChatInterface.wiring_up_bindings", { n: count });
+    case "saveCapsuleAsBinding": return t("workshop-frontend.ChatInterface.saving_resources", { n: count });
+    case "createGadget": return t("workshop-frontend.ChatInterface.creating_gadgets", { n: count });
+    case "createWorktree": return t("workshop-frontend.ChatInterface.creating_worktrees", { n: count });
+    case "observeUserChanges": return t("workshop-frontend.ChatInterface.observing_change_sets", { n: count });
+    case "giveUp": return t("workshop-frontend.ChatInterface.stopping");
+    case "listBlueprints": return t("workshop-frontend.ChatInterface.listing_blueprints");
+    case "listConnectableResources": return t("workshop-frontend.ChatInterface.listing_connectable_resources");
+    case "requestConnection": return t("workshop-frontend.ChatInterface.requesting_connections", { n: count });
   }
   const _exhaustive: never = toolName;
   return _exhaustive;
@@ -834,7 +831,7 @@ function buildProvisionalToolSummary(
 ): { label: string; detailLines: string[] } {
 
   if (calls.length === 1 && calls[0].outputFormat) {
-    return { label: `Creating ${calls[0].outputFormat.noun}`, detailLines: [] };
+    return { label: t("workshop-frontend.ChatInterface.creating", { name: calls[0].outputFormat.noun }), detailLines: [] };
   }
   const toolNames = Array.from(
     new Set(calls.map((c) => c.toolName).filter((n): n is AiToolCall["toolName"] => !!n)),
@@ -844,7 +841,7 @@ function buildProvisionalToolSummary(
   );
 
   if (toolNames.length === 0) {
-    return { label: "Using tool", detailLines: [] };
+    return { label: t("workshop-frontend.ChatInterface.using_tool"), detailLines: [] };
   }
 
   if (toolNames.length > 1) {
@@ -864,14 +861,14 @@ function buildProvisionalToolSummary(
   if (calls.length === 1) {
     const target = detailLines[0];
     return {
-      label: target ? `${getProvisionalToolVerb(toolName)} ${target}` : getProvisionalToolLabel(toolName),
+      label: target ? t("workshop-frontend.ChatInterface.", { action: getProvisionalToolVerb(toolName), target: target }) : getProvisionalToolLabel(toolName),
       detailLines: [],
     };
   }
 
   const label =
     detailLines.length === 1
-      ? `${getProvisionalToolVerb(toolName)} ${detailLines[0]}`
+      ? t("workshop-frontend.ChatInterface.", { action: getProvisionalToolVerb(toolName), target: detailLines[0] })
       : describeProvisionalToolCount(toolName, calls.length);
   return { label, detailLines };
 }
@@ -895,11 +892,11 @@ function buildToolCallGroups(
 
   if (toolCalls.length === 1) {
     const summary = getToolCallSummary(toolCalls[0], outputOf);
-    labelParts.push(`${summary.verb}${summary.target ? ` ${summary.target}` : ""}`);
+    labelParts.push((summary.target ? t("workshop-frontend.ChatInterface.", { action: summary.verb, target: summary.target }) : summary.verb));
   } else if (toolCalls.length > 1 && distinctToolNames.length === 1) {
     const summary = getToolCallSummary(toolCalls[0], outputOf);
     labelParts.push(detailLines.length === 1 && summary.target && observations.length === 0
-      ? `${summary.verb} ${summary.target}`
+      ? t("workshop-frontend.ChatInterface.", { action: summary.verb, target: summary.target })
       : describeToolCallCount(toolCalls[0].toolName, toolCalls.length));
   } else if (toolCalls.length > 1 && distinctToolNames.length <= 3) {
     labelParts.push(...distinctToolNames.map((toolName) => {
@@ -907,7 +904,7 @@ function buildToolCallGroups(
       return describeToolCallCount(toolName, count);
     }));
   } else if (toolCalls.length > 0) {
-    labelParts.push(`${toolCalls.length} tool calls`);
+    labelParts.push(t("workshop-frontend.ChatInterface.tool_calls", { n: toolCalls.length }));
   }
 
   if (observations.length > 0) {
@@ -936,6 +933,7 @@ function buildToolCallGroups(
 }
 
 function WorkIcon({ Icon }: { Icon: PhosphorIcon }) {
+  useTranslation();
   return <Icon size={15} className="text-kumo-inactive" />;
 }
 
@@ -952,6 +950,7 @@ function TextWithMentions(
     mentions: { key: string; position: number; length: number; node: ReactNode }[];
   },
 ) {
+  useTranslation();
   const parts: ReactNode[] = [];
   let cursor = 0;
   for (const mention of [...mentions].toSorted((a, b) => a.position - b.position)) {
@@ -979,6 +978,7 @@ function SlashCommandMention(
     getOverseer: OverseerSource;
   },
 ) {
+  useTranslation();
   const choice = useSlashCommandChoice(getOverseer, name ? id : undefined);
   const mention = name ? <span className="text-kumo-brand">/{name}</span> : null;
   const command = choice
@@ -1036,6 +1036,7 @@ function SlashCommandMention(
 }
 
 function CapsuleMention({ capsule }: { capsule: CapsuleSpecifier }) {
+  useTranslation();
   const { authenticatedApi } = useAuthenticatedApi();
   const vendorBranding = useVendorBranding(authenticatedApi);
   const logo = capsule.vendorId ? vendorBranding.get(capsule.vendorId)?.logoUrl : undefined;
@@ -1064,6 +1065,7 @@ function CapsuleMention({ capsule }: { capsule: CapsuleSpecifier }) {
 // styling so a message reads the same as the draft it came from. Not a link: a format names
 // nothing the user can open.
 function FormatMention({ format }: { format: MessageFormatRef }) {
+  useTranslation();
   const Icon = FORMAT_ICONS[format.icon];
   return (
     <span className={styles.capsuleMention}>
@@ -1074,6 +1076,7 @@ function FormatMention({ format }: { format: MessageFormatRef }) {
 }
 
 function CodeBlock({ children, ...props }: ComponentPropsWithoutRef<"pre">) {
+  const { t } = useTranslation();
   const code = isValidElement<{ children?: ReactNode }>(children) &&
       typeof children.props.children === "string"
     ? children.props.children.replace(/\n$/, "")
@@ -1086,8 +1089,8 @@ function CodeBlock({ children, ...props }: ComponentPropsWithoutRef<"pre">) {
         type="button"
         className={styles.codeCopyButton}
         onClick={() => void copyToClipboard(code)}
-        aria-label="Copy code"
-        title="Copy code"
+        aria-label={t("workshop-frontend.ChatInterface.copy_code")}
+        title={t("workshop-frontend.ChatInterface.copy_code")}
       >
         <ClipboardIcon size={16} />
       </button>
@@ -1150,6 +1153,7 @@ export const MarkdownMessage = memo(function MarkdownMessage(
     formats?: MessageFormatRef[];
   },
 ): ReactNode {
+  useTranslation();
   const tokenizedMessage = useMemo(
     () => capsules?.length || formats?.length
       ? buildTokenizedCapsuleMessage(message, capsules, formats)
@@ -1182,6 +1186,7 @@ export const MarkdownMessage = memo(function MarkdownMessage(
 
 // Build a temporary object URL for inlined attachment bytes, revoking it when no longer needed.
 function useAttachmentObjectUrl(content: Uint8Array | undefined, mimeType: string): string | null {
+  useTranslation();
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   useEffect(() => {
     if (!content) {
@@ -1212,6 +1217,7 @@ const AttachmentPreviewModal = memo(function AttachmentPreviewModal(
     onDownload,
   }: AttachmentPreviewModalProps,
 ) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const isImage = (attachment?.mimeType ?? "").startsWith("image/");
   const objectUrl = useAttachmentObjectUrl(
@@ -1256,7 +1262,7 @@ const AttachmentPreviewModal = memo(function AttachmentPreviewModal(
   if (!attachment) return null;
 
   const sizeLabel = formatAttachmentSize(attachment.size);
-  const title = attachment.name ?? "Attached file";
+  const title = attachment.name ?? t("workshop-frontend.ChatInterface.attached_file");
   const modalWidthClass = isImage
     ? "w-[min(1120px,calc(100vw-32px))]"
     : "w-[min(520px,calc(100vw-32px))]";
@@ -1268,7 +1274,7 @@ const AttachmentPreviewModal = memo(function AttachmentPreviewModal(
       className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[1px]"
       role="dialog"
       aria-modal="true"
-      aria-label={`Preview ${title}`}
+      aria-label={t("workshop-frontend.ChatInterface.preview", { value1: title })}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -1278,7 +1284,7 @@ const AttachmentPreviewModal = memo(function AttachmentPreviewModal(
           type="button"
           onClick={onClose}
           className="absolute right-3 top-3 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-kumo-line bg-kumo-base/90 text-kumo-subtle shadow-[0_1px_2px_rgba(0,0,0,0.05)] backdrop-blur-sm transition-[background-color,color,transform] duration-150 ease-out hover:bg-kumo-base hover:text-kumo-default active:scale-[0.96]"
-          aria-label="Close preview"
+          aria-label={t("workshop-frontend.ChatInterface.close_preview")}
         >
           <X size={18} />
         </button>
@@ -1298,17 +1304,16 @@ const AttachmentPreviewModal = memo(function AttachmentPreviewModal(
                 </div>
                 <div className="text-[14px] font-medium text-kumo-default">{title}</div>
                 <div className="text-[12px] leading-5 text-kumo-subtle">
-                  {attachment.mimeType || "Unknown file type"}{sizeLabel ? ` · ${sizeLabel}` : ""}
+                  {attachment.mimeType || t("workshop-frontend.ChatInterface.unknown_file_type")}{sizeLabel ? ` · ${sizeLabel}` : ""}
                 </div>
-                <div className="text-[12px] leading-5 text-kumo-inactive">This file can’t be previewed here.</div>
+                <div className="text-[12px] leading-5 text-kumo-inactive">{t("workshop-frontend.ChatInterface.this_file_can_t_be_previewed_here")}</div>
                 {onDownload && (
                   <button
                     type="button"
                     onClick={() => onDownload(attachment)}
                     className="mt-1 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-kumo-line/70 bg-kumo-base px-3 py-1.5 text-[12px] font-medium text-kumo-default transition-colors hover:bg-kumo-tint/40"
                   >
-                    Download
-                  </button>
+                    {t("workshop-frontend.ChatInterface.download")}</button>
                 )}
               </div>
             </div>
@@ -1330,6 +1335,7 @@ const ChatAttachmentThumbnail = memo(function ChatAttachmentThumbnail(
     onPreview,
   }: ChatAttachmentThumbnailProps,
 ) {
+  const { t } = useTranslation();
   const isImage = attachment.mimeType.startsWith("image/");
   const objectUrl = useAttachmentObjectUrl(isImage ? attachment.content : undefined, attachment.mimeType);
   const [imageState, setImageState] = useState<"loading" | "loaded" | "error">("loading");
@@ -1339,27 +1345,27 @@ const ChatAttachmentThumbnail = memo(function ChatAttachmentThumbnail(
       type="button"
       onClick={() => onPreview(attachment.id)}
       className="relative h-28 w-36 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-kumo-line/70 bg-kumo-elevated text-left transition-[border-color,background-color,transform] duration-150 ease-out hover:border-kumo-line hover:bg-kumo-tint/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-brand/40 active:scale-[0.98]"
-      aria-label={`Preview ${attachment.name ?? "attached file"}`}
+      aria-label={t("workshop-frontend.ChatInterface.preview_2", { name: attachment.name ?? t("workshop-frontend.ChatInterface.attached_file") })}
     >
       {isImage && objectUrl && imageState !== "error" ? (
         <>
           {/* Kept in layout (not display:none) so lazy-loading actually triggers. */}
           <img
             src={objectUrl}
-            alt={attachment.name ?? "Attached image"}
+            alt={attachment.name ?? t("workshop-frontend.ChatInterface.attached_image")}
             loading="lazy"
             className="block h-full w-full object-cover"
             onLoad={() => setImageState("loaded")}
             onError={() => setImageState("error")}
           />
           {imageState !== "loaded" && (
-            <div className="absolute inset-0 grid place-items-center bg-kumo-elevated text-[11px] text-kumo-inactive">Loading image…</div>
+            <div className="absolute inset-0 grid place-items-center bg-kumo-elevated text-[11px] text-kumo-inactive">{t("workshop-frontend.ChatInterface.loading_image")}</div>
           )}
         </>
       ) : (
         <div className="flex h-full w-full min-w-0 items-center justify-center gap-2 p-3 text-[12px] leading-4 text-kumo-subtle">
           <FileIcon size={20} className="shrink-0 text-kumo-inactive" />
-          <span className="min-w-0 truncate">{attachment.name ?? "Attached file"}</span>
+          <span className="min-w-0 truncate">{attachment.name ?? t("workshop-frontend.ChatInterface.attached_file")}</span>
         </div>
       )}
     </button>
@@ -1377,6 +1383,7 @@ const ChatAttachmentGrid = memo(function ChatAttachmentGrid(
     onDownload,
   }: ChatAttachmentGridProps,
 ) {
+  useTranslation();
   const [previewAttachmentId, setPreviewAttachmentId] = useState<string | null>(null);
   const previewAttachment = previewAttachmentId === null
     ? null
@@ -1407,6 +1414,7 @@ const ChatAttachmentGrid = memo(function ChatAttachmentGrid(
 const ToolCallDetails = memo(function ToolCallDetails(
   { toolCall: tc }: { toolCall: AiToolCall },
 ) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-2">
       {tc.error && (
@@ -1417,16 +1425,14 @@ const ToolCallDetails = memo(function ToolCallDetails(
       {tc.toolName === "executeCode" ? (
         <>
           <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">
-            Code
-          </span>
+            {t("workshop-frontend.ChatInterface.code")}</span>
           <pre className="max-h-56 overflow-auto rounded-xl border border-kumo-line/70 bg-kumo-base p-3 font-mono text-[12px] leading-[18px] text-kumo-subtle whitespace-pre-wrap">
             {tc.input.code}
           </pre>
           {tc.output && (
             <>
               <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">
-                Output
-              </span>
+                {t("workshop-frontend.ChatInterface.output")}</span>
               <pre className="max-h-56 overflow-auto rounded-xl border border-kumo-line/70 bg-kumo-base p-3 font-mono text-[12px] leading-[18px] text-kumo-subtle whitespace-pre-wrap">
                 {tc.output}
               </pre>
@@ -1445,6 +1451,7 @@ const ToolCallDetails = memo(function ToolCallDetails(
 const ObservationDetails = memo(function ObservationDetails(
   { observation }: { observation: ObservationChatMessage },
 ) {
+  useTranslation();
   const log = observation.actionLog;
   const safeResourceUrl = safeExternalUrl(log.resourceUrl);
   const metadata = log.resourceTitle;
@@ -1493,9 +1500,10 @@ const NestedToolCallRow = memo(function NestedToolCallRow({
   onToggle: (key: string) => void;
   outputOf?: ToolOutputResolver;
 }) {
+  const { t } = useTranslation();
   const key = `call-${tc.toolCallId}`;
   const summary = getToolCallSummary(tc, outputOf);
-  const label = `${summary.verb}${summary.target ? ` ${summary.target}` : ""}`;
+  const label = (summary.target ? t("workshop-frontend.ChatInterface.", { action: summary.verb, target: summary.target }) : summary.verb);
   const Icon = getToolIcon(tc.toolName, outputOf?.(tc));
 
   return (
@@ -1513,8 +1521,7 @@ const NestedToolCallRow = memo(function NestedToolCallRow({
           <span className="min-w-0 truncate">{label}</span>
           {tc.error && (
             <span className="flex-shrink-0 rounded-full bg-kumo-danger-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-kumo-danger">
-              Error
-            </span>
+              {t("workshop-frontend.ChatInterface.error")}</span>
           )}
           <CaretRight
             size={13}
@@ -1541,9 +1548,10 @@ const NestedObservationRow = memo(function NestedObservationRow({
   open: boolean;
   onToggle: (key: string) => void;
 }) {
+  const { t } = useTranslation();
   const key = `observation-${observation.chatId}-${observation.sequence}`;
   const log = observation.actionLog;
-  const label = `Read ${log.description.title || log.resourceTitle || "resource"}`;
+  const label = t("workshop-frontend.ChatInterface.read", { name: log.description.title || log.resourceTitle || t("workshop-frontend.AdminPage.resource") });
 
   return (
     <div className="group/nested">
@@ -1579,6 +1587,7 @@ const ThinkingTraceRow = memo(function ThinkingTraceRow({
 }: {
   reasoning: string;
 }) {
+  useTranslation();
   return (
     <div className="min-w-0 py-1 text-kumo-subtle">
       <div className={`min-w-0 text-[13px] leading-[19px] ${styles.markdownContent}`}>
@@ -1613,6 +1622,7 @@ const ToolGroupRow = memo(function ToolGroupRow({
   onFooterRevert?: (sequence: number) => void;
   outputOf?: ToolOutputResolver;
 }) {
+  const { t } = useTranslation();
   const footerLabel = footerChangeSequence !== undefined
     ? getDiscardLabel(footerIsTrailing, footerCreatedGadgetTitles)
     : null;
@@ -1632,8 +1642,7 @@ const ToolGroupRow = memo(function ToolGroupRow({
             <span className="min-w-0 truncate">{group.label}</span>
             {group.hasError && (
               <span className="flex-shrink-0 rounded-full bg-kumo-danger-tint px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em] text-kumo-danger">
-                Error
-              </span>
+                {t("workshop-frontend.ChatInterface.error")}</span>
             )}
             <CaretRight
               size={13}
@@ -1700,7 +1709,7 @@ const ToolGroupRow = memo(function ToolGroupRow({
           </Tooltip>
           <Tooltip content={formatFullTimestamp(footerTimestamp)} asChild>
             <span className="px-1 font-mono text-[11px] leading-4 text-kumo-inactive">
-              {footerTimestamp.toLocaleTimeString([], {
+              {footerTimestamp.toLocaleTimeString(getLocale(), {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
@@ -1846,7 +1855,7 @@ function appendWorkParts(target: WorkMessageParts, source: WorkMessageParts) {
 function describeCreatedGadgetDeletion(titles: string[] | undefined): string {
   if (!titles || titles.length === 0) return "";
   const names = titles.map((t) => `“${t}”`).join(", ");
-  return ` (deletes ${titles.length === 1 ? "gadget" : "gadgets"} ${names})`;
+  return t("workshop-frontend.ChatInterface.deletes", { names: names });
 }
 
 // Label for the per-turn discard-changes button.
@@ -1855,8 +1864,8 @@ function getDiscardLabel(
   createdGadgetTitles?: string[],
 ): string {
   const base = isTrailing
-    ? "Discard changes from this response"
-    : "Discard changes from this response and later responses";
+    ? t("workshop-frontend.ChatInterface.discard_changes_from_this_response")
+    : t("workshop-frontend.ChatInterface.discard_changes_from_this_response_and_later_responses");
   return base + describeCreatedGadgetDeletion(createdGadgetTitles);
 }
 
@@ -1865,8 +1874,8 @@ function getSavedEditsDiscardLabel(
   createdGadgetTitles?: string[],
 ): string {
   const base = isTrailing
-    ? "Discard saved edits"
-    : "Discard saved edits and later changes";
+    ? t("workshop-frontend.ChatInterface.discard_saved_edits")
+    : t("workshop-frontend.ChatInterface.discard_saved_edits_and_later_changes");
   return base + describeCreatedGadgetDeletion(createdGadgetTitles);
 }
 
@@ -1883,6 +1892,7 @@ function DiscardPendingChangesPopover({
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <Popover.Trigger
@@ -1892,8 +1902,7 @@ function DiscardPendingChangesPopover({
             disabled={disabled}
             className="inline-flex h-[30px] cursor-pointer items-center justify-center rounded-md border border-kumo-fill bg-kumo-base px-2.5 text-[12px] font-medium leading-[18px] tracking-[-0.25px] text-kumo-default transition-colors enabled:hover:bg-kumo-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Discard…
-          </button>
+            {t("workshop-frontend.ChatInterface.discard")}</button>
         }
       />
       <Popover.Content
@@ -1905,15 +1914,11 @@ function DiscardPendingChangesPopover({
       >
         <div className="px-3.5 pb-2.5 pt-3">
           <Popover.Title className="text-[13px] font-medium leading-[18px] tracking-[-0.25px] text-kumo-default">
-            Discard all pending changes?
-          </Popover.Title>
+            {t("workshop-frontend.ChatInterface.discard_all_pending_changes")}</Popover.Title>
           <p className="mt-0.5 text-[11.5px] leading-4 tracking-[-0.15px] text-kumo-subtle">
-            Return to the last accepted version. Any gadgets created by these changes will be
-            permanently deleted. Pending changes can&apos;t be restored.
-          </p>
+            {t("workshop-frontend.ChatInterface.return_to_the_last_accepted_version_any_gadgets_created_by_these_")}</p>
           <p className="mt-2 border-t border-kumo-line pt-2 text-[11px] leading-[15px] tracking-[-0.1px] text-kumo-inactive">
-            Use the <ArrowUUpLeft size={12} className="mx-0.5 inline-block align-[-2px]" aria-hidden="true" /><span className="sr-only">undo arrow</span> under any agent response to discard from that turn onward.
-          </p>
+            <ArrowUUpLeft size={12} className="mx-0.5 inline-block align-[-2px]" aria-hidden="true" />{renderTranslation(t("workshop-frontend.ChatInterface.use_the_under_any_agent_response_to_discard_from_that_turn_onward"), { value: <span className="sr-only">{t("workshop-frontend.ChatInterface.undo_arrow")}</span> })}</p>
         </div>
         <div className="flex items-center justify-end gap-0.5 border-t border-kumo-line px-2 py-1.5">
           <button
@@ -1922,15 +1927,14 @@ function DiscardPendingChangesPopover({
             onClick={() => onOpenChange(false)}
             className="flex h-6 cursor-pointer items-center rounded-md px-2 text-[12px] font-medium tracking-[-0.15px] text-kumo-inactive transition-colors enabled:hover:bg-kumo-tint enabled:hover:text-kumo-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Cancel
-          </button>
+            {t("workshop-frontend.ChatInterface.cancel")}</button>
           <button
             type="button"
             disabled={disabled || isDiscarding}
             onClick={onConfirm}
             className="flex h-6 cursor-pointer items-center rounded-md px-2 text-[12px] font-medium tracking-[-0.15px] text-kumo-default transition-colors enabled:hover:bg-kumo-tint enabled:hover:text-kumo-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-ring disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {isDiscarding ? "Discarding..." : "Discard changes"}
+            {isDiscarding ? t("workshop-frontend.ChatInterface.discarding") : t("workshop-frontend.ChatInterface.discard_changes")}
           </button>
         </div>
       </Popover.Content>
@@ -2437,10 +2441,10 @@ function chatHasProposedChanges(meta: AiChatMetadata): boolean {
 type ChatTimeBucket = "today" | "yesterday" | "thisWeek" | "earlier";
 
 const CHAT_TIME_BUCKET_LABELS: Record<ChatTimeBucket, string> = {
-  today: "Today",
-  yesterday: "Yesterday",
-  thisWeek: "Earlier this week",
-  earlier: "Earlier",
+  get today() { return t("workshop-frontend.ChatInterface.today"); },
+  get yesterday() { return t("workshop-frontend.ChatInterface.yesterday"); },
+  get thisWeek() { return t("workshop-frontend.ChatInterface.earlier_this_week"); },
+  get earlier() { return t("workshop-frontend.ChatInterface.earlier"); },
 };
 const CHAT_TIME_BUCKET_ORDER: ChatTimeBucket[] = [
   "today",
@@ -2469,12 +2473,12 @@ function getChatTimeBucket(date: Date, now: Date): ChatTimeBucket {
 // own the "date" half of the label (via the section header), so rows only show
 // what the header doesn't.
 function formatChatRowTime(date: Date, bucket: ChatTimeBucket, now: Date): string {
-  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time = date.toLocaleTimeString(getLocale(), { hour: "numeric", minute: "2-digit" });
   if (bucket === "today" || bucket === "yesterday") {
     return time;
   }
   if (bucket === "thisWeek") {
-    const day = date.toLocaleDateString([], { weekday: "short" });
+    const day = date.toLocaleDateString(getLocale(), { weekday: "short" });
     return `${day} ${time}`;
   }
   const sameYear = date.getFullYear() === now.getFullYear();
@@ -2611,6 +2615,7 @@ function ChatInterface({
   onOpenGadget,
   outputOfWorkpiece,
 }: ChatInterfaceProps) {
+  const { t } = useTranslation();
   // Persistent cache that survives reconnects
   const toasts = useKumoToastManager();
   const { currentUser } = useAuthenticatedApi();
@@ -3062,7 +3067,7 @@ function ChatInterface({
       }
     } catch (err: any) {
       console.error("Failed to download chat attachment:", err);
-      toasts.add({ title: err?.message || "Failed to download attachment", variant: "error" });
+      toasts.add({ title: err?.message || t("workshop-frontend.ChatInterface.failed_to_download_attachment"), variant: "error" });
     }
   }, [overseer, toasts]);
 
@@ -3561,7 +3566,7 @@ function ChatInterface({
           provisional.compacting = false;
           if (event.nothingToCompact) {
             toastsRef.current.add({
-              title: "Nothing to compact — there are no earlier messages to summarize.",
+              title: t("workshop-frontend.ChatInterface.nothing_to_compact_there_are_no_earlier_messages_to_summarize"),
             });
           }
           break;
@@ -3728,7 +3733,7 @@ function ChatInterface({
       } catch (err) {
         if (!logRpcFailure("Failed to subscribe to chats:", err)) {
           reportIssue('chat.subscription-load', err)
-          toasts.add({ title: "Unable to load conversations", variant: "error" });
+          toasts.add({ title: t("workshop-frontend.ChatInterface.unable_to_load_conversations"), variant: "error" });
         }
       }
     };
@@ -3881,7 +3886,7 @@ function ChatInterface({
       forceUpdate();
     } catch (err) {
       console.error("Failed to load earlier messages:", err);
-      toasts.add({ title: "Failed to load earlier messages", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_load_earlier_messages"), variant: "error" });
     } finally {
       setIsLoadingEarlier(false);
     }
@@ -3922,7 +3927,7 @@ function ChatInterface({
       }
     } catch (err) {
       if (!logRpcFailure("Failed to send message:", err, { reportSite: "chat.send" })) {
-        toasts.add({ title: "Failed to send message", variant: "error" });
+        toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_send_message"), variant: "error" });
       }
       throw err;
     }
@@ -3945,7 +3950,7 @@ function ChatInterface({
       onNavigateToChatRef.current(newChatId);
     } catch (err) {
       if (!logRpcFailure("Failed to create new chat:", err, { reportSite: "chat.new" })) {
-        toasts.add({ title: "Failed to start conversation", variant: "error" });
+        toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_start_conversation"), variant: "error" });
       }
       throw err;
     }
@@ -3965,7 +3970,7 @@ function ChatInterface({
       await overseer.stopAgent(selectedChatId);
     } catch (err) {
       console.error("Failed to stop agent:", err);
-      toasts.add({ title: "Failed to stop agent", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_stop_agent"), variant: "error" });
     }
   };
 
@@ -3989,10 +3994,10 @@ function ChatInterface({
       }
 
       setIsEditingTitle(false);
-      toasts.add({ title: "Chat title updated successfully", variant: "success" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.chat_title_updated_successfully"), variant: "success" });
     } catch (err) {
       console.error("Failed to update chat title:", err);
-      toasts.add({ title: "Failed to update chat title", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_update_chat_title"), variant: "error" });
     }
   };
 
@@ -4006,7 +4011,7 @@ function ChatInterface({
   // chat list (with explicit chatId/title).
   const handleDeleteChat = (chatId?: number, chatTitle?: string) => {
     const id = chatId ?? selectedChatId;
-    const title = chatTitle ?? currentChatMetadata?.title ?? "this chat";
+    const title = chatTitle ?? currentChatMetadata?.title ?? t("workshop-frontend.ChatInterface.this_chat");
     if (id === null || id === undefined) return;
     setDeleteTarget({ id, title });
   };
@@ -4016,10 +4021,10 @@ function ChatInterface({
     setIsDeleting(true);
     try {
       await overseer.deleteChat(deleteTarget.id);
-      toasts.add({ title: "Chat deleted successfully", variant: "success" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.chat_deleted_successfully"), variant: "success" });
     } catch (err) {
       console.error("Failed to delete chat:", err);
-      toasts.add({ title: "Failed to delete chat", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_delete_chat"), variant: "error" });
     }
     setIsDeleting(false);
     setDeleteTarget(null);
@@ -4058,10 +4063,10 @@ function ChatInterface({
         bumpChatListVersion();
         forceUpdate();
       }
-      toasts.add({ title: "Chat title updated successfully", variant: "success" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.chat_title_updated_successfully"), variant: "success" });
     } catch (err) {
       console.error("Failed to update chat title:", err);
-      toasts.add({ title: "Failed to update chat title", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_update_chat_title"), variant: "error" });
     }
   };
 
@@ -4079,10 +4084,10 @@ function ChatInterface({
         setStaleAcceptChatId(selectedChatId);
         return;
       }
-      toasts.add({ title: "Changes accepted", variant: "success" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.changes_accepted"), variant: "success" });
     } catch (err) {
       console.error("Failed to accept changes:", err);
-      toasts.add({ title: "Failed to accept changes", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_accept_changes"), variant: "error" });
     }
   };
 
@@ -4099,20 +4104,18 @@ function ChatInterface({
       setStaleAcceptChatId(null);
       if (conflictPaths.length > 0) {
         toasts.add({
-          title: `Updated this draft with the gadget's latest changes. ` +
-            `${conflictPaths.length} ${conflictPaths.length === 1 ? "file has" : "files have"} ` +
-            `conflicts marked in the code -- resolve them (or ask the agent to), then accept again.`,
+          title: t("workshop-frontend.ChatInterface.updated_this_draft_with_the_latest_changes_resolve_conflicts_in_f", { n: conflictPaths.length }),
           variant: "warning",
         });
       } else {
         toasts.add({
-          title: "Updated this draft with the gadget's latest changes. Review and accept again.",
+          title: t("workshop-frontend.ChatInterface.updated_this_draft_with_the_gadget_s_latest_changes_review_and_ac"),
           variant: "success",
         });
       }
     } catch (err) {
       console.error("Failed to update from mainline:", err);
-      toasts.add({ title: "Failed to bring in the latest changes", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_bring_in_the_latest_changes"), variant: "error" });
     } finally {
       setIsUpdatingFromMainline(false);
     }
@@ -4123,10 +4126,10 @@ function ChatInterface({
 
     try {
       await overseer.finalizeChatDraft(selectedChatId);
-      toasts.add({ title: "Changes saved", variant: "success" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.changes_saved"), variant: "success" });
     } catch (err) {
       console.error("Failed to save changes:", err);
-      toasts.add({ title: "Failed to save changes", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_save_changes"), variant: "error" });
     }
   };
 
@@ -4137,10 +4140,10 @@ function ChatInterface({
       // The destructive generation bump this causes prunes the buffered rows when its
       // metadata arrives (see the metadata handler).
       await overseer.discardChatDraftChanges(selectedChatId);
-      toasts.add({ title: "Changes discarded", variant: "success" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.changes_discarded"), variant: "success" });
     } catch (err) {
       console.error("Failed to discard changes:", err);
-      toasts.add({ title: "Failed to discard changes", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_discard_changes"), variant: "error" });
     }
   };
 
@@ -4157,13 +4160,13 @@ function ChatInterface({
       setDiscardChangesTarget((current) =>
         current?.chatId === target.chatId ? null : current,
       );
-      toasts.add({ title: "Pending changes discarded", variant: "success" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.pending_changes_discarded"), variant: "success" });
     } catch (err) {
       console.error("Failed to discard pending changes:", err);
       // See handleRevertChanges: the server's refusals are instructive, so surface them.
       toasts.add({
         title: err instanceof Error && err.message
-          ? err.message : "Failed to discard pending changes",
+          ? err.message : t("workshop-frontend.ChatInterface.failed_to_discard_pending_changes"),
         variant: "error",
       });
     } finally {
@@ -4262,13 +4265,13 @@ function ChatInterface({
 
     try {
       await overseer.revertChanges(selectedChatId, revertFrom);
-      toasts.add({ title: "Draft rewound", variant: "success" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.draft_rewound"), variant: "success" });
     } catch (err) {
       console.error("Failed to rewind draft:", err);
       // The server's refusals here are instructive (e.g. a still-proposed update-from-mainline
       // batch can't be reverted), so surface them rather than a generic failure.
       toasts.add({
-        title: err instanceof Error && err.message ? err.message : "Failed to rewind draft",
+        title: err instanceof Error && err.message ? err.message : t("workshop-frontend.ChatInterface.failed_to_rewind_draft"),
         variant: "error",
       });
     }
@@ -4302,7 +4305,7 @@ function ChatInterface({
       }
     } catch (err) {
       console.error("Failed to toggle hook:", err);
-      toasts.add({ title: `Failed to ${enabled ? "enable" : "disable"} hook`, variant: "error" });
+      toasts.add({ title: (enabled ? t("workshop-frontend.Activity.failed_to_enable_hook") : t("workshop-frontend.Activity.failed_to_disable_hook")), variant: "error" });
       // Revert the optimistic update.
       if (applyOptimisticHookEnabled(actionId, !enabled)) forceUpdate();
     } finally {
@@ -4343,7 +4346,7 @@ function ChatInterface({
       setConnectionAccept(null);
     } catch (err) {
       console.error("Failed to finalize connection:", err);
-      toasts.add({ title: "Failed to add connection", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_add_connection"), variant: "error" });
     } finally {
       gk[Symbol.dispose]();
       setProcessingConnections((prev) => {
@@ -4364,7 +4367,7 @@ function ChatInterface({
       }
     } catch (err) {
       console.error("Failed to deny connection:", err);
-      toasts.add({ title: "Failed to deny connection", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_deny_connection"), variant: "error" });
     } finally {
       setProcessingConnections((prev) => {
         const next = new Set(prev);
@@ -4444,14 +4447,14 @@ function ChatInterface({
       await overseer.retryAgent(selectedChatId, selectedModel);
     } catch (err) {
       console.error("Failed to retry agent:", err);
-      toasts.add({ title: "Failed to retry agent", variant: "error" });
+      toasts.add({ title: t("workshop-frontend.ChatInterface.failed_to_retry_agent"), variant: "error" });
     }
   };
 
   const handleCopyMessage = useCallback(async (message: string) => {
     const ok = await copyToClipboard(message);
     toasts.add({
-      title: ok ? "Copied message" : "Unable to copy message",
+      title: ok ? t("workshop-frontend.ChatInterface.copied_message") : t("workshop-frontend.ChatInterface.unable_to_copy_message"),
       variant: ok ? "success" : "error",
     });
   }, [toasts]);
@@ -4668,7 +4671,7 @@ function ChatInterface({
     const isDenied = msg.state === "denied";
     const isProc = processingConnections.has(msg.requestId);
 
-    const stateLabel = isAccepted ? "Connected" : isDenied ? "Denied" : null;
+    const stateLabel = isAccepted ? t("workshop-frontend.OnboardingWizard.connected") : isDenied ? t("workshop-frontend.Activity.denied") : null;
     const stateLabelCls = isDenied ? "text-kumo-danger" : "text-kumo-success";
     const scope = msg.resourceTitle ?? msg.resourceUrl;
 
@@ -4684,8 +4687,7 @@ function ChatInterface({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span className="font-medium text-kumo-default">
-                  Connect {msg.vendorName}
-                </span>
+                  {renderTranslation(t("workshop-frontend.ChatInterface.connect_2"), { vendorName: msg.vendorName })}</span>
                 {scope && (
                   <span className="rounded-full bg-kumo-tint px-2 py-0.5 text-[11px] leading-4 text-kumo-subtle">
                     {scope}
@@ -4711,16 +4713,14 @@ function ChatInterface({
                   disabled={isProc}
                   className="cursor-pointer rounded-md px-2 py-1 font-medium text-kumo-inactive transition-colors duration-150 ease-out hover:text-kumo-danger focus-visible:text-kumo-danger focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Deny
-                </button>
+                  {t("workshop-frontend.ChatInterface.deny")}</button>
                 <button
                   type="button"
                   onClick={() => handleAcceptConnection(msg)}
                   disabled={isProc}
                   className="cursor-pointer rounded-md bg-kumo-brand px-3 py-1 font-medium text-white transition-[opacity,transform] duration-150 ease-out hover:opacity-90 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Set up
-                </button>
+                  {t("workshop-frontend.ChatInterface.set_up")}</button>
               </div>
             )}
           </div>
@@ -4742,10 +4742,10 @@ function ChatInterface({
     if (log.type === "bindHook") {
       const isDeleted = log.hookId === undefined;
       const stateLabel = isDeleted
-        ? "Deleted"
+        ? t("workshop-frontend.Activity.deleted")
         : log.enabled
-          ? "Enabled"
-          : "Disabled";
+          ? t("workshop-frontend.Activity.enabled")
+          : t("workshop-frontend.Activity.disabled");
       const stateLabelCls = isDeleted
         ? "text-kumo-inactive"
         : log.enabled
@@ -4763,8 +4763,7 @@ function ChatInterface({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                   <span className="font-medium text-kumo-default">
-                    Hook: {log.description.title}
-                  </span>
+                    {renderTranslation(t("workshop-frontend.ChatInterface.hook_2"), { title: log.description.title })}</span>
                   <span className={`text-[12px] font-medium ${stateLabelCls}`}>
                     {stateLabel}
                   </span>
@@ -4860,9 +4859,9 @@ function ChatInterface({
     const showDescription = isPending || open;
     const metadata = log.resourceTitle;
     const stateLabel = isApproved
-      ? "Approved"
+      ? t("workshop-frontend.Activity.approved")
       : isRejected
-        ? "Denied"
+        ? t("workshop-frontend.Activity.denied")
         : null;
     const stateLabelCls = isRejected
       ? "text-kumo-danger"
@@ -4887,7 +4886,7 @@ function ChatInterface({
       <>
         {autoApproveTarget &&
           !isTagAutoApproved(autoApproveTarget.gatekeeperId, autoApproveTarget.actionKind.tag) && (
-          <Tooltip content="Always approve this type of action on this connection, without future prompts." asChild>
+          <Tooltip content={t("workshop-frontend.ChatInterface.always_approve_this_type_of_action_on_this_connection_without_fut")} asChild>
             <span className="flex">
               <AlwaysApproveButton
                 onClick={() => setAutoApproveConfirm(autoApproveTarget)}
@@ -5033,7 +5032,7 @@ function ChatInterface({
               <button
                 type="button"
                 className="group flex h-8 -ml-1.5 cursor-pointer items-center gap-1.5 rounded-md px-1.5 text-left transition-colors duration-150 ease-out hover:bg-kumo-tint/60 focus-visible:bg-kumo-tint/60 focus-visible:outline-none data-[popup-open]:bg-kumo-tint/60"
-                aria-label="Filter conversations"
+                aria-label={t("workshop-frontend.ChatInterface.filter_conversations")}
               >
                 <span className="text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
                   {CHAT_LIST_SCOPE_LABELS[chatListScope]}
@@ -5076,8 +5075,7 @@ function ChatInterface({
           </div>
         ) : chatList.length === 0 ? (
           <p className="text-sm text-kumo-inactive text-center py-8">
-            No conversations yet
-          </p>
+            {t("workshop-frontend.ChatInterface.no_conversations_yet")}</p>
         ) : (
           <div className="flex flex-col gap-1">
             {visibleChatList.length === 0 ? (
@@ -5085,15 +5083,13 @@ function ChatInterface({
               // the all-empty case is handled by the outer chatList.length check.
               <div className="py-8 text-center">
                 <p className="text-[13px] leading-[18px] text-kumo-inactive">
-                  No conversations started by {chatListScope === "agents" ? "agents" : "people"} yet
-                </p>
+                  {renderTranslation(t("workshop-frontend.ChatInterface.no_conversations_started_by_yet"), { value: chatListScope === "agents" ? t("workshop-frontend.ChatInterface.agents") : t("workshop-frontend.ChatInterface.people") })}</p>
                 <button
                   type="button"
                   onClick={() => setChatListScope("all")}
                   className="mt-2 cursor-pointer rounded-md px-2 py-1 text-[12px] leading-4 font-medium text-kumo-subtle transition-colors duration-150 ease-out hover:text-kumo-default focus-visible:text-kumo-default focus-visible:outline-none"
                 >
-                  Show all
-                </button>
+                  {t("workshop-frontend.ChatInterface.show_all")}</button>
               </div>
             ) : (
               <div className="flex flex-col gap-4">
@@ -5140,7 +5136,7 @@ function ChatInterface({
                             spellCheck={false}
                             autoCapitalize="off"
                             autoCorrect="off"
-                            aria-label={`Rename ${chat.title}`}
+                            aria-label={t("workshop-frontend.FileSidebar.rename_2", { value1: chat.title })}
                             className="min-w-0 flex-1 bg-transparent text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default outline-none placeholder:text-kumo-inactive"
                           />
                         ) : (
@@ -5150,22 +5146,18 @@ function ChatInterface({
                         )}
                         {!isRenaming && chat.activeAgent ? (
                           <span className="inline-flex flex-shrink-0 cursor-pointer items-center gap-1 text-[11px] leading-4 font-medium text-kumo-brand">
-                            <span className="h-1.5 w-1.5 rounded-full bg-kumo-brand animate-pulse" />
-                            Working
-                          </span>
+                            <span className="h-1.5 w-1.5 rounded-full bg-kumo-brand animate-pulse" />{t("workshop-frontend.ChatInterface.working")}</span>
                         ) : !isRenaming && chatHasProposedChanges(chat) ? (
-                          <Tooltip content="This conversation has pending changes" asChild>
+                          <Tooltip content={t("workshop-frontend.ChatInterface.this_conversation_has_pending_changes")} asChild>
                             <span className="inline-flex flex-shrink-0 cursor-pointer items-center gap-1 text-[11px] leading-4 font-medium text-kumo-warning">
-                              <span className="h-1.5 w-1.5 rounded-full bg-kumo-warning" />
-                              Pending changes
-                            </span>
+                              <span className="h-1.5 w-1.5 rounded-full bg-kumo-warning" />{t("workshop-frontend.ChatInterface.pending_changes")}</span>
                           </Tooltip>
                         ) : null}
                       </div>
                       <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-4 text-kumo-inactive">
                         {chat.spawnerName && (
                           <>
-                            <span className="truncate">Agent · {chat.spawnerName}</span>
+                            <span className="truncate">{renderTranslation(t("workshop-frontend.ChatInterface.agent_2"), { spawnerName: chat.spawnerName })}</span>
                             <span className="flex-shrink-0" aria-hidden="true">·</span>
                           </>
                         )}
@@ -5187,7 +5179,7 @@ function ChatInterface({
                         <DropdownMenu.Trigger
                           render={
                             <WorkshopIconButton
-                              aria-label={`Actions for ${chat.title}`}
+                              aria-label={t("gatekeeper-context.ContextLibraryPage.actions_for", { value1: chat.title })}
                               onClick={(e) => e.stopPropagation()}
                               className="!h-9 !w-9 flex-shrink-0 text-kumo-inactive opacity-100 focus:opacity-100 group-hover:opacity-100 data-[popup-open]:opacity-100 sm:!h-7 sm:!w-7 sm:opacity-0"
                             >
@@ -5204,16 +5196,14 @@ function ChatInterface({
                             onClick={() => startListRename(chat.id, chat.title)}
                             className="!h-auto rounded-md !px-2.5 !py-1.5 text-[12px] leading-4 tracking-[-0.2px] text-kumo-default transition-colors data-highlighted:bg-kumo-tint"
                           >
-                            Rename
-                          </DropdownMenu.Item>
+                            {t("workshop-frontend.ChatInterface.rename")}</DropdownMenu.Item>
                           <DropdownMenu.Item
                             icon={<Trash size={12} className="mr-2" />}
                             variant="danger"
                             onClick={() => handleDeleteChat(chat.id, chat.title)}
                             className="!h-auto rounded-md !px-2.5 !py-1.5 text-[12px] leading-4 tracking-[-0.2px] transition-colors data-highlighted:bg-kumo-danger-tint"
                           >
-                            Delete
-                          </DropdownMenu.Item>
+                            {t("workshop-frontend.ChatInterface.delete")}</DropdownMenu.Item>
                         </DropdownMenu.Content>
                       </DropdownMenu>
                     )}
@@ -5306,8 +5296,7 @@ function ChatInterface({
                     : "font-normal text-kumo-subtle hover:text-kumo-default"
                 }`}
               >
-                Chat
-              </button>
+                {t("workshop-frontend.ChatInterface.chat")}</button>
               <button
                 type="button"
                 onClick={() => setSidebarActiveTab("connections")}
@@ -5317,8 +5306,7 @@ function ChatInterface({
                     : "font-normal text-kumo-subtle hover:text-kumo-default"
                 }`}
               >
-                Connections
-              </button>
+                {t("workshop-frontend.ChatInterface.connections")}</button>
             </div>
           )}
 
@@ -5338,8 +5326,8 @@ function ChatInterface({
                   <WorkshopIconButton
                     onClick={() => onNavigateToChat(null)}
                     className="!h-8 !w-8 flex-shrink-0"
-                    title="Back to conversations"
-                    aria-label="Back to conversations"
+                    title={t("workshop-frontend.ChatInterface.back_to_conversations")}
+                    aria-label={t("workshop-frontend.ChatInterface.back_to_conversations")}
                   >
                     <CaretLeft size={14} />
                   </WorkshopIconButton>
@@ -5362,14 +5350,14 @@ function ChatInterface({
                         onClick={handleSaveChatTitle}
                         disabled={!titleInput.trim()}
                         className="!h-8 !w-8 hover:text-kumo-brand disabled:opacity-30"
-                        aria-label="Save chat title"
+                        aria-label={t("workshop-frontend.ChatInterface.save_chat_title")}
                       >
                         <Check size={13} />
                       </WorkshopIconButton>
                       <WorkshopIconButton
                         onClick={handleCancelTitleEdit}
                         className="!h-8 !w-8"
-                        aria-label="Cancel title edit"
+                        aria-label={t("workshop-frontend.ChatInterface.cancel_title_edit")}
                       >
                         <X size={13} />
                       </WorkshopIconButton>
@@ -5377,13 +5365,13 @@ function ChatInterface({
                   ) : (
                     <>
                       <span className="min-w-0 flex-1 truncate text-[13px] leading-[18px] font-medium tracking-[-0.25px] text-kumo-default">
-                        {currentChatMetadata?.title || "Chat"}
+                        {currentChatMetadata?.title || t("workshop-frontend.ChatInterface.chat")}
                       </span>
                       <WorkshopIconButton
                         onClick={() => setIsEditingTitle(true)}
                         className="!h-8 !w-8 flex-shrink-0 text-kumo-inactive hover:text-kumo-subtle"
-                        title="Rename chat"
-                        aria-label="Rename chat"
+                        title={t("workshop-frontend.ChatInterface.rename_chat")}
+                        aria-label={t("workshop-frontend.ChatInterface.rename_chat")}
                       >
                         <Pencil size={11} />
                       </WorkshopIconButton>
@@ -5394,8 +5382,8 @@ function ChatInterface({
                     onClick={() => handleDeleteChat()}
                     danger
                     className="!h-8 !w-8 flex-shrink-0 text-kumo-inactive"
-                    title="Delete chat"
-                    aria-label="Delete chat"
+                    title={t("workshop-frontend.ChatInterface.delete_chat")}
+                    aria-label={t("workshop-frontend.ChatInterface.delete_chat")}
                   >
                     <Trash size={14} />
                   </WorkshopIconButton>
@@ -5418,8 +5406,7 @@ function ChatInterface({
                   >
                     {isLoadingEarlier && (
                       <div className="mx-auto mb-6 text-[12px] leading-4 font-medium text-kumo-inactive">
-                        Loading earlier messages…
-                      </div>
+                        {t("workshop-frontend.ChatInterface.loading_earlier_messages")}</div>
                     )}
 
                     {displayEntries.map((entry, entryIndex) => {
@@ -5433,8 +5420,7 @@ function ChatInterface({
                             <div className="flex items-center gap-3" role="separator">
                               <span className="h-px flex-1 bg-kumo-line/60" aria-hidden="true" />
                               <span className="flex-shrink-0 text-[11px] leading-4 font-medium tracking-[0.6px] text-kumo-inactive uppercase">
-                                Kept in full from here
-                              </span>
+                                {t("workshop-frontend.ChatInterface.kept_in_full_from_here")}</span>
                               <span className="h-px flex-1 bg-kumo-line/60" aria-hidden="true" />
                             </div>
                           </div>
@@ -5450,11 +5436,7 @@ function ChatInterface({
                               // Says what the agent traded away and what it still has, since the
                               // marker sits at the request rather than at the cut it describes.
                               <p className="mb-3 text-[12px] leading-[17px] text-kumo-subtle">
-                                The agent reads this in place of everything earlier in the chat.{" "}
-                                {kept === 0
-                                  ? "Nothing after it was kept."
-                                  : `The ${kept === 1 ? "message" : `${kept} messages`} after the cut ${kept === 1 ? "was" : "were"} kept in full.`}
-                              </p>
+                                {renderTranslation(t("workshop-frontend.ChatInterface.the_agent_reads_this_in_place_of_everything_earlier_in_the_chat_m"), { n: kept })}</p>
                             )}
                             <div className={`min-w-0 text-[13px] leading-[19px] ${styles.markdownContent}`}>
                               <MarkdownMessage message={entry.boundary.summary} />
@@ -5478,8 +5460,7 @@ function ChatInterface({
                                   <Brain size={16} />
                                 </span>
                                 <span className="font-medium">
-                                  {entry.requestedBy.name} compacted the context
-                                </span>
+                                  {renderTranslation(t("workshop-frontend.ChatInterface.compacted_the_context_2"), { name: entry.requestedBy.name })}</span>
                                 <CaretRight
                                   size={11}
                                   weight="bold"
@@ -5493,7 +5474,7 @@ function ChatInterface({
 
                         return (
                           <div key={entry.key} className={`${entryTopClass} mb-4 max-w-[860px]`}>
-                            <div className="flex items-center gap-3" role="separator" aria-label="Context compacted">
+                            <div className="flex items-center gap-3" role="separator" aria-label={t("workshop-frontend.ChatInterface.context_compacted")}>
                               <span className="h-px flex-1 bg-kumo-line" aria-hidden="true" />
                               <button
                                 type="button"
@@ -5501,14 +5482,11 @@ function ChatInterface({
                                 aria-expanded={expanded}
                                 className="flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-1 py-0.5 text-[11px] leading-4 font-medium tracking-[0.6px] text-kumo-inactive uppercase transition-colors duration-150 ease-out hover:text-kumo-default focus-visible:text-kumo-default focus-visible:outline-none"
                               >
-                                <Brain size={13} aria-hidden="true" />
-                                Context compacted
                                 <CaretRight
                                   size={11}
                                   weight="bold"
                                   className={`transition-transform duration-150 ease-out ${expanded ? "rotate-90" : ""}`}
-                                />
-                              </button>
+                                /><Brain size={13} aria-hidden="true" />{t("workshop-frontend.ChatInterface.context_compacted")}</button>
                               <span className="h-px flex-1 bg-kumo-line" aria-hidden="true" />
                             </div>
                             {expanded && summary}
@@ -5524,8 +5502,7 @@ function ChatInterface({
                                 <Swap size={16} />
                               </span>
                               <span className="min-w-0 truncate">
-                                Switched to {entry.author.name}
-                              </span>
+                                {renderTranslation(t("workshop-frontend.ChatInterface.switched_to_2"), { name: entry.author.name })}</span>
                             </div>
                           </div>
                         );
@@ -5533,7 +5510,7 @@ function ChatInterface({
 
                       if (entry.type === "savedChanges") {
                         const isOwnChange = entry.message.author.id === currentUser?.id;
-                        const actor = isOwnChange ? "You" : entry.message.author.name;
+                        const actor = isOwnChange ? t("gatekeeper-context.ContextLibraryPage.you") : entry.message.author.name;
                         // A user-authored creation is recorded as a "changes" message carrying
                         // createdGadgets over a no-op update, so label it as a creation rather
                         // than as saved edits.
@@ -5544,19 +5521,15 @@ function ChatInterface({
                         const mainlineMerge = entry.message.mainlineMerge;
                         const conflictCount = mainlineMerge?.conflictPaths.length ?? 0;
                         const label = mainlineMerge
-                          ? `${actor} brought the gadget's latest changes into this draft${
-                              conflictCount > 0
-                                ? ` — ${conflictCount} ${conflictCount === 1 ? "file has" : "files have"} conflicts marked in the code`
-                                : ""}`
+                          ? t("workshop-frontend.ChatInterface.brought_the_latest_gadget_changes_into_this_draft_files_with_conf", { actor: actor, n: conflictCount })
                           : createdGadgets.length > 0
-                          ? `${actor} created ${createdGadgets.length === 1 ? "gadget" : "gadgets"} ${
-                              createdGadgets.map((g) => `“${g.title}”`).join(", ")}`
-                          : `${actor} saved edits`;
+                          ? t("workshop-frontend.ChatInterface.created_gadgets_2", { actor: actor, names: createdGadgets.map(g => g.title).join(", ") })
+                          : t("workshop-frontend.ChatInterface.saved_edits", { value1: actor });
                         // A still-proposed mainline merge can't be reverted: it advanced the
                         // chat's pins, and erasing it would let a later accept silently overwrite
                         // the mainline content it brought in (the server refuses too).
                         const discardLabel = mainlineMerge
-                          ? "This update can't be discarded: it brought in changes already accepted elsewhere. Edit the files instead."
+                          ? t("workshop-frontend.ChatInterface.this_update_can_t_be_discarded_it_brought_in_changes_already_acce")
                           : getSavedEditsDiscardLabel(
                               entry.message.sequence === lastDurablePendingChange?.sequence,
                               createdGadgets.map((g) => g.title),
@@ -5589,7 +5562,7 @@ function ChatInterface({
                                 )}
                                 <Tooltip content={formatFullTimestamp(entry.message.timestamp)} asChild>
                                   <span className="px-1 font-mono text-[11px] leading-4 text-kumo-inactive">
-                                    {entry.message.timestamp.toLocaleTimeString([], {
+                                    {entry.message.timestamp.toLocaleTimeString(getLocale(), {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                     })}
@@ -5676,7 +5649,7 @@ function ChatInterface({
                               )}
                               <Tooltip content={formatFullTimestamp(msg.timestamp)} asChild>
                                 <span className="font-mono">
-                                  {msg.timestamp.toLocaleTimeString([], {
+                                  {msg.timestamp.toLocaleTimeString(getLocale(), {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                   })}
@@ -5726,7 +5699,7 @@ function ChatInterface({
                                 )}
                                 <Tooltip content={formatFullTimestamp(msg.timestamp)} asChild>
                                   <span className="font-mono">
-                                    {msg.timestamp.toLocaleTimeString([], {
+                                    {msg.timestamp.toLocaleTimeString(getLocale(), {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                     })}
@@ -5781,12 +5754,12 @@ function ChatInterface({
                                     : "opacity-100 sm:opacity-0 sm:group-hover/agentMessage:opacity-100 sm:group-focus-within/agentMessage:opacity-100"
                                 }`}>
                                   {hasMessageText && (
-                                    <Tooltip content="Copy message" asChild>
+                                    <Tooltip content={t("workshop-frontend.ChatInterface.copy_message")} asChild>
                                       <button
                                         type="button"
                                         onClick={() => handleCopyMessage(msg.message)}
                                         className="flex cursor-pointer items-center rounded-md p-1 text-kumo-inactive transition-[color,transform] duration-150 ease-out hover:text-kumo-default focus-visible:text-kumo-default focus-visible:outline-none active:scale-[0.96]"
-                                        aria-label="Copy message"
+                                        aria-label={t("workshop-frontend.ChatInterface.copy_message")}
                                       >
                                         <Copy size={15} />
                                       </button>
@@ -5813,7 +5786,7 @@ function ChatInterface({
                                   })()}
                                   <Tooltip content={formatFullTimestamp(msg.timestamp)} asChild>
                                     <span className="px-1 font-mono text-[11px] leading-4 text-kumo-inactive">
-                                      {msg.timestamp.toLocaleTimeString([], {
+                                      {msg.timestamp.toLocaleTimeString(getLocale(), {
                                         hour: "2-digit",
                                         minute: "2-digit",
                                       })}
@@ -5883,8 +5856,8 @@ function ChatInterface({
                                 <Tooltip
                                   content={
                                     isMerge
-                                      ? `Accepted draft changes${ts ? ` through ${formatFullTimestamp(ts)}` : ""}.`
-                                      : `Returned to the gadget state before the prompt sent ${ts ? `at ${ts.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "earlier"}.`
+                                      ? (ts ? t("workshop-frontend.ChatInterface.accepted_draft_changes_through", { time: ts ? formatFullTimestamp(ts) : "" }) : t("workshop-frontend.ChatInterface.accepted_draft_changes", { time: ts ? formatFullTimestamp(ts) : "" }))
+                                      : t("workshop-frontend.ChatInterface.returned_to_the_gadget_state_before_the_earlier_prompt", { time: ts ? formatFullTimestamp(ts) : "" })
                                   }
                                   asChild
                                 >
@@ -5893,10 +5866,7 @@ function ChatInterface({
                                       {isMerge ? <Check size={16} /> : <ArrowUUpLeft size={16} />}
                                     </span>
                                     <span className="font-medium">
-                                      {msg.author.name}{" "}
-                                      {isMerge
-                                        ? "accepted changes"
-                                        : "discarded changes"}
+                                      {isMerge ? t("workshop-frontend.ChatInterface.accepted_changes_2", { name: msg.author.name }) : t("workshop-frontend.ChatInterface.discarded_changes_2", { name: msg.author.name })}
                                     </span>
                                   </span>
                                 </Tooltip>
@@ -5910,12 +5880,12 @@ function ChatInterface({
 
                         {msg.type === "useGadget" && (
                           <div className="max-w-[860px] text-[14px] leading-5 tracking-[-0.25px] text-kumo-subtle">
-                            <Tooltip content={`Used the gadget at ${formatFullTimestamp(msg.timestamp)}`} asChild>
+                            <Tooltip content={t("workshop-frontend.ChatInterface.used_the_gadget_at", { value1: formatFullTimestamp(msg.timestamp) })} asChild>
                               <span className="inline-flex items-center gap-3 px-1.5 py-1">
                                 <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-kumo-inactive" aria-hidden="true">
                                   <Plug size={16} />
                                 </span>
-                                <span>Used the gadget</span>
+                                <span>{t("workshop-frontend.ChatInterface.used_the_gadget")}</span>
                               </span>
                             </Tooltip>
                           </div>
@@ -5944,7 +5914,7 @@ function ChatInterface({
                                         </span>
                                         <span className="flex min-w-0 flex-1 items-center gap-1">
                                           <span className="min-w-0 truncate">
-                                            <span className="font-medium text-kumo-danger">Error: </span>
+                                            <span className="font-medium text-kumo-danger">{t("workshop-frontend.ChatInterface.error_3")}</span>
                                             <span className="text-kumo-subtle">{msg.message}</span>
                                           </span>
                                           <CaretRight
@@ -5957,28 +5927,24 @@ function ChatInterface({
                                     </Tooltip>
                                   </button>
                                   {isLast && msg.code === "usage_limit" && (
-                                    <Tooltip content="Add credits to continue." asChild>
+                                    <Tooltip content={t("workshop-frontend.ChatInterface.add_credits_to_continue")} asChild>
                                       <button
                                         type="button"
                                         onClick={() => setUsageModalOpen(true)}
                                         className="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 text-[13px] leading-4 font-medium text-kumo-default transition-[color,opacity,transform] duration-150 ease-out hover:text-kumo-default-hover focus-visible:text-kumo-default-hover focus-visible:outline-none active:scale-[0.98]"
                                       >
-                                        <Lightning size={12} weight="bold" />
-                                        Continue
-                                      </button>
+                                        <Lightning size={12} weight="bold" />{t("workshop-frontend.ChatInterface.continue")}</button>
                                     </Tooltip>
                                   )}
                                   {isLast && msg.code !== "usage_limit" && (
-                                    <Tooltip content="Retry the last action." asChild>
+                                    <Tooltip content={t("workshop-frontend.ChatInterface.retry_the_last_action")} asChild>
                                       <button
                                         type="button"
                                         onClick={() => handleRetry()}
                                         disabled={selectedModel === null}
                                         className="flex flex-shrink-0 cursor-pointer items-center gap-1 rounded-md px-1 py-0.5 text-[13px] leading-4 font-medium text-kumo-default transition-[color,opacity,transform] duration-150 ease-out hover:text-kumo-default-hover focus-visible:text-kumo-default-hover focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                                       >
-                                        <ArrowsClockwise size={12} weight="bold" />
-                                        Retry
-                                      </button>
+                                        <ArrowsClockwise size={12} weight="bold" />{t("workshop-frontend.Activity.retry")}</button>
                                     </Tooltip>
                                   )}
                                 </div>
@@ -6033,33 +5999,30 @@ function ChatInterface({
                               <Pencil size={16} />
                             </span>
                             <Tooltip
-                              content={`Your edits are still a live draft.${lastEditedAt !== null ? ` Last edited ${formatFullTimestamp(lastEditedAt)}` : ''}`}
+                              content={(lastEditedAt !== null ? t("workshop-frontend.ChatInterface.your_edits_are_still_a_live_draft_last_edited", { time: lastEditedAt !== null ? formatFullTimestamp(lastEditedAt) : "" }) : t("workshop-frontend.ChatInterface.your_edits_are_still_a_live_draft", { time: lastEditedAt !== null ? formatFullTimestamp(lastEditedAt) : "" }))}
                               asChild
                             >
                               <span className="font-medium text-kumo-subtle">
-                                Draft changes pending
-                              </span>
+                                {t("workshop-frontend.ChatInterface.draft_changes_pending")}</span>
                             </Tooltip>
                             <div className="flex flex-wrap items-center gap-2 text-[13px] leading-4">
-                              <Tooltip content="Throw away these draft edits." asChild>
+                              <Tooltip content={t("workshop-frontend.ChatInterface.throw_away_these_draft_edits")} asChild>
                                 <button
                                   type="button"
                                   disabled={isAgentActive}
                                   onClick={handleDiscardDraftChanges}
                                   className="cursor-pointer rounded-md px-1 py-0.5 font-medium text-kumo-inactive transition-colors duration-150 ease-out hover:text-kumo-danger focus-visible:text-kumo-danger focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                  Discard
-                                </button>
+                                  {t("workshop-frontend.ChatInterface.discard_2")}</button>
                               </Tooltip>
-                              <Tooltip content="Save these edits as a draft version. They won't affect the gadget until you accept changes." asChild>
+                              <Tooltip content={t("workshop-frontend.ChatInterface.save_these_edits_as_a_draft_version_they_won_t_affect_the_gadget_")} asChild>
                                 <button
                                   type="button"
                                   disabled={isAgentActive}
                                   onClick={handleFinalizeDraftChanges}
                                   className="cursor-pointer rounded-md px-1 py-0.5 font-medium text-kumo-default transition-[color,opacity,transform] duration-150 ease-out hover:text-kumo-default-hover focus-visible:text-kumo-default-hover focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
                                 >
-                                  Save draft
-                                </button>
+                                  {t("workshop-frontend.ChatInterface.save_draft")}</button>
                               </Tooltip>
                             </div>
                           </div>
@@ -6108,14 +6071,12 @@ function ChatInterface({
                         <div className={`group/agent min-w-0 w-full max-w-[860px] space-y-2 ${provisionalTopClass}`}>
                           {isCompacting && (
                             <div className={`inline-flex px-1.5 py-1 text-[14px] leading-5 tracking-[-0.25px] ${styles.thinkingShimmer}`}>
-                              Compacting…
-                            </div>
+                              {t("workshop-frontend.ChatInterface.compacting")}</div>
                           )}
 
                           {showThinking && (
                             <div className={`inline-flex px-1.5 py-1 text-[14px] leading-5 tracking-[-0.25px] ${styles.thinkingShimmer}`}>
-                              Thinking
-                            </div>
+                              {t("workshop-frontend.ChatInterface.thinking")}</div>
                           )}
 
                           {showThinkingTraces && currentProvisionalState?.reasoning && (
@@ -6174,7 +6135,7 @@ function ChatInterface({
                                         >
                                           {toolCall.code && (
                                             <>
-                                              <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">Code</span>
+                                              <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">{t("workshop-frontend.ChatInterface.code")}</span>
                                               <pre className="max-h-56 overflow-auto rounded-xl border border-kumo-line/70 bg-kumo-base p-3 font-mono text-[12px] leading-[18px] text-kumo-subtle whitespace-pre-wrap">
                                                 {toolCall.code}
                                               </pre>
@@ -6182,7 +6143,7 @@ function ChatInterface({
                                           )}
                                           {toolCall.output && (
                                             <>
-                                              <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">Output</span>
+                                              <span className="font-mono text-[11px] leading-4 text-kumo-inactive uppercase tracking-[0.08em]">{t("workshop-frontend.ChatInterface.output")}</span>
                                               <pre className="max-h-56 overflow-auto rounded-xl border border-kumo-line/70 bg-kumo-base p-3 font-mono text-[12px] leading-[18px] text-kumo-subtle whitespace-pre-wrap">
                                                 {toolCall.output}
                                               </pre>
@@ -6235,9 +6196,9 @@ function ChatInterface({
                       : undefined}
                     blockedReason={
                       hasPendingConnectionRequest
-                        ? "Set up or deny the connection request above to continue."
+                        ? t("workshop-frontend.ChatInterface.set_up_or_deny_the_connection_request_above_to_continue")
                         : hasPendingAwaitedAction
-                          ? "Approve or reject the pending action above to continue."
+                          ? t("workshop-frontend.ChatInterface.approve_or_reject_the_pending_action_above_to_continue")
                           : undefined
                     }
                     draftUpdateBanner={(() => {
@@ -6256,8 +6217,7 @@ function ChatInterface({
                         <div className="themed-surface-inset relative flex items-center gap-2 overflow-hidden rounded-t-[calc(1rem-1px)] border-b border-kumo-line bg-kumo-elevated px-3.5 py-2">
                           <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-kumo-brand/40 to-transparent" aria-hidden="true" />
                           <span className="min-w-0 flex-1 truncate text-[12px] font-medium leading-4 tracking-[-0.2px] text-kumo-default">
-                            Pending changes
-                          </span>
+                            {t("workshop-frontend.ChatInterface.pending_changes")}</span>
                           <DiscardPendingChangesPopover
                             open={discardChangesTarget?.chatId === currentChatMetadata.id}
                             disabled={changesActionsDisabled}
@@ -6271,19 +6231,17 @@ function ChatInterface({
                             onConfirm={handleDiscardPendingChanges}
                           />
                           <Tooltip content={isAgentActive
-                            ? "Wait for the agent to finish before accepting changes."
+                            ? t("workshop-frontend.ChatInterface.wait_for_the_agent_to_finish_before_accepting_changes")
                             : isDiscardingChanges
-                              ? "Wait for pending changes to finish discarding."
-                              : "Keep this draft and make it the gadget's current version."} asChild>
+                              ? t("workshop-frontend.ChatInterface.wait_for_pending_changes_to_finish_discarding")
+                              : t("workshop-frontend.ChatInterface.keep_this_draft_and_make_it_the_gadget_s_current_version")} asChild>
                             <WorkshopButton
                               disabled={changesActionsDisabled}
                               onClick={() => handleMergeChanges()}
                               tone="primary"
                               className="!h-7 !cursor-pointer !rounded-md !border-transparent !shadow-none gap-1 text-[12px]"
                             >
-                              <Check size={11} weight="bold" />
-                              Accept changes
-                            </WorkshopButton>
+                              <Check size={11} weight="bold" />{t("workshop-frontend.ChatInterface.accept_changes")}</WorkshopButton>
                           </Tooltip>
                         </div>
                       );
@@ -6294,8 +6252,7 @@ function ChatInterface({
                   <div className="-mt-1 flex min-h-[1.25rem] items-start justify-end gap-4 px-4 pb-1 font-mono text-[11px] leading-4 text-kumo-inactive">
                     {currentChatMetadata?.totalTokens != null && (
                       <span>
-                        {currentChatMetadata.totalTokens.toLocaleString()} tokens
-                      </span>
+                        {renderTranslation(t("workshop-frontend.ChatInterface.tokens_2"), { value: currentChatMetadata.totalTokens.toLocaleString(getLocale()) })}</span>
                     )}
                     {currentChatMetadata?.totalCost != null && (
                       <span>${currentChatMetadata.totalCost.toFixed(4)}</span>
@@ -6323,14 +6280,9 @@ function ChatInterface({
           <div className="flex items-start justify-between gap-4 border-b border-kumo-line px-5 py-4">
             <div className="min-w-0">
               <Dialog.Title className="text-[15px] leading-5 font-medium tracking-[-0.3px] text-kumo-default">
-                The gadget changed since this draft started
-              </Dialog.Title>
+                {t("workshop-frontend.ChatInterface.the_gadget_changed_since_this_draft_started")}</Dialog.Title>
               <Dialog.Description className="mt-1 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
-                Someone else&apos;s changes were accepted in the meantime, so this draft&apos;s
-                changes can&apos;t be applied as-is. Bring the latest changes into this draft
-                first; any conflicts will be marked in the code for you (or the agent) to resolve
-                before accepting again.
-              </Dialog.Description>
+                {t("workshop-frontend.ChatInterface.someone_else_s_changes_were_accepted_in_the_meantime_so_this_draf")}</Dialog.Description>
             </div>
             <Dialog.Close
               render={(props) => (
@@ -6338,7 +6290,7 @@ function ChatInterface({
                   {...props}
                   className="!h-7 !w-7"
                   disabled={isUpdatingFromMainline}
-                  aria-label="Close"
+                  aria-label={t("workshop-frontend.Inbox.close")}
                 >
                   <X size={16} />
                 </WorkshopIconButton>
@@ -6354,8 +6306,7 @@ function ChatInterface({
                   className="!h-9"
                   disabled={isUpdatingFromMainline}
                 >
-                  Not now
-                </WorkshopButton>
+                  {t("workshop-frontend.ChatInterface.not_now")}</WorkshopButton>
               )}
             />
             <WorkshopButton
@@ -6364,7 +6315,7 @@ function ChatInterface({
               disabled={isUpdatingFromMainline}
               className="!h-9 min-w-[64px]"
             >
-              {isUpdatingFromMainline ? "Updating..." : "Bring in latest changes"}
+              {isUpdatingFromMainline ? t("workshop-frontend.BlueprintLandingPage.updating") : t("workshop-frontend.ChatInterface.bring_in_latest_changes")}
             </WorkshopButton>
           </div>
         </Dialog>
@@ -6372,8 +6323,8 @@ function ChatInterface({
 
       <DeleteConfirmationDialog
         open={deleteTarget !== null}
-        title="Delete conversation?"
-        description={<>This removes <span className="font-medium text-kumo-default">{deleteTarget?.title}</span>. You can&apos;t undo this.</>}
+        title={t("workshop-frontend.ChatInterface.delete_conversation")}
+        description={<>{renderTranslation(t("workshop-frontend.ChatInterface.this_removes_you_can_t_undo_this"), { value: <span className="font-medium text-kumo-default">{deleteTarget?.title}</span> })}</>}
         isDeleting={isDeleting}
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);

@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   SpotifyAccountConfiguratorRpc,
@@ -23,8 +24,8 @@ export default {
   render() {
     return <Section>
       <Field
-        label="Whole-account access"
-        description="This binding grants access to the connected Spotify account: profile, catalog search, your library, your playlists, and playback control on your Spotify Connect devices.">
+        label={t("gatekeeper-spotify.account-configurator-ui.whole_account_access")}
+        description={t("gatekeeper-spotify.account-configurator-ui.this_binding_grants_access_to_the_connected_spotify_account_prof")}>
       </Field>
     </Section>;
   },

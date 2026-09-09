@@ -1,3 +1,4 @@
+import { t } from "@gadgets/i18n";
 import { MAX_SITE_LOGO_BYTES } from '@gadgets/workshop-shared/api'
 
 const SITE_LOGO_SIZE = 256
@@ -10,7 +11,7 @@ type ImageDimensions = { width: number; height: number }
 
 /** Calculates aspect-preserving output dimensions with a 256px longest edge. */
 export function siteLogoDimensions(width: number, height: number): { width: number; height: number } {
-  if (width <= 0 || height <= 0) throw new Error('Invalid image dimensions.')
+  if (width <= 0 || height <= 0) throw new Error(t("workshop-frontend.siteLogoUtils.invalid_image_dimensions"))
   const scale = SITE_LOGO_SIZE / Math.max(width, height)
   return {
     width: Math.max(1, Math.round(width * scale)),
@@ -80,7 +81,7 @@ function readFile(file: File, mode: 'arrayBuffer' | 'text'): Promise<ArrayBuffer
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.addEventListener('load', () => resolve(reader.result as ArrayBuffer | string), { once: true })
-    reader.addEventListener('error', () => reject(new Error('Failed to read the selected image.')), {
+    reader.addEventListener('error', () => reject(new Error(t("workshop-frontend.siteLogoUtils.failed_to_read_the_selected_image"))), {
       once: true,
     })
     if (mode === 'arrayBuffer') reader.readAsArrayBuffer(file)
@@ -101,7 +102,7 @@ async function validateSvgResources(file: File): Promise<void> {
   const document = new DOMParser().parseFromString(await readFile(file, 'text'), 'image/svg+xml')
   const root = document.documentElement
   if (root.localName !== 'svg' || document.querySelector('parsererror')) {
-    throw new Error('The selected file is not a supported image.')
+    throw new Error(t("workshop-frontend.siteLogoUtils.the_selected_file_is_not_a_supported_image"))
   }
   const blockedElements = new Set([
     'script', 'foreignobject', 'image', 'feimage', 'iframe', 'object', 'embed',
@@ -109,7 +110,7 @@ async function validateSvgResources(file: File): Promise<void> {
   ])
   for (const element of [root, ...root.querySelectorAll('*')]) {
     if (blockedElements.has(element.localName.toLowerCase())) {
-      throw new Error('SVG logos cannot contain embedded images or external resources.')
+      throw new Error(t("workshop-frontend.siteLogoUtils.svg_logos_cannot_contain_embedded_images_or_external_resources"))
     }
     for (const attribute of element.attributes) {
       const name = attribute.name.toLowerCase()
@@ -117,11 +118,11 @@ async function validateSvgResources(file: File): Promise<void> {
       if (name.startsWith('on') ||
           ((name === 'href' || name.endsWith(':href') || name === 'src') &&
             value !== '' && !value.startsWith('#')) || hasExternalSvgResource(value)) {
-        throw new Error('SVG logos cannot contain embedded images or external resources.')
+        throw new Error(t("workshop-frontend.siteLogoUtils.svg_logos_cannot_contain_embedded_images_or_external_resources"))
       }
     }
     if (element.localName === 'style' && hasExternalSvgResource(element.textContent ?? '')) {
-      throw new Error('SVG logos cannot contain embedded images or external resources.')
+      throw new Error(t("workshop-frontend.siteLogoUtils.svg_logos_cannot_contain_embedded_images_or_external_resources"))
     }
   }
 }
@@ -133,7 +134,7 @@ function validateSourceDimensions(
   if (width <= 0 || height <= 0 || (enforceRasterLimit &&
       (width > MAX_SOURCE_DIMENSION || height > MAX_SOURCE_DIMENSION ||
         width * height > MAX_SOURCE_PIXELS))) {
-    throw new Error('Logo source dimensions are too large.')
+    throw new Error(t("workshop-frontend.siteLogoUtils.logo_source_dimensions_are_too_large"))
   }
 }
 
@@ -144,7 +145,7 @@ async function preflightRasterDimensions(file: File): Promise<void> {
   }
   const data = new Uint8Array(await readFile(file, 'arrayBuffer'))
   const dimensions = pngDimensions(data) ?? jpegDimensions(data) ?? webpDimensions(data)
-  if (!dimensions) throw new Error('The selected file is not a supported image.')
+  if (!dimensions) throw new Error(t("workshop-frontend.siteLogoUtils.the_selected_file_is_not_a_supported_image"))
   validateSourceDimensions(dimensions)
 }
 
@@ -152,7 +153,7 @@ function canvasToPng(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (blob) resolve(blob)
-      else reject(new Error('Failed to encode the logo as PNG.'))
+      else reject(new Error(t("workshop-frontend.siteLogoUtils.failed_to_encode_the_logo_as_png")))
     }, 'image/png')
   })
 }
@@ -185,7 +186,7 @@ async function decodeImage(file: File): Promise<DecodedImage> {
       const element = new Image()
       element.addEventListener('load', () => resolve(element), { once: true })
       element.addEventListener('error', () => {
-        reject(new Error('The selected file could not be decoded as an image.'))
+        reject(new Error(t("workshop-frontend.siteLogoUtils.the_selected_file_could_not_be_decoded_as_an_image")))
       }, { once: true })
       element.src = url
     })
@@ -203,15 +204,15 @@ async function decodeImage(file: File): Promise<DecodedImage> {
 
 /** Decodes, scales, and rasterizes an uploaded image into a bounded static PNG. */
 export async function prepareSiteLogo(file: File): Promise<Uint8Array> {
-  if (file.size > MAX_SOURCE_BYTES) throw new Error('Logo source image is too large (max 5 MB).')
-  if (file.type && !file.type.startsWith('image/')) throw new Error('Choose an image file.')
+  if (file.size > MAX_SOURCE_BYTES) throw new Error(t("workshop-frontend.siteLogoUtils.logo_source_image_is_too_large_max_5_mb"))
+  if (file.type && !file.type.startsWith('image/')) throw new Error(t("workshop-frontend.siteLogoUtils.choose_an_image_file"))
   await preflightRasterDimensions(file)
 
   let image: DecodedImage
   try {
     image = await decodeImage(file)
   } catch {
-    throw new Error('The selected file could not be decoded as an image.')
+    throw new Error(t("workshop-frontend.siteLogoUtils.the_selected_file_could_not_be_decoded_as_an_image"))
   }
 
   try {
@@ -221,12 +222,12 @@ export async function prepareSiteLogo(file: File): Promise<Uint8Array> {
     canvas.width = dimensions.width
     canvas.height = dimensions.height
     const context = canvas.getContext('2d')
-    if (!context) throw new Error('Failed to prepare the logo image.')
+    if (!context) throw new Error(t("workshop-frontend.siteLogoUtils.failed_to_prepare_the_logo_image"))
     context.drawImage(image.source, 0, 0, dimensions.width, dimensions.height)
 
     const png = await canvasToPng(canvas)
     if (png.size > MAX_SITE_LOGO_BYTES) {
-      throw new Error('Logo is too complex to fit within the upload limit.')
+      throw new Error(t("workshop-frontend.siteLogoUtils.logo_is_too_complex_to_fit_within_the_upload_limit"))
     }
     return new Uint8Array(await png.arrayBuffer())
   } finally {

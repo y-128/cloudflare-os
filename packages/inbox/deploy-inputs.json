@@ -1,0 +1,8 @@
+[
+  {
+    "name": "DOMAINS",
+    "kind": "var",
+    "label": "Inbound email domains",
+    "help": "Comma-separated domains with Cloudflare Email Routing enabled, for example example.com."
+  }
+]

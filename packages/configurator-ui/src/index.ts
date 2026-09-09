@@ -1,6 +1,11 @@
 /** Values owned by a sandboxed configurator UI. */
 export type ConfiguratorUIValues = Record<string, string | null | undefined>;
 
+/** Translates a display message in the host's language. Provided by the configurator sandbox. */
+export function t(_key: string, _params?: Record<string, string | number>): string {
+  throw new Error("t is provided by the configurator UI sandbox runtime.");
+}
+
 /** Option shown by configurator controls such as Autocomplete. */
 export type ConfiguratorUIOption = {
   value: string;

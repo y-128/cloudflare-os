@@ -1,3 +1,4 @@
+import { useTranslation } from "@gadgets/i18n";
 import { Select, type PortalContainer } from '@cloudflare/kumo'
 import { AiChatAuthorInfo } from '@gadgets/workshop-shared/api'
 import { ConnectionConfigField } from './ConnectionConfigField'
@@ -15,17 +16,18 @@ export function AiModelConnectionConfig({
   onSelectedModelIdChange,
   selectContainer,
 }: AiModelConnectionConfigProps) {
+  const { t } = useTranslation();
   return (
     <section className="grid gap-3">
       <ConnectionConfigField
-        label="Model"
-        description="Choose the model this connection can use."
+        label={t("workshop-frontend.AiModelConnectionConfig.model")}
+        description={t("workshop-frontend.AiModelConnectionConfig.choose_the_model_this_connection_can_use")}
       >
         <Select
-          aria-label="Select an AI model"
+          aria-label={t("workshop-frontend.AiModelConnectionConfig.select_an_ai_model")}
           className="w-full text-sm [&_button]:!h-9"
           container={selectContainer}
-          placeholder="Select an AI model"
+          placeholder={t("workshop-frontend.AiModelConnectionConfig.select_an_ai_model")}
           value={selectedModelId}
           onValueChange={(v) => onSelectedModelIdChange(v as string | undefined)}
           renderValue={(id) => availableModels.find((m) => m.id === id)?.name ?? id}

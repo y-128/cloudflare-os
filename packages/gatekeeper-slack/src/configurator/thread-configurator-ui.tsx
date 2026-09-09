@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Field, h, Section, TextInput, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type { ThreadConfiguratorRpc, ThreadConfiguratorValues } from "./thread-configurator-types";
 
@@ -35,8 +36,8 @@ export default {
   render({ values, setValues }) {
     return <Section>
       <Field
-        label="Thread permalink"
-        description="Paste a Slack message link (Copy link on a message). It looks like https://your-workspace.slack.com/archives/C0.../p123..."
+        label={t("gatekeeper-slack.thread-configurator-ui.thread_permalink")}
+        description={t("gatekeeper-slack.thread-configurator-ui.paste_a_slack_message_link_copy_link_on_a_message_it_looks_like")}
       >
         <TextInput
           name="permalink"

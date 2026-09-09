@@ -1,3 +1,4 @@
+import { t } from "@gadgets/configurator-ui";
 import { Autocomplete, Field, h, Section, type ConfiguratorUISpec } from "@gadgets/configurator-ui";
 import type {
   HomeAssistantEntityConfiguratorRpc,
@@ -17,11 +18,11 @@ export default {
 
   render({ values, setValues, ui }) {
     return <Section>
-      <Field label="Entity" description="Choose a single Home Assistant entity (light, sensor, switch, etc).">
+      <Field label={t("gatekeeper-homeassistant.entity-configurator-ui.entity")} description={t("gatekeeper-homeassistant.entity-configurator-ui.choose_a_single_home_assistant_entity_light_sensor_switch_etc")}>
         <Autocomplete
           name="entityId"
           value={values.entityId}
-          placeholder="Search entities..."
+          placeholder={t("gatekeeper-homeassistant.entity-configurator-ui.search_entities")}
           loadOptions={query => ui.listEntities(query)}
           onChange={entityId => setValues({ entityId })}
         />

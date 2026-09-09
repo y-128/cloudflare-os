@@ -1,3 +1,4 @@
+import { translate, translateWithFallback } from "../packages/i18n/src/core.ts";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { access, mkdtemp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -72,6 +73,12 @@ async function runConfiguratorRuntime(directory: string) {
     pretendToBeVisual: true,
     runScripts: "outside-only",
   });
+  dom.window.translateWithFallback = translateWithFallback;
+  const frameSource = await readFile(resolve("packages/i18n/src/frame.ts"), "utf8");
+  const frameModule = ts.transpileModule(frameSource, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+  }).outputText;
+  dom.window.receiveFrameLocale = dom.window.eval(frameModule.replace(/^export /gm, "") + "; receiveFrameLocale;");
   const runtime = (await readRuntime(directory)).replace(/^import .*;\n/gm, "");
   Object.defineProperty(dom.window, "postMessage", { value: () => {} });
   dom.window.eval(`
@@ -128,7 +135,8 @@ function readRuntimeFunctions(
   // The generated runtime is trusted build output and production executes the same function.
   // oxlint-disable-next-line no-new-func
   return new Function(
-    `${constants.join("\n")}\n${definitions.join("\n")}\nreturn { ${names.join(", ")} };`)();
+    "t",
+    `${constants.join("\n")}\n${definitions.join("\n")}\nreturn { ${names.join(", ")} };`)(translate.bind(null, "ja"));
 }
 
 /** The source map the builder writes beside each configurator artifact. */
@@ -327,7 +335,7 @@ describe("generated configurator option sanitizing", () => {
     assert.deepEqual(withUnavailableOptions(
       [{ value: "current", title: "Current" }], "current,removed"), [
       { value: "current", title: "Current" },
-      { value: "removed", title: "removed (unavailable)" },
+      { value: "removed", title: translate("ja", "configurator-ui.runtime.unavailable", { name: "removed" }) },
     ]);
   });
 
@@ -374,7 +382,14 @@ describe("generated configurator checkbox behavior", () => {
       const rowsAfterSelection = root.querySelector(".checkbox-rows");
       assert.notEqual(rowsAfterSelection, rows);
       assert.equal(rowsAfterSelection?.scrollTop, 176);
-      assert.match(root.textContent, /1 of 12 selected/);
+      assert.ok(root.textContent.includes(translate("ja", "configurator-ui.runtime.of_selected", { n: 1, total: 12 })));
+
+      dom.window.dispatchEvent(new dom.window.MessageEvent("message", {
+        source: dom.window.parent,
+        data: { type: "gadgets.locale.v1", locale: "en" },
+      }));
+      assert.ok(root.textContent.includes(translate("en", "configurator-ui.runtime.of_selected", { n: 1, total: 12 })));
+      assert.equal(root.querySelectorAll('input[type="checkbox"]')[8].checked, true);
 
       const filter = root.querySelector('input[type="search"]');
       assert.ok(filter);

@@ -1,3 +1,4 @@
+import { useTranslation, renderTranslation } from "@gadgets/i18n";
 import { Tooltip } from "@cloudflare/kumo";
 import { X } from "@phosphor-icons/react";
 
@@ -16,6 +17,7 @@ export const CapturedConsoleLogsPrompt = ({
   onAttach,
   onDiscard,
 }: CapturedConsoleLogsPromptProps) => {
+  const { t } = useTranslation();
   if (count <= 0) return null;
 
   // Keep the chip neutral and communicate severity with the dot so noisy errors do not paint the
@@ -25,7 +27,6 @@ export const CapturedConsoleLogsPrompt = ({
     : severity === "warn"
       ? "bg-kumo-warning"
       : "bg-kumo-inactive";
-  const logKind = severity === "error" ? "error" : severity === "warn" ? "warning" : "log";
 
   return (
     <div className="pointer-events-none absolute inset-x-4 -top-10 z-10 flex justify-center">
@@ -47,15 +48,14 @@ export const CapturedConsoleLogsPrompt = ({
           >
             <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} />
             <span className="truncate">
-              Send {count} captured {logKind}{count !== 1 ? "s" : ""} to chat
-            </span>
+              {renderTranslation(t("workshop-frontend.CapturedConsoleLogsPrompt.send_captured_logs_to_chat"), { n: count })}</span>
           </button>
         </Tooltip>
         <button
           type="button"
           onClick={onDiscard}
           className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full opacity-60 transition-opacity hover:bg-kumo-tint hover:opacity-100"
-          aria-label="Discard captured logs"
+          aria-label={t("workshop-frontend.ChatInterface.discard_captured_logs")}
         >
           <X size={10} />
         </button>
