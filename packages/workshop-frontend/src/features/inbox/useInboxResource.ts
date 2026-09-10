@@ -1,9 +1,10 @@
+import { describeError } from "../../../../inbox/workers/lib/describe-error"
 import { useEffect, useState } from 'react'
 import { inboxApi, inboxErrorMessage, isAbort } from './api'
 
 /** Loads one REST resource, aborting stale work and never exposing data under a different key. */
 export const useInboxResource = <T,>(path: string | null, revision = 0) => {
-  const [state, setState] = useState<{ path: string; data?: T; error?: Error }>({ path: '' })
+  const [state, setState] = useState<{ path: string; data?: T; error?: Error; loadedRevision?: number }>({ path: '' })
   const [attempt, setAttempt] = useState(0)
   /** Retries this resource without reloading or remounting unrelated forms. */
   const retry = () => setAttempt(current => current + 1)
@@ -14,15 +15,16 @@ export const useInboxResource = <T,>(path: string | null, revision = 0) => {
     const load = async () => {
       try {
         const data = await inboxApi<T>(path, { signal: controller.signal })
-        if (!controller.signal.aborted) setState({ path, data })
+        if (!controller.signal.aborted) setState({ path, data, loadedRevision: revision })
       } catch (err) {
         if (controller.signal.aborted || isAbort(err)) return
-        console.error('[loadInboxResource] failed', { err })
+        console.error('[loadInboxResource] failed', { err: describeError(err) })
         setState(current => ({ path, data: current.path === path ? current.data : undefined, error: new Error(inboxErrorMessage(err)) }))
       }
     }
     void load()
     return () => controller.abort()
   }, [path, revision, attempt])
-  return { data: state.path === path ? state.data : undefined, error: state.path === path ? state.error : undefined, retry }
+  // Consumers that unlock editing must distinguish fresh verification from retained display data.
+  return { data: state.path === path ? state.data : undefined, error: state.path === path ? state.error : undefined, loadedRevision: state.path === path ? state.loadedRevision : undefined, retry }
 }

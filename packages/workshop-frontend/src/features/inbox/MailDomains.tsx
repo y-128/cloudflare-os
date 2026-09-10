@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Button, Checkbox, Input } from '@cloudflare/kumo'
 import { useTranslation } from '@gadgets/i18n'
-import { inboxApi, jsonRequest } from './api'
+import { inboxApi, inboxErrorMessage, InboxRequestError, isAbort, jsonRequest } from './api'
+import { describeError } from '../../../../inbox/workers/lib/describe-error'
+import { MAIL_ONBOARDING_ERROR_CODES } from '../../../../inbox/shared/mail-onboarding'
 import { useInboxResource } from './useInboxResource'
 import { MailCopyValue } from './MailCopyValue'
 import { MailDestinations } from './MailDestinations'
+import { MailAddresses } from './MailAddresses'
 import type { DomainStatus, MailDomain } from '../../../../inbox/shared/mail-onboarding'
 
 const DNS_POLL_MS = 30_000 // DNS propagation takes minutes; avoid excessive Cloudflare API calls.
@@ -12,12 +15,13 @@ const DNS_POLL_MS = 30_000 // DNS propagation takes minutes; avoid excessive Clo
 /** Lists resumable domain setups and starts onboarding without requiring an existing mailbox. */
 export const MailDomains = ({ onMailboxCreated }: { onMailboxCreated?: () => void }) => {
   const { t } = useTranslation()
-  const [revision, setRevision] = useState(0)
-  const domains = useInboxResource<MailDomain[]>('/admin/mail-domains', revision)
+  const domains = useInboxResource<MailDomain[]>('/admin/mail-domains')
+  const [addressRevision, setAddressRevision] = useState(0)
+  const mailboxCreated = () => { setAddressRevision(value => value + 1); onMailboxCreated?.() }
   // 送信枠は参考表示なので、取得できなくても画面は成立させる。ワーカー側も 500 を返さず
   // available: false と理由を返す (Cloudflare がこの権限名を公開していないため、他が揃った
   // トークンでも拒否されうる)。
-  const limits = useInboxResource<{ available: boolean; limits?: Record<string, unknown>; reason?: string }>('/admin/mail-limits', revision)
+  const limits = useInboxResource<{ available: boolean; limits?: Record<string, unknown>; reason?: string }>('/admin/mail-limits')
   const [domain, setDomain] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -27,8 +31,8 @@ export const MailDomains = ({ onMailboxCreated }: { onMailboxCreated?: () => voi
     if (busy) return
     setBusy(true); setError('')
     try { const result = await inboxApi<MailDomain>('/admin/mail-domains', jsonRequest('POST', { domain })); setSelected(result.id) }
-    catch (err) { console.error('[startMailDomain] failed', { err }); setError(err instanceof Error ? err.message : t('workshop-frontend.Inbox.save_failed')) }
-    finally { setBusy(false); setRevision(value => value + 1) }
+    catch (err) { if (!isAbort(err)) { console.error('[startMailDomain] failed', { err: describeError(err) }); setError(inboxErrorMessage(err)) } }
+    finally { setBusy(false); domains.retry() }
   }
   return <div className="space-y-6">
     <form className="space-y-3" onSubmit={event => { event.preventDefault(); void start() }}>
@@ -38,8 +42,9 @@ export const MailDomains = ({ onMailboxCreated }: { onMailboxCreated?: () => voi
     </form>
     {(error || domains.error) && <p role="alert" className="text-kumo-danger">{error || domains.error?.message}</p>}
     <nav aria-label={t('workshop-frontend.Inbox.domain_settings')} className="flex flex-wrap gap-2">{domains.data?.map(item => <Button key={item.id} variant={selected === item.id ? 'primary' : 'secondary'} onClick={() => setSelected(item.id)}>{item.domain}</Button>)}</nav>
-    {selected && <DomainWizard key={selected} domainId={selected} onMailboxCreated={onMailboxCreated} />}
-    <section className="space-y-2 border-t border-kumo-line pt-5"><h3 className="font-semibold">{t('workshop-frontend.Inbox.sending_quota')}</h3><p className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.quota_hint')}</p>{limits.error ? <p role="alert">{limits.error.message}</p> : !limits.data ? <p role="status">{t('workshop-frontend.Inbox.loading')}</p> : limits.data.available ? <pre className="overflow-x-auto rounded-lg border border-kumo-line p-3 text-sm">{JSON.stringify(limits.data.limits, null, 2)}</pre> : <p role="status" className="text-sm text-kumo-subtle">{limits.data.reason}</p>}<Button variant="secondary" onClick={() => setRevision(value => value + 1)}>{t('workshop-frontend.Inbox.refresh')}</Button></section>
+    {selected && <DomainWizard key={selected} domainId={selected} onMailboxCreated={mailboxCreated} />}
+    <section className="space-y-2 border-t border-kumo-line pt-5"><h3 className="font-semibold">{t('workshop-frontend.Inbox.sending_quota')}</h3><p className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.quota_hint')}</p>{limits.error ? <p role="alert">{limits.error.message}</p> : !limits.data ? <p role="status">{t('workshop-frontend.Inbox.loading')}</p> : limits.data.available ? <pre className="overflow-x-auto rounded-lg border border-kumo-line p-3 text-sm">{JSON.stringify(limits.data.limits, null, 2)}</pre> : <p role="status" className="text-sm text-kumo-subtle">{limits.data.reason}</p>}<Button variant="secondary" onClick={() => { domains.retry(); limits.retry() }}>{t('workshop-frontend.Inbox.refresh')}</Button></section>
+    <MailAddresses revision={addressRevision} onChanged={onMailboxCreated} />
     <MailDestinations />
   </div>
 }
@@ -69,8 +74,8 @@ const DomainWizard = ({ domainId, onMailboxCreated }: { domainId: string; onMail
         setStatus(next); setLoadError('')
         if (next.state === 'pending') timer = setTimeout(() => void poll(), DNS_POLL_MS)
       } catch (err) {
-        if (controller.signal.aborted) return
-        console.error('[pollMailDomain] failed', { err }); setLoadError(err instanceof Error ? err.message : t('workshop-frontend.Inbox.save_failed'))
+        if (controller.signal.aborted || isAbort(err)) return
+        console.error('[pollMailDomain] failed', { err: describeError(err) }); setLoadError(inboxErrorMessage(err))
       }
     }
     if (!busy) void poll()
@@ -79,17 +84,17 @@ const DomainWizard = ({ domainId, onMailboxCreated }: { domainId: string; onMail
   /** Performs one explicit wizard action then reloads the persisted result. */
   const mutate = async (suffix: string, body?: unknown) => {
     if (busy) return
-    setBusy(true); setError('')
+    setBusy(true); setError(''); setConflict(false)
     try {
       await inboxApi(`${path}/${suffix}`, jsonRequest('POST', body))
       setConflict(false)
       if (suffix === 'addresses') onMailboxCreated?.()
     } catch (err) {
-      console.error('[updateMailDomain] failed', { err })
-      const message = err instanceof Error ? err.message : t('workshop-frontend.Inbox.save_failed')
-      setError(message)
+      if (isAbort(err)) return
+      console.error('[updateMailDomain] failed', { err: describeError(err) })
+      setError(inboxErrorMessage(err))
       // 既存の DNS レコードと競合したときだけ、そのまま使って続行する選択肢を出す。
-      setConflict(suffix === 'enable' && message.includes(t('workshop-frontend.Inbox.dns_conflict_marker')))
+      setConflict(suffix === 'enable' && err instanceof InboxRequestError && err.code === MAIL_ONBOARDING_ERROR_CODES.DNS_CONFLICT)
     }
     finally { setBusy(false); setRevision(value => value + 1) }
   }

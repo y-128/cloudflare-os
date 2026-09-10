@@ -1,3 +1,4 @@
+import { resolveMailboxFrom } from "../lib/mailbox-settings";
 import { searchPattern } from "../lib/search-pattern";
 import { BODY_CLEANUP_RETRY_MS, SQLITE_MAX_BOUND_PARAMETERS } from "./storage-limits";
 import { BodyStore } from "./body-store";
@@ -27,7 +28,7 @@ import { drizzle } from "drizzle-orm/durable-sqlite";
 import { eq, and, or, asc, desc, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import * as schema from "../db/schema";
-import { Folders } from "../../shared/folders";
+import { Folders, SYSTEM_FOLDER_IDS } from "../../shared/folders";
 import type { Env } from "../types";
 import { applyMigrations, mailboxMigrations } from "./migrations";
 import { withStoredAttachments, type ResolvedAttachment } from "../lib/attachments";
@@ -603,6 +604,7 @@ export class MailboxDO extends DurableObject<Env> {
         read: !!email.read,
         starred: !!email.starred,
         attachments: emailAttachments,
+        labels: await this.labelsForEmail(id),
       };
     } catch (err) {
       console.error("[durableObject.getEmail] failed", {
@@ -614,7 +616,7 @@ export class MailboxDO extends DurableObject<Env> {
   }
 
   /**
-   * Fetch thread rows and attachments in two queries, hydrating external bodies from R2.
+   * Fetch thread rows, attachments and labels in three queries, hydrating external bodies from R2.
    */
   async getThreadEmails(threadId: string) {
     try {
@@ -638,6 +640,20 @@ export class MailboxDO extends DurableObject<Env> {
         ),
       ] as (typeof schema.attachments.$inferSelect)[];
 
+      type Label = Awaited<ReturnType<typeof this.labelsForEmail>>[number];
+      const labelRows = this.ctx.storage.sql.exec<Label & { email_id: string }>(
+        `SELECT el.email_id, l.id, l.name, l.color FROM email_labels el
+         JOIN labels l ON l.id = el.label_id JOIN emails e ON e.id = el.email_id
+         WHERE e.thread_id = ?`,
+        threadId,
+      );
+      const labelsByEmail = new Map<string, Label[]>();
+      for (const { email_id, ...label } of labelRows) {
+        const list = labelsByEmail.get(email_id) ?? [];
+        list.push(label);
+        labelsByEmail.set(email_id, list);
+      }
+
       // Group attachments by email_id
       const attachmentsByEmail = new Map<string, (typeof schema.attachments.$inferSelect)[]>();
       for (const att of attachmentRows) {
@@ -654,6 +670,7 @@ export class MailboxDO extends DurableObject<Env> {
           read: !!email.read,
           starred: !!email.starred,
           attachments: attachmentsByEmail.get(email.id) || [],
+          labels: labelsByEmail.get(email.id) ?? [],
         });
       }
       return result;
@@ -733,6 +750,7 @@ export class MailboxDO extends DurableObject<Env> {
       await this.#refreshAlarm(Date.now() + BODY_CLEANUP_RETRY_MS);
       this.ctx.storage.transactionSync(/** Journal cleanup atomically with email deletion. */ () => {
         this.bodies.prepareDeletion([id]);
+        this.#cancelDraftSchedules(id);
         this.db.delete(schema.emails).where(eq(schema.emails.id, id)).run();
       });
       await this.bodies.cleanup();
@@ -781,7 +799,15 @@ export class MailboxDO extends DurableObject<Env> {
         .leftJoin(schema.emails, eq(schema.emails.folder_id, schema.folders.id))
         .groupBy(schema.folders.id, schema.folders.name)
         .all();
-      return await result;
+      const systemOrder = new Map<string, number>(
+        [...SYSTEM_FOLDER_IDS, Folders.SPAM].map((id, index) => [id, index]),
+      );
+      // SQL row order varies with migrations and query plans; the API owns sidebar order.
+      return result.toSorted((a, b) => {
+        const rankA = systemOrder.get(a.id) ?? systemOrder.size;
+        const rankB = systemOrder.get(b.id) ?? systemOrder.size;
+        return rankA - rankB || a.name.localeCompare(b.name, "ja") || a.id.localeCompare(b.id, "en");
+      });
     } catch (err) {
       console.error("[durableObject.getFolders] failed", {
         context: { operation: "getFolders", parameterCount: 0 },
@@ -856,6 +882,7 @@ export class MailboxDO extends DurableObject<Env> {
       await this.#refreshAlarm(Date.now() + BODY_CLEANUP_RETRY_MS);
       this.ctx.storage.transactionSync(/** Journal every body before cascading folder deletion. */ () => {
         this.bodies.prepareDeletion(emailIds.map(/** Extract IDs for body cleanup. */ (email) => email.id));
+        for (const email of emailIds) this.#cancelDraftSchedules(email.id);
         this.db.delete(schema.folders).where(eq(schema.folders.id, id)).run();
       });
       await this.bodies.cleanup();
@@ -881,11 +908,11 @@ export class MailboxDO extends DurableObject<Env> {
 
       if (!folder) return false;
 
-      this.db
-        .update(schema.emails)
-        .set({ folder_id: folderId })
-        .where(eq(schema.emails.id, id))
-        .run();
+      this.ctx.storage.transactionSync(() => {
+        this.db.update(schema.emails).set({ folder_id: folderId }).where(eq(schema.emails.id, id)).run();
+        if (folderId !== Folders.DRAFT) this.#cancelDraftSchedules(id);
+      });
+      await this.#refreshAlarm();
 
       return true;
     } catch (err) {
@@ -1829,6 +1856,14 @@ export class MailboxDO extends DurableObject<Env> {
 
   // ── Scheduled send ─────────────────────────────────────────────
 
+  /** Cancel pending jobs atomically with draft removal; retain history for the management UI. */
+  #cancelDraftSchedules(draftEmailId: string) {
+    this.ctx.storage.sql.exec(
+      `UPDATE scheduled_sends SET status = 'cancelled' WHERE draft_email_id = ? AND status = 'pending'`,
+      draftEmailId,
+    );
+  }
+
   async listScheduledSends() {
     try {
       return await ([
@@ -1931,7 +1966,10 @@ export class MailboxDO extends DurableObject<Env> {
       for (const job of due) {
         try {
           const draft = await this.getEmail(job.draft_email_id);
-          if (!draft) throw new Error("draft not found");
+          if (!draft || draft.folder_id !== Folders.DRAFT) {
+            this.#cancelDraftSchedules(job.draft_email_id);
+            continue;
+          }
           const { sendEmail } = await import("../email-sender");
 
           const messageId = crypto.randomUUID();
@@ -1946,12 +1984,27 @@ export class MailboxDO extends DurableObject<Env> {
           const threading = draft.in_reply_to
             ? buildThreadingHeaders(draft.in_reply_to, references)
             : undefined;
+          const from = await resolveMailboxFrom(this.env as Env, draft.sender || "");
+          // External reads yield to move/delete/cancel requests. Recheck immediately before sending.
+          const eligible = this.ctx.storage.sql.exec(
+            `SELECT s.id FROM scheduled_sends s JOIN emails e ON e.id = s.draft_email_id
+             WHERE s.id = ? AND s.status = 'pending' AND e.folder_id = ?`,
+            job.id, Folders.DRAFT,
+          ).toArray();
+          if (eligible.length === 0) {
+            // A user may already have replaced this job; never cancel the new reservation.
+            this.ctx.storage.sql.exec(
+              `UPDATE scheduled_sends SET status = 'cancelled' WHERE id = ? AND status = 'pending'`,
+              job.id,
+            );
+            continue;
+          }
           const { messageId: outgoingMessageId } = await sendEmail(requireBinding(this.env as Env, "EMAIL"), {
             cc: draft.cc || undefined,
             bcc: draft.bcc || undefined,
             headers: threading,
             to: draft.recipient || "",
-            from: draft.sender || "",
+            from,
             subject: draft.subject || "",
             html: draft.body || "",
             attachments: resolvedAttachments,
@@ -2070,8 +2123,7 @@ export class MailboxDO extends DurableObject<Env> {
         ),
       ][0] as { id: string } | undefined;
       if (!folder) return false;
-      this.ctx.storage.sql.exec(`UPDATE emails SET folder_id = ? WHERE id = ?`, folder.id, emailId);
-      return true;
+      return await this.moveEmail(emailId, folder.id);
     } catch (err) {
       console.error("[durableObject.moveEmailToFolderName] failed", {
         context: { operation: "moveEmailToFolderName", parameterCount: 2 },

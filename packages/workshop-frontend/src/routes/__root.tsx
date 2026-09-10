@@ -15,6 +15,7 @@ import AppShell from '../components/AppShell/AppShell'
 import LoginPage from '../LoginPage'
 import OnboardingWizard from '../OnboardingWizard'
 import AccountSelectionModal from '../components/billing/AccountSelectionModal'
+import { PwaUpdateToast } from '../features/pwa/PwaUpdateToast'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -94,6 +95,7 @@ function RootComponent() {
     return (
       <TooltipProvider>
         <Toasty>
+          <PwaUpdateToast />
           <div className="flex h-full min-h-0 flex-col">
             {showHeader && <Header />}
             <main className="min-h-0 flex-1 overflow-y-auto">
@@ -114,6 +116,7 @@ function RootComponent() {
       <FeatureFlagsProvider>
         <TooltipProvider>
           <Toasty>
+            <PwaUpdateToast />
             <AuthenticatedShell
               authenticatedApi={authenticatedApi}
               isWorkspaceEditor={isWorkspaceEditor}

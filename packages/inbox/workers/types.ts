@@ -1,6 +1,6 @@
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 // Worker bindings are generated from wrangler.jsonc by pnpm types:generate.
-/** Inboxのバインディングと、Access認証・任意のVectorize設定を表します。 */
+/** Inboxのバインディングと、Access認証・任意の運用設定を表します。 */
 export interface Env extends Cloudflare.Env {
   /** Operator token with Email Sending, Email Routing and zone DNS permissions. */
   CLOUDFLARE_API_TOKEN?: string;
@@ -10,7 +10,6 @@ export interface Env extends Cloudflare.Env {
   MAIL_ROUTING_WORKER?: string;
   POLICY_AUD?: string;
   TEAM_DOMAIN?: string;
-  VECTORIZE?: VectorizeIndex;
   /** Optional Worker secret used only when Discord notifications are enabled. */
   DISCORD_WEBHOOK_URL?: string;
   /** Public cfos origin used to construct message links. */

@@ -11,6 +11,7 @@ import type { Email } from '../../features/inbox/types'
 import './InboxPage'
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+vi.mock('../../features/inbox/EmailAgentPanel', () => ({ EmailAgentPanel: ({ onChanged, onClose }: { onChanged: () => void; onClose: () => void }) => <button onClick={() => { selected.read = false; onChanged(); onClose() }}>AI mark unread</button> }))
 vi.mock('../../ServerConfigContext', () => ({ useSiteName: () => 'cfos' }))
 const selected: Email = { id: 'older/id', subject: 'Deep-linked message', sender: 'writer@example.com', recipient: 'second@example.com', date: '2026-09-01T00:00:00Z', read: true, starred: false, folder_id: 'spam', thread_id: 'thread', body: '<p id="untrusted-mail">Secret message</p><script>attack()</script>' }
 let root: Root
@@ -37,13 +38,14 @@ const fetchMock = async (input: string | URL | Request, init?: RequestInit): Pro
 }
 
 beforeEach(() => {
+  vi.stubEnv('VITE_CF_ACCESS_MODE', 'true'); selected.read = true
   setLocale('en'); corrected = false; rejectCorrection = false; requests.length = 0
   localStorage.setItem('authToken', 'existing:session')
   vi.stubGlobal('fetch', vi.fn(fetchMock)); vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   container = document.createElement('div'); document.body.append(container); root = createRoot(container)
 })
-afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.clear() })
+afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); localStorage.clear() })
 
 /** Mounts the real file route with a notifier URL whose message is absent from the list page. */
 const renderRoute = async () => {
@@ -146,4 +148,46 @@ it('translates transport failures instead of rendering raw exceptions', async ()
   await renderRoute()
   expect(container.querySelector('[role="alert"]')?.textContent).toBe(t('workshop-frontend.Inbox.network_failed'))
   expect(container.textContent).not.toContain('Failed to fetch')
+})
+
+it.each(['ja', 'en'] as const)('opens each new settings pane from the real navigation in %s', async locale => {
+  setLocale(locale)
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (url, init) => {
+    const path = String(url)
+    if (path.endsWith('/mailbox-settings')) return Response.json({ fromName: 'Sender' })
+    if (path.endsWith('/filter-rules') || path.endsWith('/aliases')) return Response.json([])
+    if (path.endsWith('/admin/ai')) return Response.json({ model: '@cf/current', knownModels: ['@cf/current'] })
+    if (path.endsWith('/spam-stats')) return Response.json({ tokenCount: 0, topSpamTokens: [] })
+    if (path.includes('/spam/log')) return Response.json({ items: [], next_before: null })
+    return fetchMock(url, init)
+  }))
+  await renderRoute()
+  for (const key of ['filter_settings', 'alias_settings', 'ai_settings', 'spam_activity_settings']) {
+    await click(`workshop-frontend.Inbox.${key}`)
+    expect(container.querySelector('h2')?.textContent).toBe(t(`workshop-frontend.Inbox.${key}`))
+    expect(container.querySelector('main')?.textContent ?? container.textContent).not.toContain('workshop-frontend.Inbox.')
+    expect(container.querySelector('section[aria-label="' + t('workshop-frontend.Inbox.from_name') + '"] input')).not.toBeNull()
+  }
+})
+
+
+it('refreshes the selected detail and thread after AI mutations without marking it read again', async () => {
+  await renderRoute()
+  const before = requests.length
+  await click('workshop-frontend.Inbox.agent_title')
+  const action = [...container.querySelectorAll('button')].find(button => button.textContent === 'AI mark unread')!
+  await act(async () => action.click())
+  expect(container.textContent).toContain(t('workshop-frontend.Inbox.mark_read'))
+  const refreshed = requests.slice(before)
+  expect(refreshed.some(request => request.url.includes('/threads/'))).toBe(true)
+  expect(refreshed.some(request => request.url.endsWith('/emails/older%2Fid') && request.method === 'GET')).toBe(true)
+  expect(refreshed.some(request => request.method === 'PUT')).toBe(false)
+})
+
+it('disables AI chat and explains the limitation in normal-login deployments', async () => {
+  vi.stubEnv('VITE_CF_ACCESS_MODE', 'false')
+  await renderRoute()
+  const chat = [...container.querySelectorAll('button')].find(button => button.textContent === t('workshop-frontend.Inbox.agent_title'))!
+  expect(chat.disabled).toBe(true)
+  expect(container.textContent).toContain(t('workshop-frontend.Inbox.agent_access_required'))
 })

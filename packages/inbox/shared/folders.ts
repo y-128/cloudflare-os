@@ -23,8 +23,8 @@ export const Folders = {
 export type FolderId = (typeof Folders)[keyof typeof Folders];
 
 /**
- * System folder IDs that appear in the sidebar (excludes spam).
- * Order here matches the sidebar display order.
+ * Primary system folder IDs in sidebar display order.
+ * Spam follows these folders, before user-created folders.
  */
 export const SYSTEM_FOLDER_IDS: readonly FolderId[] = [
   Folders.INBOX,

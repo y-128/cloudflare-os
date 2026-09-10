@@ -3,10 +3,12 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import type { Env } from '../types';
 import type { DomainStatus, MailDomain, MailDnsRecord } from '../../shared/mail-onboarding';
+import { MAIL_ONBOARDING_ERROR_CODES } from '../../shared/mail-onboarding';
 import { CloudflareEmailClient, CloudflareEmailError, catchAllSchema, dnsRecordsMatch, destinationSchema, dnsRecordSchema, normalizeMailDomain, resolvePublicDns, routingSchema, sendingSchema, verifyDnsRecord } from '../lib/cloudflare-email';
 import { ConfigurationError, getConfigStub, requireString } from '../lib/config';
 import { describeError } from '../lib/describe-error';
 import { createMailbox } from '../lib/create-mailbox';
+import { FromNameSchema } from '../lib/mailbox-settings';
 import { HTTP } from '../lib/http-status';
 
 const LOCAL_PART_LENGTH = 64; // SMTP local parts are at most 64 ASCII octets.
@@ -14,15 +16,19 @@ const DISPLAY_NAME_LENGTH = 200; // Bound human-readable mailbox metadata.
 const DNS_AUTOMATIC_TTL = 1; // Cloudflare's sentinel for automatic TTL.
 const MAX_DNS_RECORDS = 30; // Bound public DNS verification work per poll.
 const domainBody = z.object({ domain: z.string() });
-const addressBody = z.object({ local_part: z.string().min(1).max(LOCAL_PART_LENGTH).regex(/^[a-zA-Z0-9]+(?:[._-][a-zA-Z0-9]+)*$/), display_name: z.string().trim().min(1).max(DISPLAY_NAME_LENGTH), catch_all: z.boolean().default(false) });
+const addressBody = z.object({ local_part: z.string().min(1).max(LOCAL_PART_LENGTH).regex(/^[a-zA-Z0-9]+(?:[._-][a-zA-Z0-9]+)*$/), display_name: FromNameSchema.pipe(z.string().min(1).max(DISPLAY_NAME_LENGTH)), catch_all: z.boolean().default(false) });
 const zoneSchema = z.object({ id: z.string(), name: z.string(), type: z.string() });
 // 既存の DNS レコードと競合したときに、そのまま使うかどうか。既定は使わない (中断する)。
 const enableBody = z.object({ keep_conflicting_records: z.boolean().default(false) });
 export const onboardingApp = new Hono<{ Bindings: Env }>();
 
+/** Distinguishes a recoverable DNS conflict from validation and provider failures. */
+class DnsConflictError extends Error {}
+
 /** Returns safe, actionable operator errors without serializing provider request data. */
 onboardingApp.onError((err, c) => {
-  console.error('[mailOnboarding] failed', { route: c.req.routePath, err: err instanceof CloudflareEmailError ? err.message : describeError(err) });
+  console.error('[mailOnboarding] failed', { route: c.req.routePath, err: describeError(err) });
+  if (err instanceof DnsConflictError) return c.json({ error: err.message, code: MAIL_ONBOARDING_ERROR_CODES.DNS_CONFLICT }, HTTP.CONFLICT);
   const detail = err instanceof CloudflareEmailError ? err.detail : err instanceof z.ZodError ? '入力形式が不正です。ドメイン、アドレス、表示名を確認してください。' : err.message;
   const status = err instanceof CloudflareEmailError ? (err.status === HTTP.TOO_MANY_REQUESTS ? HTTP.TOO_MANY_REQUESTS : HTTP.INTERNAL_SERVER_ERROR) : err instanceof ConfigurationError ? HTTP.INTERNAL_SERVER_ERROR : HTTP.BAD_REQUEST;
   return c.json({ error: detail }, status);
@@ -169,7 +175,7 @@ onboardingApp.post('/api/inbox/v1/admin/mail-domains/:id/enable', async c => {
           // The operator decides: keep what is there, or reconcile it in the dashboard. Public
           // DNS verification runs afterwards either way, so "keep" cannot hide a broken setup.
           if (!keepConflicting) {
-            throw new Error(`DNSレコードが競合しています: ${record.type} ${record.name}\n`
+            throw new DnsConflictError(`DNSレコードが競合しています: ${record.type} ${record.name}\n`
               + `  必要: ${describeDnsRecord(record)}\n`
               + `  既存: ${existing.map(describeDnsRecord).join(' / ')}\n`
               + '既存のレコードをそのまま使う場合は「既存を使う」を選んでください。');
@@ -181,7 +187,7 @@ onboardingApp.post('/api/inbox/v1/admin/mail-domains/:id/enable', async c => {
       }
     }
     return c.json({ ok: true, kept });
-  } catch (err) { console.error('[enableMailDomainRoute] failed', { err }); throw err; }
+  } catch (err) { console.error('[enableMailDomainRoute] failed', { err: describeError(err) }); throw err; }
 });
 
 /** Points the zone catch-all at the configured router only after DNS has verified. */
@@ -206,7 +212,7 @@ onboardingApp.post('/api/inbox/v1/admin/mail-domains/:id/addresses', async c => 
     await createMailbox(c.env, address.id, address.display_name, undefined, true);
     await config.markMailAddressInitialized(address.id);
     return c.json({ ...address, mailbox_initialized: 1 }, HTTP.CREATED);
-  } catch (err) { console.error('[createMailAddressRoute] failed', { err }); throw err; }
+  } catch (err) { console.error('[createMailAddressRoute] failed', { err: describeError(err) }); throw err; }
 });
 
 /** Lists verified and pending forwarding destinations without offering unverified ones for delivery. */

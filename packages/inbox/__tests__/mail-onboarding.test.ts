@@ -217,8 +217,14 @@ it('does not overwrite conflicting sending DNS records', async () => {
   const normal = fetch.getMockImplementation()!;
   fetch.mockImplementation(async (input, init) => String(input).includes('/dns_records') ? result([{ ...sendingDns, content: 'another-provider.example.net' }], 1) : normal(input, init));
   const response = await onboardingApp.fetch(new Request(`https://cfos.test/api/inbox/v1/admin/mail-domains/${domain.id}/enable`, { method: 'POST' }), env);
-  expect(response.status).toBe(400);
-  expect(await response.json()).toMatchObject({ error: expect.stringContaining('競合') });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ code: 'dns_conflict', error: expect.stringContaining('競合') });
+  expect(fetch.mock.calls.some(([url, init]) => String(url).includes('/dns_records') && init?.method === 'POST')).toBe(false);
+  const resumed = await onboardingApp.fetch(new Request(`https://cfos.test/api/inbox/v1/admin/mail-domains/${domain.id}/enable`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keep_conflicting_records: true }),
+  }), env);
+  expect(resumed.status).toBe(200);
+  expect(await resumed.json()).toMatchObject({ ok: true, kept: [expect.any(String)] });
   expect(fetch.mock.calls.some(([url, init]) => String(url).includes('/dns_records') && init?.method === 'POST')).toBe(false);
 });
 

@@ -12,7 +12,6 @@ import { requireMailbox, type MailboxContext } from "../workers/lib/mailbox";
 import { SenderRuleSchema, matchSenderRule, type SenderRule } from "../workers/lib/spam-policy";
 import { scoreAuthentication, ENVELOPE_MISMATCH_SCORE } from "../workers/lib/authentication";
 import { dnsRecordsMatch, normalizedDns, verifyDnsRecord } from "../workers/lib/cloudflare-email";
-import { semanticSearch } from "../workers/lib/embeddings";
 import ja from "../../i18n/src/locales/ja";
 import en from "../../i18n/src/locales/en";
 import { supplementalTranslations } from "../../../scripts/i18n/supplemental";
@@ -22,7 +21,6 @@ const DOMAINS = [
   ["見本.テスト", "xn--8pvz87e.xn--zckzah"],
 ] as const;
 const env = bindings as Env;
-const TEXT_LIMIT_BYTES = 4 * 1024;
 const DNS_CNAME = 5;
 const DNS_MX = 15;
 
@@ -49,6 +47,7 @@ describe("case-sensitive mailbox identity", () => {
       toStr: "Recipient@xn--8pvz87e.xn--zckzah, Other@example.net",
       fromEmail: "User+Tag@xn--r8jz45g.xn--zckzah",
       fromDomain: "xn--r8jz45g.xn--zckzah",
+      fromName: "",
     });
     expect(validateSender('"Last,First"@見本.テスト, Other@ExAmPlE.NET', "User@見本.テスト", "User@xn--8pvz87e.xn--zckzah").toStr).toBe('"Last,First"@xn--8pvz87e.xn--zckzah, Other@example.net');
     expect(() => validateSender("Recipient@example.net", "user@見本.テスト", "User@xn--8pvz87e.xn--zckzah")).toThrow();
@@ -142,25 +141,6 @@ describe("DNS content identity", () => {
       expect(dnsRecordsMatch(record, { ...record, content: answer })).toBe(true);
       if (type === "MX") expect(dnsRecordsMatch(record, { ...record, priority: 20 })).toBe(false);
     }
-  });
-});
-
-describe("UTF-8 embedding input", () => {
-  it.each(["国", "😀"])("truncates before a partial %s code point", async character => {
-    const text = "a".repeat(TEXT_LIMIT_BYTES - 1) + character;
-    const run = vi.fn().mockResolvedValue({ data: [[1]] });
-    const query = vi.fn().mockResolvedValue({ matches: [] });
-    // Only the AI and Vectorize methods exercised by semanticSearch are mocked.
-    const configured = { ...env, AI: { run }, VECTORIZE: { query } } as unknown as Env;
-    await semanticSearch(configured, "User@見本.テスト", text);
-    const sent = run.mock.calls[0][1].text[0] as string;
-    expect(sent).toBe("a".repeat(TEXT_LIMIT_BYTES - 1));
-    expect(new TextEncoder().encode(sent).length).toBeLessThanOrEqual(TEXT_LIMIT_BYTES);
-    expect(sent).not.toContain("\uFFFD");
-    expect(query).toHaveBeenCalledWith([1], expect.objectContaining({ namespace: "User@xn--8pvz87e.xn--zckzah" }));
-    const exact = "a".repeat(TEXT_LIMIT_BYTES - new TextEncoder().encode(character).length) + character;
-    await semanticSearch(configured, "User@見本.テスト", exact);
-    expect(run.mock.calls[1][1].text[0]).toBe(exact);
   });
 });
 

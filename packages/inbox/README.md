@@ -11,7 +11,8 @@ cfos の `/inbox` は Workshop SPA が提供します。メール API のみを 
 | --- | --- |
 | REST API | `/api/inbox/v1/*` |
 | MCP | `/api/inbox/mcp` |
-| Agent WebSocket | `/api/inbox/agents/<agent>/<instance>` |
+| Agent WebSocket | `/api/inbox/agents/email-agent/<URLエンコードしたmailboxId>` |
+| Agent 会話履歴 | 同じパスの `/get-messages`（GET） |
 | 受信 | 名前付き`email(message, env, ctx)`およびdefault exportの`email` |
 | 内部受信 RPC | default export の `deliverEmail({ from, to, rawBytes, headers })` |
 | Durable Objects | `MailboxDO`、`ConfigDO`、`EmailAgent`、`EmailMCP` |
@@ -42,6 +43,32 @@ cfos 統合構成では、管理者が全メールボックスと管理 API を�
 
 `WORKSHOP_AUTH` を外した旧単独構成のみ、従来の `POLICY_AUD` / `TEAM_DOMAIN` 検証を維持します。その構成は Access ポリシーを通過した全利用者に共有メールへのアクセスを許可します。
 このパッケージ単体ではメールボックスごとの利用者権限を追加していません。
+
+### メール AI チャット
+
+`/inbox` の「メール AI」から、メールボックス単位の保存済み会話を開けます。
+フロントはバックエンドと互換性のある `agents@0.7.9` の `useAgent` と `@cloudflare/ai-chat@0.1.9` の `useAgentChat` を使用します。
+応答は WebSocket で逐次配信します。エージェント内部の `toUIMessageStreamResponse()` は SDK が WebSocket フレームに変換し、HTTP の SSE チャットエンドポイントとしては公開していません。
+本文の増分と各ツールの準備・実行・完了・失敗を表示します。
+`draft_saved` を受信した時点でメール一覧とフォルダを再取得し、「下書きを確認」で下書きフォルダの先頭ページを開きます。
+閉じた間に作成された下書きも、会話を再度開くときに一覧へ反映します。
+
+公開ツールは `list_emails`、`get_email`、`get_thread`、`search_emails`、`draft_email`、`draft_reply`、`mark_email_read`、`move_email`、`discard_draft` の9個です。
+`send_email`、`send_reply`、`delete_email` は公開しません。フロントもクライアントツールを登録しません。
+既定モデルは `@cf/moonshotai/kimi-k2.5`、最大5ステップで、既存の `ai_model` 設定を利用します。
+
+ブラウザーの WebSocket 接続は独自の認証ヘッダーを設定できないため、チャットには同一オリジンの Access 認証が必要です。
+inbox は `Origin` が公開 URL の origin と一致する GET の Upgrade リクエストに限り、内部の認証照会へ `X-Inbox-Request: 1` を補います。
+`WORKSHOP_AUTH` による Access JWT 検証と管理者チェックは引き続き必須です。通常の HTTP リクエストにはこの補完を行いません。
+Access を使用せず localStorage の Bearer トークンだけでログインする構成では、REST の履歴取得は可能ですがブラウザーのチャット接続は認証を通過できません。
+Vite の `/api/inbox` プロキシは WebSocket 転送を有効にしています。
+追加の環境変数や秘密鍵は不要ですが、実環境では既存の Access 保護が公開ホストの WebSocket Upgrade に適用されることを確認してください。
+
+Node.js 24 系で `pnpm run lint` と `pnpm run test` を実行します。
+`agent-chat.test.ts` は workerd の実 WebSocket と SDK を使い、認証サービスと推論をモックにしてストリームを検証します。
+`EmailAgentPanel.test.tsx` は SDK フックをモックにして途中表示、下書き反映、再接続、履歴エラー、メールボックス切り替えを検証します。
+`EmailAgentTransport.test.tsx` は実際の React フックに WebSocket フレームを注入し、依頼送信からストリーミング表示・下書き保存検知までを検証します。
+本番 Access の Cookie・JWT 付加・ネットワーク経路と、実ブラウザーの狭い画面での描画は別途確認が必要です。
 
 ```sh
 # リポジトリルートから、独立したローカルWorkerを起動
@@ -79,8 +106,6 @@ pnpm --filter @gadgets/inbox deploy
 `d1_migrations`は互換性のためのSQLiteテーブル名であり、D1バインディングではありません。
 
 通常検索はSQLiteを使用します。
-意味検索を利用する場合だけ、1024次元の埋め込みに対応するVectorizeインデックスを作成し、`VECTORIZE`バインディングを追加してください。
-未設定の意味検索は設定先を示すエラーを返し、通常受信・SQLite検索には影響しません。
 
 VAPID鍵はConfigDOが生成・保存するため、環境変数の秘密鍵は不要です。
 既定の通知連絡先は`mailto:postmaster@<DOMAINSの先頭>`です。
