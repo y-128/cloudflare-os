@@ -388,6 +388,8 @@ export type LinkCategory = {
   name: string;
   /** Zero-based position among categories. */
   order: number;
+  /** Marks a saved group of work destinations; omitted for ordinary link categories. */
+  purpose?: "workset";
 };
 
 /** Editable fields of a directory link; favicon and ordering are managed by the server. */
@@ -434,7 +436,7 @@ export interface LinkDirectoryApi extends RpcTarget {
   /** Lists categories and searches title, URL, tags and note; an empty query lists all links. */
   list(query: string): Promise<LinkDirectory>;
   /** Creates a category at the end of the directory. */
-  createCategory(name: string): Promise<LinkCategory>;
+  createCategory(name: string, purpose?: "workset"): Promise<LinkCategory>;
   /** Renames an existing category. */
   updateCategory(id: string, name: string): Promise<LinkCategory>;
   /** Deletes an empty category; move or delete its links first. */
@@ -574,7 +576,9 @@ export interface AuthenticatedApi extends RpcTarget {
    * TODO(multi-gadget): This should be renamed to openWorkspace().
    */
   openGadget(id: string, shareKey?: string,
-             configureObservers?: RpcStub<ObserverConfigCallback>): Promise<RpcStub<Overseer>>;
+             configureObservers?: RpcStub<ObserverConfigCallback>,
+             /** False for background listings: preserves recent-work ordering and suppresses visit analytics. Authorization is unchanged. */
+             recordVisit?: boolean): Promise<RpcStub<Overseer>>;
 
   /**
    * Create a new workspace. It will start out titled "Untitled Workspace".

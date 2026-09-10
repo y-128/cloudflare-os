@@ -9738,7 +9738,7 @@ export class OverseerDurableObject extends DurableObject<Cloudflare.Env> {
   async open(userId: string, profileId: string,
              notifyClosed: NativeRpcStub<() => void>,
              shareKey?: string,
-             configureObservers?: RpcStub<ObserverConfigCallback>): Promise<Overseer> {
+             configureObservers?: RpcStub<ObserverConfigCallback>, recordVisit = true): Promise<Overseer> {
     let firstOpen = !this.impl.ownerId;
     if (firstOpen) {
       // This Overseer hasn't been initialized yet.
@@ -9849,7 +9849,7 @@ export class OverseerDurableObject extends DurableObject<Cloudflare.Env> {
       void (async () => {
         try {
           const ownerProfile = await owner.whoami();
-          await clientUser.recordSharedGadgetOpen(gadgetId, title, ownerProfile, role);
+          if (recordVisit) await clientUser.recordSharedGadgetOpen(gadgetId, title, ownerProfile, role);
         } catch (err) {
           this.impl.logger.warn("failed to record shared gadget open", {
             event: "shared.gadget.open.record.failed", gadgetId, error: err,

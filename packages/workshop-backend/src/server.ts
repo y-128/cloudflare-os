@@ -223,7 +223,7 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
   }
 
   async #openGadgetInternal(id: string, shareKey?: string,
-                            configureObservers?: RpcStub<ObserverConfigCallback>)
+                            configureObservers?: RpcStub<ObserverConfigCallback>, recordVisit = true)
       : Promise<NativeRpcStub<Overseer>> {
     let userId = this.#userId.toString();
     let profileId = this.#userId.name!;
@@ -261,7 +261,7 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
 
     let result;
     try {
-      result = await overseer.open(userId, profileId, notifyClosed, shareKey, configureObservers);
+      result = await overseer.open(userId, profileId, notifyClosed, shareKey, configureObservers, recordVisit);
     } catch (err) {
       // A denial proves this user's listing for the workspace is stale: revocation tries to drop it
       // (refreshAffectedCollaboratorListings), but that push is best-effort. Only catches entries
@@ -272,7 +272,7 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
       throw err;
     }
     started = true;
-    recordAnalytics(this.ctx, this.env, {
+    if (recordVisit) recordAnalytics(this.ctx, this.env, {
       event_name: "gadget_opened",
       user_id: userId,
       gadget_id: id,
@@ -282,11 +282,11 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
   }
 
   async openGadget(id: string, shareKey?: string,
-                   configureObservers?: RpcStub<ObserverConfigCallback>)
+                   configureObservers?: RpcStub<ObserverConfigCallback>, recordVisit = true)
       : Promise<RpcStub<Overseer>> {
     // @ts-expect-error Cap'n Web RPC stubs and native RPC stubs are compatible but the type
     //     system doesn't know this.
-    return this.#openGadgetInternal(id, shareKey, configureObservers);
+    return this.#openGadgetInternal(id, shareKey, configureObservers, recordVisit);
   }
 
   async newGadget(): Promise<RpcStub<Overseer>> {

@@ -23,6 +23,29 @@ const inputFor = (categoryId: string): DirectoryLinkInput => ({
 afterEach(() => vi.restoreAllMocks());
 
 describe('private links directory', () => {
+  it('persists empty worksets across restarts, preserves their purpose on rename, and isolates owners', async () => {
+    const owner = crypto.randomUUID();
+    using api = openDirectory(owner);
+    const regular = await api.createCategory('Regular links');
+    const workset = await api.createCategory('例え.test の確認', 'workset');
+    expect(workset.purpose).toBe('workset');
+    expect(regular).not.toHaveProperty('purpose');
+    await api.updateCategory(workset.id, 'サンプル.test の確認');
+    await abortAllDurableObjects();
+    using reopened = openDirectory(owner);
+    expect((await reopened.list('')).categories).toEqual([
+      regular, { ...workset, name: 'サンプル.test の確認' },
+    ]);
+    using other = openDirectory();
+    expect((await other.list('')).categories).toEqual([]);
+    await expect(other.createLink(inputFor(workset.id))).rejects.toThrow('LINKS_NOT_FOUND');
+    await reopened.deleteCategory(workset.id);
+    await runInDurableObject(env.TEST_LINK_DIRECTORY.getByName(owner), (_instance, state) => {
+      expect(state.storage.kv.get('worksetCategories')).toEqual([]);
+    });
+    expect((await reopened.list('')).categories).toEqual([regular]);
+  });
+
   it('round-trips category and link CRUD through the validated capability', async () => {
     using api = openDirectory();
     expect(await api.list('')).toEqual({ categories: [], links: [] });

@@ -1,3 +1,4 @@
+import type { ScheduleManagementClient } from "./management-types";
 import {
   DurableObject,
   RpcStub as NativeRpcStub,
@@ -300,7 +301,7 @@ export class SchedulerGatekeeper
 }
 
 @validateRpc()
-export class ScheduleManagementApi extends RpcTarget {
+export class ScheduleManagementApi extends RpcTarget implements ScheduleManagementClient {
   constructor(private readonly driver: Pick<ScheduleDriver, "listAccount">) {
     super();
   }

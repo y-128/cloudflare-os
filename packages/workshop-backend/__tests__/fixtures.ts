@@ -73,7 +73,7 @@ export function putAction(
  */
 export async function openFakeOverseer(
     storage: object,
-    opts: { role?: "build" | "use", exports?: object, impl?: object } = {}): Promise<Overseer> {
+    opts: { role?: "build" | "use", exports?: object, impl?: object, recordVisit?: boolean } = {}): Promise<Overseer> {
   let role = opts.role ?? "build";
   let ownerId = "owner-id";
   let userId = role === "build" ? ownerId : "viewer-id";
@@ -109,5 +109,5 @@ export async function openFakeOverseer(
       ...opts.impl,
     },
   } satisfies Pick<OverseerDurableObject, "open"> & { impl: object };
-  return overseer.open(userId, `${userId}-profile`, new NativeRpcStub<() => void>(() => {}));
+  return overseer.open(userId, `${userId}-profile`, new NativeRpcStub<() => void>(() => {}), undefined, undefined, opts.recordVisit);
 }

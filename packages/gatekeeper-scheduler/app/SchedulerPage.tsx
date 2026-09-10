@@ -9,9 +9,8 @@ import {
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
-  ManagementListOptions,
+  ScheduleManagementClient,
   ManagementSchedule,
-  ManagementSchedulePage,
 } from "../src/management-types";
 import type { ScheduleStatus } from "../src/types";
 import { formatCadence, formatOccurrences, formatTiming } from "./format";
@@ -57,9 +56,7 @@ type Filter = "all" | "active" | "dead" | "finished";
 // Upper bound on one host title lookup, matching its per-call cap and our page size.
 const MAX_TITLE_LOOKUP = 100;
 
-export type ScheduleManagementClient = {
-  list(options?: ManagementListOptions): Promise<ManagementSchedulePage>;
-};
+export type { ScheduleManagementClient } from "../src/management-types";
 
 type Props = {
   api: ScheduleManagementClient;

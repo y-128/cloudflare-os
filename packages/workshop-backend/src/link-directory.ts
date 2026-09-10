@@ -108,7 +108,8 @@ export class LinkDirectoryDurableObject extends DurableObject<Cloudflare.Env> {
       FROM links l JOIN link_categories c ON c.id = l.category_id
       ORDER BY c."order", c.id, l."order", l.id
     `).toArray().map(decodeLink);
-    return { categories, links };
+    const worksets = this.ctx.storage.kv.get<string[]>("worksetCategories") ?? [];
+    return { categories: categories.map(category => worksets.includes(category.id) ? { ...category, purpose: "workset" as const } : category), links };
   }
 
   /** Requires a category belonging to this same user's directory. */
@@ -117,7 +118,8 @@ export class LinkDirectoryDurableObject extends DurableObject<Cloudflare.Env> {
     const row = this.ctx.storage.sql.exec<LinkCategory>(
       'SELECT * FROM link_categories WHERE id = ?', id).toArray()[0];
     if (!row) throw new Error("LINKS_NOT_FOUND");
-    return row;
+    const worksets = this.ctx.storage.kv.get<string[]>("worksetCategories") ?? [];
+    return worksets.includes(id) ? { ...row, purpose: "workset" } : row;
   }
 
   /** Requires a link belonging to this same user's directory. */
@@ -145,14 +147,20 @@ export class LinkDirectoryDurableObject extends DurableObject<Cloudflare.Env> {
   }
 
   /** Appends a category after validating its name and the per-user quota. */
-  async createCategory(name: string): Promise<LinkCategory> {
+  async createCategory(name: string, purpose?: "workset"): Promise<LinkCategory> {
     return this.#run("createLinkCategory", () => {
       checkText(name, LIMITS.categoryName);
+      if (purpose !== undefined && purpose !== "workset") throw new Error("LINKS_INVALID_TEXT");
       const order = this.#snapshot().categories.length;
       if (order >= LIMITS.categories) throw new Error("LINKS_LIMIT_REACHED");
       const category = { id: crypto.randomUUID(), name: name.trim(), order };
       this.ctx.storage.sql.exec('INSERT INTO link_categories VALUES (?, ?, ?)',
         category.id, category.name, order);
+      if (purpose) {
+        const worksets = this.ctx.storage.kv.get<string[]>("worksetCategories") ?? [];
+        this.ctx.storage.kv.put("worksetCategories", [...worksets, category.id]);
+        return { ...category, purpose };
+      }
       return category;
     });
   }
@@ -174,6 +182,8 @@ export class LinkDirectoryDurableObject extends DurableObject<Cloudflare.Env> {
       const { categories, links } = this.#snapshot();
       if (links.some(link => link.categoryId === id)) throw new Error("LINKS_CATEGORY_NOT_EMPTY");
       this.ctx.storage.sql.exec('DELETE FROM link_categories WHERE id = ?', id);
+      const worksets = this.ctx.storage.kv.get<string[]>("worksetCategories") ?? [];
+      this.ctx.storage.kv.put("worksetCategories", worksets.filter(value => value !== id));
       categories.filter(category => category.id !== id).forEach((category, order) => {
         this.ctx.storage.sql.exec('UPDATE link_categories SET "order" = ? WHERE id = ?', order, category.id);
       });
@@ -277,7 +287,7 @@ export class LinkDirectoryApiImpl extends RpcTarget implements LinkDirectoryApi 
   /** Lists or searches the private directory. */
   list(query: string): Promise<LinkDirectory> { return this.#call("listLinksRpc", stub => stub.list(query)); }
   /** Creates a private category. */
-  createCategory(name: string): Promise<LinkCategory> { return this.#call("createLinkCategoryRpc", stub => stub.createCategory(name)); }
+  createCategory(name: string, purpose?: "workset"): Promise<LinkCategory> { return this.#call("createLinkCategoryRpc", stub => stub.createCategory(name, purpose)); }
   /** Renames a private category. */
   updateCategory(id: string, name: string): Promise<LinkCategory> { return this.#call("updateLinkCategoryRpc", stub => stub.updateCategory(id, name)); }
   /** Deletes an empty private category. */

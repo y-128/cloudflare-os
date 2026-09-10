@@ -21,3 +21,9 @@ export type ManagementSchedulePage = {
   schedules: ManagementSchedule[];
   cursor?: string;
 };
+
+/** Read-only management contract shared by the management app and Workshop overview. */
+export interface ScheduleManagementClient {
+  /** Lists enabled schedules for this account, with an opaque pagination cursor. */
+  list(options?: ManagementListOptions): Promise<ManagementSchedulePage>;
+}
