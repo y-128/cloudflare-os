@@ -42,11 +42,11 @@ it('retries only a failed alias resource and retains failed writes for another a
   const fetch = vi.fn<typeof globalThis.fetch>(async (url, init) => init?.method === 'PUT' ? saveFail ? new Response('', { status: 503 }) : Response.json({ subaddress: alias.subaddress }) : String(url).endsWith('/aliases') ? loadFail ? new Response('', { status: 503 }) : Response.json([alias]) : senderSettingsResponse())
   vi.stubGlobal('fetch', fetch)
   await render()
-  const sender = ui.section('from_name').querySelector('input')
+  expect(ui.section('from_name')).toBeNull()
   const requests = fetch.mock.calls.length; loadFail = false
   await clickSettings(ui.section('alias_settings'), 'retry')
   expect(fetch).toHaveBeenCalledTimes(requests + 1)
-  expect(ui.section('from_name').querySelector('input')).toBe(sender)
+  expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/mailbox-settings'))).toBe(false)
   await clickSettings(ui.section('alias_settings'), 'edit'); await submitSettings(ui.section('alias_settings'))
   expect(ui.section('alias_settings').querySelector('[role="alert"]')?.textContent).toBe(t('workshop-frontend.Inbox.request_failed', { status: 503 }))
   saveFail = false; await submitSettings(ui.section('alias_settings'))

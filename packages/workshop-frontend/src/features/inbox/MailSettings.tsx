@@ -1,3 +1,4 @@
+import { MailGeneralSettings } from './MailGeneralSettings'
 import { MailSenderSettings } from "./MailSenderSettings"
 import { MailDomains } from "./MailDomains"
 import { MailSmtpSettings } from "./MailSmtpSettings"
@@ -20,13 +21,14 @@ const MAX_SPAM_SCORE = 100 // Phase 4 stores normalized scores from zero through
 /** Loads mailbox-specific settings and remounts forms only after switching mailbox or screen. */
 export const MailSettings = ({ mailboxId, screen, onMailboxCreated }: { mailboxId: string; screen: MailSettingsScreen; onMailboxCreated?: () => void }) => {
   const { t } = useTranslation()
-  const sender = useInboxResource<{ fromName: string }>(mailboxId ? mailboxPath(mailboxId, "/mailbox-settings") : null)
+  const sender = useInboxResource<{ fromName: string }>(mailboxId && screen === 'accounts' ? mailboxPath(mailboxId, "/mailbox-settings") : null)
   const spam = useInboxResource<SpamThresholds>(screen === 'spam' ? mailboxPath(mailboxId, '/spam/config') : null)
   const rules = useInboxResource<SenderRule[]>(screen === 'spam' ? mailboxPath(mailboxId, '/spam/rules') : null)
   const discord = useInboxResource<{ rule: DiscordRule; timezone: string }>(screen === 'notifications' ? mailboxPath(mailboxId, '/notifications/discord') : null)
-  return <section className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-5">
+  return <section className="w-full max-w-3xl space-y-6 p-5 @3xl/inbox:p-8">
     <h2 className="text-xl font-semibold">{t(`workshop-frontend.Inbox.${MAIL_SETTINGS_SCREENS[screen]}`)}</h2>
-    {mailboxId && <SettingsResource label={t('workshop-frontend.Inbox.from_name')} loaded={!!sender.data} error={sender.error} onRetry={sender.retry}>
+    {screen === 'general' && <MailGeneralSettings />}
+    {mailboxId && screen === 'accounts' && <SettingsResource label={t('workshop-frontend.Inbox.from_name')} loaded={!!sender.data} error={sender.error} onRetry={sender.retry}>
       {sender.data && <MailSenderSettings key={`${mailboxId}:${screen}`} mailboxId={mailboxId} initial={sender.data.fromName} onSaved={sender.retry} />}
     </SettingsResource>}
     {screen === 'filters' ? <MailFilters key={mailboxId} mailboxId={mailboxId} /> : screen === 'aliases' ? <MailAliases key={mailboxId} mailboxId={mailboxId} /> : screen === 'ai' ? <MailAiSettings key={mailboxId} mailboxId={mailboxId} /> : screen === 'activity' ? <MailSpamActivity key={mailboxId} mailboxId={mailboxId} /> : screen === 'domains' ? <MailDomains onMailboxCreated={onMailboxCreated} /> : screen === 'smtp' ? <MailSmtpSettings /> : screen === 'spam' ? <>
@@ -36,9 +38,9 @@ export const MailSettings = ({ mailboxId, screen, onMailboxCreated }: { mailboxI
       <SettingsResource label={t('workshop-frontend.Inbox.sender_rules')} loaded={!!rules.data} error={rules.error} onRetry={rules.retry}>
         {rules.data && <SenderRules mailboxId={mailboxId} rules={rules.data} onChanged={rules.retry} />}
       </SettingsResource>
-    </> : <SettingsResource label={t('workshop-frontend.Inbox.notification_settings')} loaded={!!discord.data} error={discord.error} onRetry={discord.retry}>
+    </> : screen === 'notifications' ? <SettingsResource label={t('workshop-frontend.Inbox.notification_settings')} loaded={!!discord.data} error={discord.error} onRetry={discord.retry}>
       {discord.data && <DiscordForm mailboxId={mailboxId} initial={discord.data.rule} timezone={discord.data.timezone} />}
-    </SettingsResource>}
+    </SettingsResource> : null}
   </section>
 }
 

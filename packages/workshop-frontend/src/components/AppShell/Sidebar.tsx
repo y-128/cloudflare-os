@@ -3,6 +3,10 @@ import { Link } from '@tanstack/react-router'
 
 import {
   Blueprint,
+  CalendarBlank,
+  Bell,
+  BookmarkSimple,
+  Heartbeat,
   BookOpen,
   Compass,
   Hexagon,
@@ -26,18 +30,7 @@ import {
 } from './SidebarWorkspaces'
 import SidebarUtilityStrip from './SidebarUtilityStrip'
 
-/**
- * The persistent left rail. Three pinned regions sandwich a single scrolling region of lists, so
- * the user can always reach Search, primary nav, and the bottom utility strip no matter how many
- * workspaces they have.
- *
- * Layout (top → bottom):
- *   • brand row                            pinned
- *   • primary nav (Home, Workspaces, …)    pinned
- *   • workspace tools (⌘K search)          pinned
- *   • Favorites / Recent workspaces        SCROLLS
- *   • utility strip (plug, avatar)         pinned
- */
+/** Keeps daily destinations pinned, related tools together, and secondary navigation scrollable. */
 export default function Sidebar({
   collapsed,
   onToggleCollapsed,
@@ -118,46 +111,25 @@ export default function Sidebar({
       )}
 
       <SidebarWorkspacesProvider>
-        {/* Pinned top stack. shrink-0 keeps it from squishing when the lists below grow. */}
-        <div className="flex shrink-0 flex-col gap-3 pt-3">
-          {/* Primary nav */}
-          <nav className="flex flex-col gap-0.5 px-2">
-            <SidebarItem
-              to="/"
-              label={t('workshop-frontend.Sidebar.home')}
-              icon={<House size={14} weight="regular" />}
-              collapsed={collapsed}
-            />
-            <SidebarItem
-              to="/workspaces"
-              label={t('workshop-frontend.Sidebar.workspaces')}
-              icon={<SquaresFour size={14} weight="regular" />}
-              collapsed={collapsed}
-            />
-            <SidebarItem
-              to="/blueprints"
-              label={t('workshop-frontend.Sidebar.blueprints')}
-              icon={<Blueprint size={14} weight="regular" />}
-              collapsed={collapsed}
-            />
-            <SidebarItem
-              to="/outputs"
-              label={t('workshop-frontend.Sidebar.outputs')}
-              icon={<Stack size={14} weight="regular" />}
-              collapsed={collapsed}
-            />
-            <SidebarItem
-              to="/inbox"
-              label={t('workshop-frontend.Sidebar.inbox')}
-              icon={<Envelope size={14} weight="regular" />}
-              collapsed={collapsed}
-            />
-            <SidebarItem
-              to="/links"
-              label={t('workshop-frontend.Sidebar.links')}
-              icon={<LinkSimple size={14} weight="regular" />}
-              collapsed={collapsed}
-            />
+        <nav aria-label={t('workshop-frontend.Sidebar.daily')} className="flex shrink-0 flex-col gap-0.5 px-2 py-3">
+          <SidebarItem to="/" label={t('workshop-frontend.Sidebar.home')} icon={<House size={14} />} collapsed={collapsed} />
+          <SidebarItem to="/today" label={t('workshop-frontend.WorkHub.today')} icon={<CalendarBlank size={14} />} collapsed={collapsed} />
+          <SidebarItem to="/inbox" label={t('workshop-frontend.Sidebar.inbox')} icon={<Envelope size={14} />} collapsed={collapsed} />
+          <SidebarItem to="/activity" label={t('workshop-frontend.WorkHub.activity')} icon={<Bell size={14} />} collapsed={collapsed} />
+        </nav>
+        <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto border-t border-kumo-line">
+          <nav aria-label={t('workshop-frontend.Sidebar.work')} className="flex flex-col gap-0.5 px-2 py-3">
+            {!collapsed && <p className="px-3 pb-2 text-xs font-medium text-kumo-subtle">{t('workshop-frontend.Sidebar.work')}</p>}
+            <SidebarItem to="/workspaces" label={t('workshop-frontend.Sidebar.workspaces')} icon={<SquaresFour size={14} />} collapsed={collapsed} />
+            <SidebarItem to="/worksets" label={t('workshop-frontend.WorkHub.worksets')} icon={<BookmarkSimple size={14} />} collapsed={collapsed} />
+            <SidebarItem to="/outputs" label={t('workshop-frontend.Sidebar.outputs')} icon={<Stack size={14} />} collapsed={collapsed} />
+          </nav>
+          <SidebarWorkspacesTools collapsed={collapsed} />
+          <SidebarWorkspacesLists collapsed={collapsed} />
+          <nav aria-label={t('workshop-frontend.Sidebar.library')} className="mt-3 flex flex-col gap-0.5 border-t border-kumo-line px-2 py-3">
+            {!collapsed && <p className="px-3 pb-2 text-xs font-medium text-kumo-subtle">{t('workshop-frontend.Sidebar.library')}</p>}
+            <SidebarItem to="/links" label={t('workshop-frontend.Sidebar.links')} icon={<LinkSimple size={14} />} collapsed={collapsed} />
+            <SidebarItem to="/blueprints" label={t('workshop-frontend.Sidebar.blueprints')} icon={<Blueprint size={14} />} collapsed={collapsed} />
             {/* Gatekeeper management apps (e.g. the Context Library), listed dynamically. */}
             {gatekeeperApps.map((app) => {
               // Escape the icon URL for safe interpolation into a CSS url("…") string.
@@ -205,17 +177,12 @@ export default function Sidebar({
             />
           </nav>
 
-          {/* Workspace tools: search. Pinned so it's always reachable. */}
-          <SidebarWorkspacesTools collapsed={collapsed} />
-        </div>
-
-        {/* Scrolling middle: only the Favorites / Recent workspaces / Recent blueprints lists.
-            min-h-0 lets flex children compute scroll height correctly. */}
-        <div className="sidebar-scroll mt-1 min-h-0 flex-1 overflow-y-auto">
-          <SidebarWorkspacesLists collapsed={collapsed} />
         </div>
       </SidebarWorkspacesProvider>
 
+      <div className="shrink-0 border-t border-kumo-line px-2 py-2">
+        <SidebarItem to="/status" label={t('workshop-frontend.WorkHub.status')} icon={<Heartbeat size={14} />} collapsed={collapsed} />
+      </div>
       <SidebarUtilityStrip collapsed={collapsed} />
     </aside>
   )

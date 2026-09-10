@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivityRouteImport } from './routes/activity'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BlueprintsRouteImport } from './routes/blueprints'
 import { Route as ContextRouteImport } from './routes/context'
@@ -20,7 +21,11 @@ import { Route as LinksRouteImport } from './routes/links'
 import { Route as OutputsRouteImport } from './routes/outputs'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProvidersRouteImport } from './routes/providers'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as StatusRouteImport } from './routes/status'
+import { Route as TodayRouteImport } from './routes/today'
+import { Route as WorksetsRouteImport } from './routes/worksets'
 import { Route as WorkspacesRouteImport } from './routes/workspaces'
 import { Route as BlueprintIdRouteImport } from './routes/blueprint.$id'
 import { Route as GadgetIdRouteImport } from './routes/gadget.$id'
@@ -30,6 +35,11 @@ import { Route as WorkspaceIdRouteImport } from './routes/workspace.$id'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivityRoute = ActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -82,9 +92,29 @@ const ProvidersRoute = ProvidersRouteImport.update({
   path: '/providers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TodayRoute = TodayRouteImport.update({
+  id: '/today',
+  path: '/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorksetsRoute = WorksetsRouteImport.update({
+  id: '/worksets',
+  path: '/worksets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspacesRoute = WorkspacesRouteImport.update({
@@ -115,6 +145,7 @@ const WorkspaceIdRoute = WorkspaceIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/admin': typeof AdminRoute
   '/blueprints': typeof BlueprintsRoute
   '/context': typeof ContextRoute
@@ -125,7 +156,11 @@ export interface FileRoutesByFullPath {
   '/outputs': typeof OutputsRoute
   '/profile': typeof ProfileRoute
   '/providers': typeof ProvidersRoute
+  '/search': typeof SearchRoute
   '/signup': typeof SignupRoute
+  '/status': typeof StatusRoute
+  '/today': typeof TodayRoute
+  '/worksets': typeof WorksetsRoute
   '/workspaces': typeof WorkspacesRoute
   '/blueprint/$id': typeof BlueprintIdRoute
   '/gadget/$id': typeof GadgetIdRoute
@@ -134,6 +169,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/admin': typeof AdminRoute
   '/blueprints': typeof BlueprintsRoute
   '/context': typeof ContextRoute
@@ -144,7 +180,11 @@ export interface FileRoutesByTo {
   '/outputs': typeof OutputsRoute
   '/profile': typeof ProfileRoute
   '/providers': typeof ProvidersRoute
+  '/search': typeof SearchRoute
   '/signup': typeof SignupRoute
+  '/status': typeof StatusRoute
+  '/today': typeof TodayRoute
+  '/worksets': typeof WorksetsRoute
   '/workspaces': typeof WorkspacesRoute
   '/blueprint/$id': typeof BlueprintIdRoute
   '/gadget/$id': typeof GadgetIdRoute
@@ -154,6 +194,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activity': typeof ActivityRoute
   '/admin': typeof AdminRoute
   '/blueprints': typeof BlueprintsRoute
   '/context': typeof ContextRoute
@@ -164,7 +205,11 @@ export interface FileRoutesById {
   '/outputs': typeof OutputsRoute
   '/profile': typeof ProfileRoute
   '/providers': typeof ProvidersRoute
+  '/search': typeof SearchRoute
   '/signup': typeof SignupRoute
+  '/status': typeof StatusRoute
+  '/today': typeof TodayRoute
+  '/worksets': typeof WorksetsRoute
   '/workspaces': typeof WorkspacesRoute
   '/blueprint/$id': typeof BlueprintIdRoute
   '/gadget/$id': typeof GadgetIdRoute
@@ -175,6 +220,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/activity'
     | '/admin'
     | '/blueprints'
     | '/context'
@@ -185,7 +231,11 @@ export interface FileRouteTypes {
     | '/outputs'
     | '/profile'
     | '/providers'
+    | '/search'
     | '/signup'
+    | '/status'
+    | '/today'
+    | '/worksets'
     | '/workspaces'
     | '/blueprint/$id'
     | '/gadget/$id'
@@ -194,6 +244,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/activity'
     | '/admin'
     | '/blueprints'
     | '/context'
@@ -204,7 +255,11 @@ export interface FileRouteTypes {
     | '/outputs'
     | '/profile'
     | '/providers'
+    | '/search'
     | '/signup'
+    | '/status'
+    | '/today'
+    | '/worksets'
     | '/workspaces'
     | '/blueprint/$id'
     | '/gadget/$id'
@@ -213,6 +268,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/activity'
     | '/admin'
     | '/blueprints'
     | '/context'
@@ -223,7 +279,11 @@ export interface FileRouteTypes {
     | '/outputs'
     | '/profile'
     | '/providers'
+    | '/search'
     | '/signup'
+    | '/status'
+    | '/today'
+    | '/worksets'
     | '/workspaces'
     | '/blueprint/$id'
     | '/gadget/$id'
@@ -233,6 +293,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivityRoute: typeof ActivityRoute
   AdminRoute: typeof AdminRoute
   BlueprintsRoute: typeof BlueprintsRoute
   ContextRoute: typeof ContextRoute
@@ -243,7 +304,11 @@ export interface RootRouteChildren {
   OutputsRoute: typeof OutputsRoute
   ProfileRoute: typeof ProfileRoute
   ProvidersRoute: typeof ProvidersRoute
+  SearchRoute: typeof SearchRoute
   SignupRoute: typeof SignupRoute
+  StatusRoute: typeof StatusRoute
+  TodayRoute: typeof TodayRoute
+  WorksetsRoute: typeof WorksetsRoute
   WorkspacesRoute: typeof WorkspacesRoute
   BlueprintIdRoute: typeof BlueprintIdRoute
   GadgetIdRoute: typeof GadgetIdRoute
@@ -258,6 +323,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -330,11 +402,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProvidersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/today': {
+      id: '/today'
+      path: '/today'
+      fullPath: '/today'
+      preLoaderRoute: typeof TodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worksets': {
+      id: '/worksets'
+      path: '/worksets'
+      fullPath: '/worksets'
+      preLoaderRoute: typeof WorksetsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/workspaces': {
@@ -377,6 +477,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivityRoute: ActivityRoute,
   AdminRoute: AdminRoute,
   BlueprintsRoute: BlueprintsRoute,
   ContextRoute: ContextRoute,
@@ -387,7 +488,11 @@ const rootRouteChildren: RootRouteChildren = {
   OutputsRoute: OutputsRoute,
   ProfileRoute: ProfileRoute,
   ProvidersRoute: ProvidersRoute,
+  SearchRoute: SearchRoute,
   SignupRoute: SignupRoute,
+  StatusRoute: StatusRoute,
+  TodayRoute: TodayRoute,
+  WorksetsRoute: WorksetsRoute,
   WorkspacesRoute: WorkspacesRoute,
   BlueprintIdRoute: BlueprintIdRoute,
   GadgetIdRoute: GadgetIdRoute,

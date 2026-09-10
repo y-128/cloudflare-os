@@ -83,8 +83,8 @@ it('progresses from pending DNS to verified routing and mailbox creation using t
   current = { ...current, catch_all_worker: 'cfos-router' }
   await click(t('workshop-frontend.Inbox.refresh_verification'))
   expect(createBlocked()).toBe(false)
-  await type(2, 'Operator')
-  await act(async () => container.querySelectorAll('form')[1].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  await type(1, 'Operator')
+  await click(t('workshop-frontend.Inbox.create_mailbox'))
   expect(onMailboxCreated).toHaveBeenCalledOnce()
   const mutation = fetch.mock.calls.find(([path, options]) => String(path).endsWith('/addresses') && options?.method === 'POST')!
   expect(JSON.parse(String(mutation[1]?.body))).toMatchObject({ local_part: 'postmaster', display_name: 'Operator', catch_all: false })

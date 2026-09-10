@@ -45,7 +45,6 @@ it('honors plain MIME metadata even when text contains real HTML syntax in displ
   const draft = initialComposeFields('draft', 'me@example.com', original)
   expect(plainText(draft.body, 'text/html')).toBe(body)
   await act(async () => root.render(<EmailBody body={body} type={type} />))
-  const toggle = [...container.querySelectorAll('button')].find(button => button.textContent === t('workshop-frontend.Inbox.show_text'))!
-  await act(async () => toggle.click())
-  expect(container.querySelector('pre')?.textContent).toBe(body)
+  expect(container.textContent).toBe(body)
+  expect(container.querySelector('iframe, p, script')).toBeNull()
 })

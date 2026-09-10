@@ -2,6 +2,7 @@ import { useTranslation } from "@gadgets/i18n";
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import { List, X } from '@phosphor-icons/react'
+import { useServerConfig } from '../../ServerConfigContext'
 import TopBarNotice from '../../TopBarNotice'
 import ReconnectingChip from '../ReconnectingChip'
 import { useConnectionLost } from '../../RpcContext'
@@ -37,6 +38,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const drawerRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const connectionLost = useConnectionLost()
+  const announcement = useServerConfig()?.announcement?.trim()
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {
@@ -145,7 +147,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Top bar. Same height as the sidebar's brand row (h-14) so they read as one continuous
             chrome strip across the top. Mostly empty — carries the mobile hamburger on the left,
             any admin TopBarNotice centered, and the reconnecting chip on the right. */}
-        <div className="relative flex h-14 shrink-0 items-center justify-between border-b border-kumo-line bg-kumo-base px-3">
+        <div className={`relative flex h-14 shrink-0 items-center justify-between border-b border-kumo-line bg-kumo-base px-3 ${pathname === '/inbox' && !announcement && !connectionLost ? 'md:hidden' : ''}`}>
           <button
             type="button"
             ref={menuButtonRef}

@@ -237,6 +237,7 @@ export default function CommandPalette({
     }))
 
     const nav: Command[] = [
+      { id: 'nav-search', label: t('workshop-frontend.WorkHub.search'), icon: <MagnifyingGlass size={15} />, run: () => navigate({ to: '/search', search: { q: query.trim() } }) },
       {
         id: 'nav-new',
         label: t("workshop-frontend.CommandPalette.new_workspace"),
@@ -302,6 +303,7 @@ export default function CommandPalette({
           { heading: t("workshop-frontend.CommandPalette.recent_workspaces"), items: refine(wsBase, 4) },
         ]
 
+    if (searching) built.unshift({ heading: t('workshop-frontend.WorkHub.search'), items: [{ ...nav[0], label: t('workshop-frontend.WorkHub.search_for', { query: needle }), indices: [] }] })
     const groups = built.filter((g) => g.items.length > 0)
     const flat = groups.flatMap((g) => g.items)
     return { groups, flat }

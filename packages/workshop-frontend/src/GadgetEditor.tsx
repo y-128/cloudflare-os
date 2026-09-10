@@ -36,6 +36,7 @@ import GadgetCodeInterface from './GadgetCodeInterface'
 import GadgetUI from './GadgetUI'
 import GadgetUseView from './GadgetUseView'
 import Connections from './Connections'
+import { SaveToWorkset } from './features/links/SaveToWorkset'
 import Activity, { type ActivityView } from './Activity'
 import { CountBadge } from './components/CountBadge'
 import ActivityNotifications from './ActivityNotifications'
@@ -433,8 +434,8 @@ export default function GadgetEditor() {
   const navigate = useNavigate()
   const { authenticatedApi } = useAuthenticatedApi()
 
-  const { chat: chatParam, w: workpieceParam } = useSearch({ strict: false }) as
-    { chat?: number; w?: number }
+  const { chat: chatParam, w: workpieceParam, activity: activityParam } = useSearch({ strict: false }) as
+    { chat?: number; w?: number; activity?: 'review' | 'history' }
   const urlChatId = chatParam !== undefined ? chatParam : null
   const urlWorkpieceId = workpieceParam !== undefined ? workpieceParam : null
 
@@ -501,11 +502,11 @@ export default function GadgetEditor() {
   const [isResizing, setIsResizing] = useState(false)
   const [activeTab, setActiveTab] = useState<RightTab>('app')
   const [workspaceView, setWorkspaceView] = useState<WorkspaceView | null>(() =>
-    getStoredWorkspaceView(id)
+    activityParam ? { mode: 'activity' } : getStoredWorkspaceView(id)
   )
   const [workspaceTransitionEnabled, setWorkspaceTransitionEnabled] = useState(false)
   const activityReturnViewRef = useRef<WorkspaceView | null>(null)
-  const [activityView, setActivityView] = useState<ActivityView>('history')
+  const [activityView, setActivityView] = useState<ActivityView>(activityParam ?? 'history')
   const [activityClosing, setActivityClosing] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [blueprintModalOpen, setBlueprintModalOpen] = useState(false)
@@ -922,6 +923,10 @@ export default function GadgetEditor() {
     setActivityView(initialView)
     setWorkspaceView({ mode: 'activity' })
   }, [workspaceView])
+
+  useEffect(() => {
+    if (activityParam) { setActivityView(activityParam); setWorkspaceView({ mode: 'activity' }) }
+  }, [activityParam, id])
 
   const closeWorkspacePane = useCallback(() => {
     if (workspaceView?.mode !== 'activity') {
@@ -1464,6 +1469,7 @@ export default function GadgetEditor() {
           )}
         </div>
 
+        <SaveToWorkset destination={{ title: metadata.title || t('workshop-frontend.WorkHub.untitled'), url: `${window.location.origin}/workspace/${encodeURIComponent(metadata.id)}?${new URLSearchParams({ ...(urlChatId !== null ? { chat: String(urlChatId) } : {}), ...(urlWorkpieceId !== null ? { w: String(urlWorkpieceId) } : {}) })}` }} />
         {/* Right: presence, cost, workspace, share, blueprints */}
         <div className="hidden flex-shrink-0 items-center gap-1 md:flex">
           <GadgetPresence

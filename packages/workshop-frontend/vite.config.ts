@@ -82,11 +82,13 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         strategies: 'generateSW',
         registerType: 'autoUpdate',
+        // Access-protected manifests need cookies even for same-origin requests.
+        useCredentials: true,
         // The Toasty integration registers the worker without forcing a reload of unsaved forms.
         injectRegister: false,
         manifest: {
           name: 'Cloudflare OS',
-          short_name: 'CF OS',
+          short_name: 'Cloudflare OS',
           display: 'standalone',
           start_url: '/',
           scope: '/',

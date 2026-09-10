@@ -2,6 +2,7 @@ import { useInboxResource } from "./useInboxResource"
 import { useEffect, useRef, useState } from 'react'
 import { useBlocker } from '@tanstack/react-router'
 import { Button, Dialog, Input } from '@cloudflare/kumo'
+import { PaperPlaneTilt, X } from '@phosphor-icons/react'
 import { useTranslation } from '@gadgets/i18n'
 import { inboxApi, InboxRequestError, inboxErrorMessage, isAbort, jsonRequest, mailboxPath } from './api'
 import { describeError } from '../../../../inbox/workers/lib/describe-error'
@@ -17,7 +18,7 @@ export const AUTOSAVE_DELAY_MS = 1000 // Coalesce typing into one serialized dra
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024 // Matches the upload endpoint's per-file limit.
 
 /** Composes and serializes autosaves, retaining drafts on failure and never retrying a sent message. */
-export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailboxId: string; session: ComposeSession; onClose: () => void; onSaved: () => void }) => {
+export const ComposeDialog = ({ mailboxId, session, onClose, onSaved, presentation = 'dialog' }: { presentation?: 'dialog' | 'inline'; mailboxId: string; session: ComposeSession; onClose: () => void; onSaved: () => void }) => {
   const { t, locale } = useTranslation()
   const sender = useInboxResource<{ fromName: string }>(mailboxPath(mailboxId, "/mailbox-settings"))
   const templates = useInboxResource<MailTemplate[]>(mailboxPath(mailboxId, '/templates'))
@@ -36,6 +37,7 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
   const [status, setStatus] = useState('')
   const [instruction, setInstruction] = useState('')
   const [showTemplates, setShowTemplates] = useState(false)
+  const [extraRecipients, setExtraRecipients] = useState(!!(fields.cc || fields.bcc))
   const [showSchedule, setShowSchedule] = useState(false)
   const [showReservations, setShowReservations] = useState(false)
   const [reservationRevision, setReservationRevision] = useState(0)
@@ -253,11 +255,13 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
     } finally { operationBusy.current = false; setBusy(false) }
   }
 
-  return <Dialog.Root open onOpenChange={open => { if (!open) void close() }}>
-    <Dialog className="w-full max-w-3xl p-5">
-      <Dialog.Title>{t(`workshop-frontend.Inbox.compose_${session.mode}`)}</Dialog.Title>
-      <Dialog.Description>{t('workshop-frontend.Inbox.autosave_hint')}</Dialog.Description>
-      <form className="mt-4 max-h-[75vh] space-y-3 overflow-y-auto" onSubmit={event => { event.preventDefault(); void send() }}>
+  const content = <>
+      <div className="flex items-center justify-between gap-3 border-b border-kumo-line px-5 py-3">
+        {presentation === 'inline' ? <h3 className="font-semibold">{t(`workshop-frontend.Inbox.compose_${session.mode}`)}</h3> : <Dialog.Title>{t(`workshop-frontend.Inbox.compose_${session.mode}`)}</Dialog.Title>}
+        <Button type="button" variant="ghost" shape="square" disabled={busy || restoring} aria-label={t('workshop-frontend.Inbox.close')} onClick={() => void close()}><X size={18} /></Button>
+      </div>
+      {presentation === 'inline' ? <p className="px-5 pt-3 text-xs text-kumo-subtle">{t('workshop-frontend.Inbox.autosave_hint')}</p> : <Dialog.Description className="px-5 pt-3 text-xs text-kumo-subtle">{t('workshop-frontend.Inbox.autosave_hint')}</Dialog.Description>}
+      <form className={`space-y-3 overflow-y-auto px-5 pt-3 ${presentation === 'dialog' ? 'max-h-[calc(90dvh-6rem)] max-sm:max-h-[calc(100dvh-6rem)]' : ''}`} onSubmit={event => { event.preventDefault(); void send() }}>
         <p className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.from')}: {fromDisplay}</p>
         {reservations.error && <div><p role="alert">{reservations.error.message}</p><Button type="button" variant="ghost" onClick={reservations.retry}>{t('workshop-frontend.Inbox.retry')}</Button></div>}
         {reserved && <p role="status">{t('workshop-frontend.Inbox.schedule_locked')}</p>}
@@ -271,7 +275,8 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
           <Button type="button" variant="secondary" disabled={busy || restoring} aria-describedby="compose-discard-hint" onClick={closeWithoutSaving}>{t('workshop-frontend.Inbox.close_without_saving')}</Button>
         </div>}
         <fieldset disabled={busy || !ready || stopped.current} className="space-y-3">
-          {(['to', 'cc', 'bcc', 'subject'] as const).map(name => <Input key={name} label={t(`workshop-frontend.Inbox.${name}`)} value={fields[name]} onChange={event => setFields(current => ({ ...current, [name]: event.target.value }))} />)}
+          <Button type="button" size="sm" variant="ghost" aria-expanded={extraRecipients} onClick={() => setExtraRecipients(value => !value)}>CC / BCC</Button>
+          {(['to', ...(extraRecipients ? ['cc', 'bcc'] as const : []), 'subject'] as const).map(name => <Input key={name} label={t(`workshop-frontend.Inbox.${name}`)} value={fields[name]} onChange={event => setFields(current => ({ ...current, [name]: event.target.value }))} />)}
           <RichTextEditor value={fields.body} disabled={busy || !ready || stopped.current} onChange={body => setFields(current => ({ ...current, body }))} expandShortcut={expandShortcut} />
           <label className="block text-sm">{t('workshop-frontend.Inbox.attachments')}<input className="mt-1 block w-full" type="file" multiple onChange={event => { void upload(event.target.files); event.target.value = '' }} /></label>
           <ul>{fields.attachments.map((attachment, index) => <li key={`${attachment.filename}-${index}`} className="flex items-center justify-between gap-2 text-sm">
@@ -298,8 +303,8 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
           <Button type="button" variant="secondary" disabled={busy || !ready || stopped.current || !sendAt} onClick={() => void schedule()}>{t('workshop-frontend.Inbox.confirm_schedule')}</Button>
         </section>}
         <p role="status" className="text-sm text-kumo-subtle">{restoring ? t('workshop-frontend.Inbox.restoring') : status}</p>
-        <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-kumo-line bg-kumo-base py-3"><Button type="button" variant="secondary" disabled={busy || restoring} onClick={() => void close()}>{t('workshop-frontend.Inbox.close')}</Button><Button type="button" variant="secondary" aria-expanded={showSchedule} disabled={busy || !ready || stopped.current} onClick={() => setShowSchedule(current => !current)}>{t('workshop-frontend.Inbox.schedule_send')}</Button><Button type="submit" disabled={busy || !ready || stopped.current}>{t('workshop-frontend.Inbox.send')}</Button></div>
+        <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-kumo-line bg-kumo-base py-3"><Button type="button" variant="secondary" disabled={busy || restoring} onClick={() => void close()}>{t('workshop-frontend.Inbox.close')}</Button><Button type="button" variant="secondary" aria-expanded={showSchedule} disabled={busy || !ready || stopped.current} onClick={() => setShowSchedule(current => !current)}>{t('workshop-frontend.Inbox.schedule_send')}</Button><Button type="submit" disabled={busy || !ready || stopped.current}><PaperPlaneTilt size={16} aria-hidden />{t('workshop-frontend.Inbox.send')}</Button></div>
       </form>
-    </Dialog>
-  </Dialog.Root>
+  </>
+  return presentation === 'inline' ? <section aria-label={t('workshop-frontend.Inbox.inline_reply')} className="rounded-lg border border-kumo-line bg-kumo-base">{content}</section> : <Dialog.Root open onOpenChange={open => { if (!open) void close() }}><Dialog className="w-full max-w-3xl overflow-hidden p-0 max-sm:h-dvh max-sm:max-h-dvh max-sm:rounded-none">{content}</Dialog></Dialog.Root>
 }

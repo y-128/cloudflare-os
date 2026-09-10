@@ -64,7 +64,7 @@ it('selects the notifier mailbox/message, expands it, loads the thread and isola
   expect(container.querySelector('h2')?.textContent).toBe('Deep-linked message')
   expect(requests.some(request => request.url.includes('second%40example.com/emails/older%2Fid'))).toBe(true)
   expect(requests.some(request => request.url.includes('first%40example.com/emails'))).toBe(false)
-  expect(container.querySelectorAll('details')).toHaveLength(3)
+  expect(container.querySelectorAll('details > article')).toHaveLength(2)
   expect(container.querySelector('article')?.closest('details')?.open).toBe(true)
   const iframe = container.querySelector('iframe')!
   expect(iframe.getAttribute('sandbox')).toBe('')
@@ -98,7 +98,7 @@ it('keeps the message and action available when not-spam fails', async () => {
 
 /** Clicks a current-locale inbox control. */
 const click = async (key: string) => {
-  const button = [...container.querySelectorAll('button')].find(item => item.textContent === t(key))!
+  const button = [...container.querySelectorAll('button')].find(item => (item.getAttribute('aria-label') || item.textContent) === t(key))!
   await act(async () => button.click())
 }
 
@@ -120,6 +120,8 @@ it('ignores a late delete of A after navigating to B', async () => {
 
 it('shows the message restored by Browser Back from SMTP settings', async () => {
   const router = await renderRoute()
+  await click('workshop-frontend.Inbox.settings')
+  await click('workshop-frontend.Inbox.account_settings')
   await click('workshop-frontend.Inbox.smtp_settings')
   expect(container.querySelector('h2')?.textContent).toBe(t('workshop-frontend.Inbox.smtp_settings'))
   await act(async () => { router.history.back(); await new Promise(resolve => setTimeout(resolve, 0)) })
@@ -162,12 +164,17 @@ it.each(['ja', 'en'] as const)('opens each new settings pane from the real navig
     return fetchMock(url, init)
   }))
   await renderRoute()
+  await click('workshop-frontend.Inbox.settings')
+  expect(container.querySelector('h2')?.textContent).toBe(t('workshop-frontend.Inbox.general_settings'))
   for (const key of ['filter_settings', 'alias_settings', 'ai_settings', 'spam_activity_settings']) {
+    await click(`workshop-frontend.Inbox.${key === 'alias_settings' ? 'account_settings' : 'advanced_settings'}`)
     await click(`workshop-frontend.Inbox.${key}`)
     expect(container.querySelector('h2')?.textContent).toBe(t(`workshop-frontend.Inbox.${key}`))
     expect(container.querySelector('main')?.textContent ?? container.textContent).not.toContain('workshop-frontend.Inbox.')
-    expect(container.querySelector('section[aria-label="' + t('workshop-frontend.Inbox.from_name') + '"] input')).not.toBeNull()
+    expect(container.querySelector('section[aria-label="' + t('workshop-frontend.Inbox.from_name') + '"] input')).toBeNull()
   }
+  await click('workshop-frontend.Inbox.account_settings')
+  expect(container.querySelector('section[aria-label="' + t('workshop-frontend.Inbox.from_name') + '"] input')).not.toBeNull()
 })
 
 
@@ -182,6 +189,22 @@ it('refreshes the selected detail and thread after AI mutations without marking 
   expect(refreshed.some(request => request.url.includes('/threads/'))).toBe(true)
   expect(refreshed.some(request => request.url.endsWith('/emails/older%2Fid') && request.method === 'GET')).toBe(true)
   expect(refreshed.some(request => request.method === 'PUT')).toBe(false)
+})
+
+it('shares the saved density between general settings and the message list', async () => {
+  // jsdom lacks PointerEvent, which Kumo uses to forward checkbox clicks.
+  vi.stubGlobal('PointerEvent', MouseEvent)
+  await renderRoute()
+  await click('workshop-frontend.Inbox.settings')
+  const compact = container.querySelector<HTMLButtonElement>('[role="checkbox"]')!
+  expect(compact.getAttribute('aria-checked')).toBe('false')
+  await act(async () => compact.click())
+  await click('workshop-frontend.Inbox.back')
+  const toggle = [...container.querySelectorAll('button')].find(button => button.textContent === t('workshop-frontend.Inbox.compact'))!
+  expect(toggle.getAttribute('aria-pressed')).toBe('true')
+  await act(async () => toggle.click())
+  await click('workshop-frontend.Inbox.settings')
+  expect(container.querySelector('[role="checkbox"]')?.getAttribute('aria-checked')).toBe('false')
 })
 
 it('disables AI chat and explains the limitation in normal-login deployments', async () => {

@@ -10,6 +10,7 @@ import type { DirectoryLinkInput, LinkDirectory, LinkDirectoryApi } from '@gadge
 import { Route as LinksRoute } from '../../routes/links'
 // Load the split page's dependencies during module setup, outside the first interaction timeout.
 import './LinksPage'
+import { LinksPage } from './LinksPage'
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
@@ -91,6 +92,28 @@ const drag = async (element: Element, type: string) => {
   Object.defineProperty(event, 'dataTransfer', { value: { effectAllowed: '', dropEffect: '', setData: vi.fn<(format: string, data: string) => void>() } })
   await act(async () => element.dispatchEvent(event))
 }
+
+it('keeps worksets separate from ordinary links and creates a persistent workset purpose', async () => {
+  api.list.mockResolvedValue({ ...initial, categories: [...initial.categories, { id: 'set', name: '例え.test', order: 2, purpose: 'workset' }], links: [...initial.links, { ...initial.links[0], id: 'source', categoryId: 'set', title: 'Original mail' }] })
+  await act(async () => root.render(<LinksPage worksets />))
+  expect(container.querySelector('h1')?.textContent).toBe(t('workshop-frontend.WorkHub.worksets'))
+  expect(container.querySelectorAll('article')).toHaveLength(1)
+  expect(container.querySelector('article')?.textContent).toContain('Original mail')
+  await act(async () => button(t('workshop-frontend.WorkHub.new_set')).click())
+  await typeText(document.querySelector('[role="dialog"] input')!, 'サンプル.test')
+  await act(async () => document.querySelector('[role="dialog"] form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
+  expect(api.createCategory).toHaveBeenCalledWith('サンプル.test', 'workset')
+})
+
+it('opens a workset only on request and reports browser-blocked tabs', async () => {
+  api.list.mockResolvedValue({ categories: [{ ...initial.categories[0], purpose: 'workset' }], links: initial.links })
+  const open = vi.spyOn(window, 'open').mockReturnValue(null)
+  await act(async () => root.render(<LinksPage worksets />))
+  expect(open).not.toHaveBeenCalled()
+  await act(async () => button(t('workshop-frontend.WorkHub.resume_set', { count: 2 })).click())
+  expect(open).toHaveBeenCalledTimes(2)
+  expect(container.textContent).toContain(t('workshop-frontend.WorkHub.blocked_tabs', { count: 2 }))
+})
 
 describe.each(['ja', 'en'] as const)('links route with %s i18n', locale => {
   beforeEach(() => { setLocale(locale) })

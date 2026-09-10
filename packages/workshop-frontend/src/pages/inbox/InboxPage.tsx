@@ -1,120 +1,111 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Input, Select } from '@cloudflare/kumo'
+import { Button, Dialog } from '@cloudflare/kumo'
+import { EnvelopeSimple, GearSix, List, MagnifyingGlass, PencilSimple, Sparkle, X } from '@phosphor-icons/react'
 import { useTranslation } from '@gadgets/i18n'
 import { useDocumentTitle } from '../../useDocumentTitle'
-import { inboxApi, jsonRequest, mailboxPath } from '../../features/inbox/api'
-import { groupThreads, parseSearchQuery } from '../../features/inbox/mailLogic'
+import { mailboxPath } from '../../features/inbox/api'
+import { groupThreads } from '../../features/inbox/mailLogic'
+import { mailListPath, type MailListFilter } from '../../features/inbox/mailPresentation'
+import { useMailOrganization } from '../../features/inbox/useMailOrganization'
 import { useInboxResource } from '../../features/inbox/useInboxResource'
 import { MessageView } from '../../features/inbox/MessageView'
 import { ComposeDialog } from '../../features/inbox/ComposeDialog'
+import { MailNavigation } from '../../features/inbox/MailNavigation'
+import { MailList, MailLoading } from '../../features/inbox/MailList'
 import { MailSettings } from '../../features/inbox/MailSettings'
 import { canConnectInboxAgent } from '../../features/inbox/inboxAgent'
 import { EmailAgentPanel } from '../../features/inbox/EmailAgentPanel'
-import { MAIL_SETTINGS_SCREENS, mailSettingsScreens, type MailSettingsScreen } from '../../features/inbox/mailSettingsScreens'
+import { MailSettingsNavigation } from '../../features/inbox/MailSettingsNavigation'
+import { type MailSettingsScreen } from '../../features/inbox/mailSettingsScreens'
 import type { ComposeSession, Email, Folder, Mailbox } from '../../features/inbox/types'
 
-const PAGE_SIZE = 30 // Keep list responses bounded while the worker groups entire conversations.
+const PAGE_SIZE = 30
+type InboxPageProps = { settings?: 'domains'; mailboxId?: string; emailId?: string; onNavigate: (mailboxId?: string, emailId?: string) => void }
 
-/** Composes mailbox navigation, paginated threads, the selected message and mailbox settings. */
-export const InboxPage = ({ mailboxId, emailId, onNavigate }: { mailboxId?: string; emailId?: string; onNavigate: (mailboxId?: string, emailId?: string) => void }) => {
+export const InboxPage = ({ mailboxId, emailId, settings, onNavigate }: InboxPageProps) => {
   const { t } = useTranslation()
   useDocumentTitle(t('workshop-frontend.Inbox.title'))
-  const [mailboxRevision, setMailboxRevision] = useState(0)
+  const [revision, setRevision] = useState(0)
   const [emptyScreen, setEmptyScreen] = useState<'domains' | 'smtp'>('domains')
-  const mailboxes = useInboxResource<Mailbox[]>('/mailboxes', mailboxRevision)
-  /** Reloads mailbox navigation after onboarding creates a durable mailbox. */
-  const refreshMailboxes = () => setMailboxRevision(value => value + 1)
+  const mailboxes = useInboxResource<Mailbox[]>('/mailboxes', revision)
   const activeMailbox = mailboxId ?? mailboxes.data?.[0]?.id
-  return <div className="flex h-full min-h-0 flex-col bg-kumo-base text-kumo-default">
-    <header className="border-b border-kumo-line px-5 py-4"><h1 className="text-2xl font-semibold">{t('workshop-frontend.Inbox.title')}</h1></header>
-    {mailboxes.error ? <p role="alert" className="p-5">{mailboxes.error.message}</p> : !mailboxes.data ? <p className="p-5" role="status">{t('workshop-frontend.Inbox.loading')}</p> : activeMailbox ?
-      <MailboxView key={activeMailbox} mailboxId={activeMailbox} emailId={emailId} mailboxes={mailboxes.data} onNavigate={onNavigate} onMailboxCreated={refreshMailboxes} /> :
-      <div className="min-h-0 overflow-y-auto"><nav className="flex gap-2 p-4">{(['domains', 'smtp'] as const).map(item => <Button key={item} variant={emptyScreen === item ? 'secondary' : 'ghost'} onClick={() => setEmptyScreen(item)}>{t(`workshop-frontend.Inbox.${item === 'domains' ? 'domain_settings' : 'smtp_settings'}`)}</Button>)}</nav><MailSettings mailboxId="" screen={emptyScreen} onMailboxCreated={refreshMailboxes} /></div>}
-  </div>
+  const refreshMailboxes = () => setRevision(value => value + 1)
+  return <section className="flex h-full min-h-0 flex-col bg-kumo-base text-kumo-default" aria-label={t('workshop-frontend.Inbox.title')}>
+    {mailboxes.error ? <div className="space-y-3 p-5"><p role="alert">{mailboxes.error.message}</p><Button onClick={mailboxes.retry}>{t('workshop-frontend.Inbox.retry')}</Button></div> : !mailboxes.data ? <MailLoading /> : activeMailbox ?
+      <MailboxView settings={settings} key={activeMailbox} mailboxId={activeMailbox} emailId={emailId} mailboxes={mailboxes.data} onNavigate={onNavigate} onMailboxCreated={refreshMailboxes} /> :
+      <div className="min-h-0 overflow-y-auto"><header className="border-b border-kumo-line p-4"><h1 className="font-semibold">{t('workshop-frontend.Inbox.title')}</h1><p className="mt-2 text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.setup_mailbox')}</p></header><nav className="flex gap-2 p-4">{(['domains', 'smtp'] as const).map(item => <Button key={item} variant={emptyScreen === item ? 'secondary' : 'ghost'} onClick={() => setEmptyScreen(item)}>{t(`workshop-frontend.Inbox.${item === 'domains' ? 'domain_settings' : 'smtp_settings'}`)}</Button>)}</nav><MailSettings mailboxId="" screen={emptyScreen} onMailboxCreated={refreshMailboxes} /></div>}
+  </section>
 }
 
-/** Owns state scoped to one mailbox so switching accounts cannot carry drafts or search results across. */
-const MailboxView = ({ mailboxId, emailId, mailboxes, onNavigate, onMailboxCreated }: { onMailboxCreated: () => void; mailboxId: string; emailId?: string; mailboxes: Mailbox[]; onNavigate: (mailboxId?: string, emailId?: string) => void }) => {
+const MailboxView = ({ mailboxId, emailId, settings, mailboxes, onNavigate, onMailboxCreated }: {
+  settings?: 'domains';
+  mailboxId: string; emailId?: string; mailboxes: Mailbox[]; onNavigate: InboxPageProps['onNavigate']; onMailboxCreated: () => void;
+}) => {
   const { t } = useTranslation()
   const [folder, setFolder] = useState('inbox')
-  const [requestedScreen, setScreen] = useState<'mail' | MailSettingsScreen>('mail')
+  const [requestedScreen, setScreen] = useState<'mail' | MailSettingsScreen>(settings ?? 'mail')
   const screen = emailId ? 'mail' : requestedScreen
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<MailListFilter>('all')
   const [page, setPage] = useState(1)
   const [revision, setRevision] = useState(0)
-  const [compose, setCompose] = useState<ComposeSession | null>(null)
   const [messageRevision, setMessageRevision] = useState(0)
+  const [compose, setCompose] = useState<ComposeSession | null>(null)
   const [agentOpen, setAgentOpen] = useState(false)
-  const [folderName, setFolderName] = useState('')
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [navigationOpen, setNavigationOpen] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const focusSearchOnReturn = useRef(false)
+  const currentEmailId = useRef(emailId); currentEmailId.current = emailId
   useEffect(() => {
-    if (!emailId && screen === 'mail' && focusSearchOnReturn.current) {
-      focusSearchOnReturn.current = false
-      searchRef.current?.focus()
-    }
+    if (!emailId && screen === 'mail' && focusSearchOnReturn.current) { focusSearchOnReturn.current = false; searchRef.current?.focus() }
   }, [emailId, screen])
   const folders = useInboxResource<Folder[]>(mailboxPath(mailboxId, '/folders'), revision)
-  const params = new URLSearchParams(query ? parseSearchQuery(query) : { folder, threaded: 'true' })
-  params.set('page', String(page)); params.set('limit', String(PAGE_SIZE))
-  const emails = useInboxResource<{ emails: Email[]; totalCount: number }>(mailboxPath(mailboxId, `/${query ? 'search' : 'emails'}?${params}`), revision)
-  const threads = groupThreads(emails.data?.emails ?? [])
+  const listPath = mailListPath(folder, query, filter, page, PAGE_SIZE)
+  const emails = useInboxResource<{ emails: Email[]; totalCount: number }>(mailboxPath(mailboxId, listPath), revision)
+  // Search is paginated by messages; regrouping would hide matches and corrupt selection counts.
+  const threads = !emails.data ? undefined : listPath.startsWith('/search?') ? (emails.data.emails ?? []) : groupThreads(emails.data.emails ?? [])
   const totalPages = Math.max(1, Math.ceil((emails.data?.totalCount ?? 0) / PAGE_SIZE))
-  /** Refreshes list and unread counts after a successful mail mutation. */
   const refresh = () => setRevision(current => current + 1)
-  /** Returns focus to list navigation when closing a message at any viewport width. */
+  const organization = useMailOrganization(mailboxId, () => { refresh(); setMessageRevision(value => value + 1) })
   const back = () => { focusSearchOnReturn.current = true; setScreen('mail'); onNavigate(mailboxId) }
-  /** Creates a named folder through the existing worker API. */
-  const createFolder = async () => {
-    if (busy || !folderName.trim()) return
-    setBusy(true); setError('')
-    try {
-      await inboxApi(mailboxPath(mailboxId, '/folders'), jsonRequest('POST', { name: folderName.trim() }))
-      setFolderName(''); refresh()
-    } catch (err) { console.error('[createInboxFolder] failed', { err }); setError(t('workshop-frontend.Inbox.folder_failed')) }
-    finally { setBusy(false) }
-  }
-  return <div className="@container flex min-h-0 flex-1 flex-col">
-    <div className="flex shrink-0 justify-end border-b border-kumo-line px-3 py-2">{!canConnectInboxAgent() && <p className="mr-3 text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.agent_access_required')}</p>}<Button size="sm" variant="secondary" disabled={!canConnectInboxAgent()} onClick={() => setAgentOpen(true)}>{t('workshop-frontend.Inbox.agent_title')}</Button></div>
-    <div className="flex min-h-0 flex-1 flex-col @4xl:flex-row">
-      <aside className={`shrink-0 space-y-3 border-b border-kumo-line p-3 @4xl:w-52 @4xl:overflow-y-auto @4xl:border-r @4xl:border-b-0 ${emailId ? 'hidden @4xl:block' : ''}`}>
-        <Select label={t('workshop-frontend.Inbox.mailbox')} value={mailboxId} onValueChange={value => { if (value) onNavigate(value) }}>
-          {mailboxes.map(mailbox => <Select.Option key={mailbox.id} value={mailbox.id}>{mailbox.email || mailbox.id}</Select.Option>)}
-        </Select>
-        <Button className="w-full" onClick={() => setCompose({ key: crypto.randomUUID(), mode: 'new' })}>{t('workshop-frontend.Inbox.compose_new')}</Button>
-        <nav aria-label={t('workshop-frontend.Inbox.folders')} className="flex gap-1 overflow-x-auto @4xl:flex-col">
-          {(folders.data ?? []).map(item => <Button key={item.id} variant={screen === 'mail' && folder === item.id && !query ? 'secondary' : 'ghost'} className="shrink-0 justify-between" aria-current={screen === 'mail' && folder === item.id && !query ? 'page' : undefined} onClick={() => { setScreen('mail'); setFolder(item.id); setQuery(''); setSearch(''); setPage(1); onNavigate(mailboxId) }}>
-            {t(`workshop-frontend.Inbox.folder_${item.id}`, item.name)}{item.unreadCount > 0 && <span className="ml-2">{item.unreadCount}</span>}
-          </Button>)}
-        </nav>
-        <details><summary className="cursor-pointer text-sm">{t('workshop-frontend.Inbox.add_folder')}</summary><form className="mt-2 space-y-2" onSubmit={event => { event.preventDefault(); void createFolder() }}><Input label={t('workshop-frontend.Inbox.folder_name')} value={folderName} onChange={event => setFolderName(event.target.value)} required /><Button type="submit" size="sm" disabled={busy}>{t('workshop-frontend.Inbox.create')}</Button></form></details>
-        <div className="flex flex-wrap gap-1 @4xl:flex-col">{mailSettingsScreens.map(item => <Button key={item} size="sm" variant={screen === item ? 'secondary' : 'ghost'} onClick={() => { setScreen(item); onNavigate(mailboxId) }}>{t(`workshop-frontend.Inbox.${MAIL_SETTINGS_SCREENS[item]}`)}</Button>)}</div>
-        {(error || folders.error) && <p role="alert" className="text-sm text-kumo-danger">{error || folders.error?.message}</p>}
-      </aside>
-      {screen !== 'mail' ? <MailSettings key={`${mailboxId}-${screen}`} mailboxId={mailboxId} screen={screen} onMailboxCreated={onMailboxCreated} /> : <>
-        <section aria-label={t('workshop-frontend.Inbox.threads')} className={`min-h-0 min-w-0 flex-1 flex-col border-kumo-line ${emailId ? 'hidden @3xl:flex @3xl:max-w-80 @3xl:border-r' : 'flex'}`}>
-          <form className="flex items-end gap-2 border-b border-kumo-line p-3" onSubmit={event => { event.preventDefault(); setQuery(search.trim()); setPage(1) }}>
-            <div className="min-w-0 flex-1"><Input ref={searchRef} type="search" label={t('workshop-frontend.Inbox.search')} description={t('workshop-frontend.Inbox.search_hint')} value={search} onChange={event => setSearch(event.target.value)} /></div><Button type="submit" size="sm">{t('workshop-frontend.Inbox.search')}</Button>
-          </form>
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {emails.error ? <p role="alert" className="p-4">{emails.error.message}</p> : !emails.data ? <p role="status" className="p-4">{t('workshop-frontend.Inbox.loading')}</p> : !threads.length ? <p className="p-8 text-center text-kumo-subtle">{t('workshop-frontend.Inbox.empty_messages')}</p> : <ul>{threads.map(email => <li key={email.thread_id || email.id}>
-              <button className={`w-full border-b border-kumo-line p-4 text-left focus-visible:outline-2 focus-visible:outline-kumo-ring ${emailId === email.id ? 'bg-kumo-fill' : 'hover:bg-kumo-elevated'}`} aria-current={emailId === email.id ? 'true' : undefined} onClick={() => onNavigate(mailboxId, email.id)}>
-                <div className={`flex justify-between gap-2 text-sm ${email.thread_unread_count ? 'font-semibold' : ''}`}><span className="truncate">{email.sender}</span><span className="shrink-0 text-kumo-subtle">{email.thread_count}</span></div>
-                <p className="truncate text-sm">{email.subject || t('workshop-frontend.Inbox.no_subject')}</p><p className="mt-1 truncate text-xs text-kumo-subtle">{email.snippet}</p><time className="text-xs text-kumo-subtle">{email.date}</time>
-              </button>
-            </li>)}</ul>}
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-kumo-line p-3"><Button size="sm" variant="ghost" onClick={refresh}>{t('workshop-frontend.Inbox.refresh')}</Button><Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>{t('workshop-frontend.Inbox.previous')}</Button><span className="text-xs">{t('workshop-frontend.Inbox.pagination', { page, total: totalPages })}</span><Button size="sm" variant="secondary" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)}>{t('workshop-frontend.Inbox.next')}</Button></div>
-        </section>
-        {emailId && <div className="min-h-0 min-w-0 flex-1"><MessageView key={`${mailboxId}-${emailId}`} mailboxId={mailboxId} emailId={emailId} refreshRevision={messageRevision} folders={folders.data ?? []} onBack={back} onChanged={refresh} onCompose={(mode, original) => setCompose({ key: crypto.randomUUID(), mode, original })} /></div>}
-      </>}
+  const changeFolder = (id: string) => { setScreen('mail'); setFolder(id); setQuery(''); setSearch(''); setFilter('all'); setPage(1); setNavigationOpen(false); onNavigate(mailboxId) }
+  const openSettings = (next: MailSettingsScreen = 'general') => { setScreen(next); setNavigationOpen(false); onNavigate(mailboxId) }
+  const openCompose = () => { setNavigationOpen(false); setCompose({ key: crypto.randomUUID(), mode: 'new' }) }
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey || event.target instanceof HTMLElement && event.target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return
+      if (event.key === '/' && screen === 'mail') { event.preventDefault(); searchRef.current?.focus() }
+      if (event.key === 'Escape' && emailId && !compose && !agentOpen && !navigationOpen) back()
+    }
+    window.addEventListener('keydown', keydown); return () => window.removeEventListener('keydown', keydown)
+  }, [emailId, screen, compose, agentOpen, navigationOpen])
+  const navigation = <MailNavigation mailboxId={mailboxId} mailboxes={mailboxes} folders={folders.data ?? []} folder={folder} settings={screen !== 'mail'} busy={organization.busy} onMailbox={id => { setNavigationOpen(false); onNavigate(id) }} onFolder={changeFolder} onCompose={openCompose} onSettings={() => openSettings()} onChanged={refresh} />
+  return <div className="@container/inbox flex min-h-0 flex-1 flex-col">
+    <header className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-kumo-line px-3 py-2 @2xl/inbox:gap-3 @2xl/inbox:px-5">
+      <Button variant="ghost" shape="square" className="@5xl/inbox:hidden" aria-label={t('workshop-frontend.Inbox.folders')} onClick={() => setNavigationOpen(true)}><List size={20} /></Button>
+      <h1 className="mr-auto text-base font-semibold">{t('workshop-frontend.Inbox.title')}</h1>
+      <form role="search" className="order-last flex w-full items-center gap-1 rounded-lg border border-kumo-line bg-kumo-elevated pr-3 focus-within:ring-2 focus-within:ring-kumo-ring @2xl/inbox:order-none @2xl/inbox:w-auto @2xl/inbox:min-w-60 @2xl/inbox:max-w-md @2xl/inbox:flex-1" onSubmit={event => { event.preventDefault(); setQuery(search.trim()); setPage(1); setScreen('mail'); onNavigate(mailboxId) }}>
+        <Button type="submit" variant="ghost" shape="square" aria-label={t('workshop-frontend.Inbox.search')}><MagnifyingGlass size={18} /></Button>
+        <input ref={searchRef} className="h-9 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-kumo-subtle" type="search" aria-label={t('workshop-frontend.Inbox.search')} placeholder={t('workshop-frontend.Inbox.search')} value={search} onChange={event => setSearch(event.target.value)} />
+        <kbd aria-hidden className="rounded border border-kumo-line px-1.5 text-xs text-kumo-subtle">/</kbd>
+      </form>
+      <Button size="sm" variant="ghost" disabled={!canConnectInboxAgent()} title={!canConnectInboxAgent() ? t('workshop-frontend.Inbox.agent_access_required') : undefined} onClick={() => setAgentOpen(true)}><Sparkle size={16} aria-hidden />{t('workshop-frontend.Inbox.agent_title')}</Button>
+      <Button variant="ghost" shape="square" aria-label={t('workshop-frontend.Inbox.settings')} onClick={() => openSettings()}><GearSix size={18} /></Button>
+      <Button variant="primary" shape="square" className="@5xl/inbox:hidden" aria-label={t('workshop-frontend.Inbox.compose_new')} onClick={openCompose}><PencilSimple size={18} /></Button>
+    </header>
+    {!canConnectInboxAgent() && <p className="sr-only">{t('workshop-frontend.Inbox.agent_access_required')}</p>}
+    {(organization.notice || organization.error || folders.error) && <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-kumo-line px-4 py-2 text-sm"><p role={organization.error || folders.error ? 'alert' : 'status'} className={organization.error || folders.error ? 'text-kumo-danger' : 'text-kumo-subtle'}>{organization.error || folders.error?.message || organization.notice}</p>{organization.notice && organization.error && <p>{organization.notice}</p>}{organization.canUndo && <Button size="sm" variant="secondary" disabled={organization.busy} onClick={() => void organization.organize('undo')}>{t('workshop-frontend.Inbox.undo')}</Button>}{folders.error && <Button size="sm" onClick={folders.retry}>{t('workshop-frontend.Inbox.retry')}</Button>}<Button variant="ghost" shape="square" aria-label={t('workshop-frontend.Inbox.close')} onClick={organization.dismiss}><X size={16} /></Button></div>}
+    <div className="flex min-h-0 flex-1">
+      <aside className="hidden w-52 shrink-0 overflow-y-auto border-r border-kumo-line bg-kumo-elevated @5xl/inbox:block">{navigation}</aside>
+      {screen !== 'mail' ? <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto"><MailSettingsNavigation screen={screen} onChange={openSettings} onBack={back} /><MailSettings key={`${mailboxId}-${screen}`} mailboxId={mailboxId} screen={screen} onMailboxCreated={onMailboxCreated} /></div> :
+        <div className="@container/mailpane min-h-0 min-w-0 flex-1"><div className="flex h-full min-h-0">
+          <MailList key={`${folder}:${query}`} emails={threads} error={emails.error} title={query ? t('workshop-frontend.Inbox.search_results') : t(`workshop-frontend.Inbox.folder_${folder}`, folders.data?.find(item => item.id === folder)?.name ?? t('workshop-frontend.Inbox.starred'))} total={emails.data?.totalCount ?? 0} emailId={emailId} filter={filter} page={page} pages={totalPages} busy={organization.busy} onFilter={value => { setFilter(value); setPage(1) }} onPage={setPage} onOpen={email => onNavigate(mailboxId, email.id)} onRefresh={refresh} onOrganize={organization.organize} />
+          {emailId ? <div className="min-h-0 min-w-0 flex-1"><MessageView key={`${mailboxId}-${emailId}`} mailboxId={mailboxId} emailId={emailId} refreshRevision={messageRevision} folders={folders.data ?? []} onBack={back} onChanged={refresh} onMoved={move => { organization.remember(move); if (currentEmailId.current === move.id) back() }} onCompose={(mode, original) => setCompose({ key: crypto.randomUUID(), mode, original })} /></div> : <div className="hidden min-w-0 flex-1 flex-col items-center justify-center gap-3 text-kumo-subtle @3xl/mailpane:flex"><EnvelopeSimple size={32} /><p className="text-sm">{t('workshop-frontend.Inbox.choose_message')}</p></div>}
+        </div></div>}
     </div>
+    <Dialog.Root open={navigationOpen} onOpenChange={setNavigationOpen}><Dialog className="w-full max-w-sm p-0"><div className="flex items-center justify-between border-b border-kumo-line px-4 py-2"><Dialog.Title>{t('workshop-frontend.Inbox.folders')}</Dialog.Title><Button variant="ghost" shape="square" aria-label={t('workshop-frontend.Inbox.close')} onClick={() => setNavigationOpen(false)}><X size={18} /></Button></div><Dialog.Description className="sr-only">{t('workshop-frontend.Inbox.mailbox')}</Dialog.Description><div className="max-h-[75dvh] overflow-y-auto">{navigation}</div></Dialog></Dialog.Root>
     {compose && <ComposeDialog key={compose.key} mailboxId={mailboxId} session={compose} onSaved={refresh} onClose={() => setCompose(null)} />}
-    {agentOpen && canConnectInboxAgent() && <EmailAgentPanel key={mailboxId} mailboxId={mailboxId} onClose={() => setAgentOpen(false)} onChanged={() => { emails.retry(); folders.retry(); setMessageRevision(current => current + 1) }} onOpenDrafts={() => {
-      setAgentOpen(false); setScreen('mail'); setFolder('draft'); setSearch(''); setQuery(''); setPage(1); refresh(); onNavigate(mailboxId)
-    }} />}
+    {agentOpen && canConnectInboxAgent() && <EmailAgentPanel key={mailboxId} mailboxId={mailboxId} onClose={() => setAgentOpen(false)} onChanged={() => { emails.retry(); folders.retry(); setMessageRevision(value => value + 1) }} onOpenDrafts={() => { setAgentOpen(false); changeFolder('draft'); refresh() }} />}
   </div>
 }

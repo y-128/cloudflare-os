@@ -35,15 +35,19 @@ export const MailDomains = ({ onMailboxCreated }: { onMailboxCreated?: () => voi
     finally { setBusy(false); domains.retry() }
   }
   return <div className="space-y-6">
+    {(error || domains.error) && <p role="alert" className="text-kumo-danger">{error || domains.error?.message}</p>}
+    {!!domains.data?.length && <section className="space-y-3"><h3 className="font-medium">{t('workshop-frontend.Inbox.registered_domains')}</h3>
+      <nav aria-label={t('workshop-frontend.Inbox.domain_settings')} className="flex flex-wrap gap-2">{domains.data.map(item => <Button key={item.id} variant={selected === item.id ? 'primary' : 'secondary'} className="max-w-full" onClick={() => setSelected(item.id)}><span className="truncate">{item.domain}</span></Button>)}</nav>
+    </section>}
+    {selected && <DomainWizard key={selected} domainId={selected} onMailboxCreated={mailboxCreated} />}
+    <details open={!domains.data?.length} className="rounded-lg border border-kumo-line p-4"><summary className="cursor-pointer font-medium">{t('workshop-frontend.Inbox.add_domain')}</summary><div className="pt-4">
     <form className="space-y-3" onSubmit={event => { event.preventDefault(); void start() }}>
       <h3 className="font-semibold">{t('workshop-frontend.Inbox.domain_step_domain')}</h3><p>{t('workshop-frontend.Inbox.domain_intro')}</p>
       <Input label={t('workshop-frontend.Inbox.domain_name')} value={domain} onChange={event => setDomain(event.target.value)} required disabled={busy} />
       <Button type="submit" disabled={busy}>{t('workshop-frontend.Inbox.domain_start')}</Button>
     </form>
-    {(error || domains.error) && <p role="alert" className="text-kumo-danger">{error || domains.error?.message}</p>}
-    <nav aria-label={t('workshop-frontend.Inbox.domain_settings')} className="flex flex-wrap gap-2">{domains.data?.map(item => <Button key={item.id} variant={selected === item.id ? 'primary' : 'secondary'} onClick={() => setSelected(item.id)}>{item.domain}</Button>)}</nav>
-    {selected && <DomainWizard key={selected} domainId={selected} onMailboxCreated={mailboxCreated} />}
-    <section className="space-y-2 border-t border-kumo-line pt-5"><h3 className="font-semibold">{t('workshop-frontend.Inbox.sending_quota')}</h3><p className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.quota_hint')}</p>{limits.error ? <p role="alert">{limits.error.message}</p> : !limits.data ? <p role="status">{t('workshop-frontend.Inbox.loading')}</p> : limits.data.available ? <pre className="overflow-x-auto rounded-lg border border-kumo-line p-3 text-sm">{JSON.stringify(limits.data.limits, null, 2)}</pre> : <p role="status" className="text-sm text-kumo-subtle">{limits.data.reason}</p>}<Button variant="secondary" onClick={() => { domains.retry(); limits.retry() }}>{t('workshop-frontend.Inbox.refresh')}</Button></section>
+    </div></details>
+    <section className="space-y-2 border-t border-kumo-line pt-5"><h3 className="font-semibold">{t('workshop-frontend.Inbox.sending_quota')}</h3><p className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.quota_hint')}</p>{limits.error ? <p role="alert">{limits.error.message}</p> : !limits.data ? <p role="status">{t('workshop-frontend.Inbox.loading')}</p> : limits.data.available ? <details><summary className="cursor-pointer py-2 text-sm">{t('workshop-frontend.Inbox.quota_details')}</summary><pre className="overflow-x-auto rounded-lg border border-kumo-line p-3 text-sm">{JSON.stringify(limits.data.limits, null, 2)}</pre></details> : <p role="status" className="text-sm text-kumo-subtle">{limits.data.reason}</p>}<Button variant="secondary" onClick={() => { domains.retry(); limits.retry() }}>{t('workshop-frontend.Inbox.refresh')}</Button></section>
     <MailAddresses revision={addressRevision} onChanged={onMailboxCreated} />
     <MailDestinations />
   </div>
