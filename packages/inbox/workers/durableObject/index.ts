@@ -1,3 +1,7 @@
+import { searchPattern } from "../lib/search-pattern";
+import { BODY_CLEANUP_RETRY_MS, SQLITE_MAX_BOUND_PARAMETERS } from "./storage-limits";
+import { BodyStore } from "./body-store";
+import { describeError } from "../lib/describe-error";
 import { validateRpc } from "capnweb-validate";
 import { MailSafetyStore } from "./mail-safety";
 import type { Classification, SenderRuleInput, SpamPolicy } from "../lib/spam-policy";
@@ -13,6 +17,7 @@ const BASE64_CHUNK_BYTES = 0x8000; // String.fromCharCodeの引数上限を避�
 const DEFAULT_PAGE_SIZE = 25; // メール一覧の既定件数
 const MAX_PAGE_SIZE = 100; // 一覧クエリで許可する最大件数
 const SEND_LIMIT_PER_HOUR = 20; // 1時間あたりの送信上限
+const ATTACHMENT_COLUMN_COUNT = 7; // Columns emitted by the attachment insert.
 const SEND_LIMIT_PER_DAY = 100; // 1日あたりの送信上限
 
 //     https://opensource.org/licenses/Apache-2.0
@@ -25,7 +30,7 @@ import * as schema from "../db/schema";
 import { Folders } from "../../shared/folders";
 import type { Env } from "../types";
 import { applyMigrations, mailboxMigrations } from "./migrations";
-import { storeAttachments, type ResolvedAttachment } from "../lib/attachments";
+import { withStoredAttachments, type ResolvedAttachment } from "../lib/attachments";
 
 /**
  * SQL expression to normalize email subjects by stripping common
@@ -79,9 +84,9 @@ const NORMALIZED_SUBJECT_SQL = `LOWER(TRIM(
     }
     return await resolved;
   } catch (err) {
-    console.error("[durableObject.resolveStoredAttachments] 失敗", {
+    console.error("[durableObject.resolveStoredAttachments] failed", {
       context: { operation: "resolveStoredAttachments", parameterCount: 3 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -172,17 +177,19 @@ export class MailboxDO extends DurableObject<Env> {
   declare __DURABLE_OBJECT_BRAND: never;
   private db: ReturnType<typeof drizzle>;
   private safety: MailSafetyStore;
+  private bodies: BodyStore;
 
   /** constructor の処理を実行します。 */ constructor(state: DurableObjectState, env: Env) {
     super(state, env);
     try {
       this.safety = new MailSafetyStore(this.ctx.storage);
+      this.bodies = new BodyStore(this.ctx.storage, env);
       this.db = drizzle(this.ctx.storage, { schema });
       applyMigrations(this.ctx.storage.sql, mailboxMigrations, this.ctx.storage);
     } catch (err) {
-      console.error("[durableObject.constructor] 失敗", {
+      console.error("[durableObject.constructor] failed", {
         context: { operation: "constructor", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -288,9 +295,9 @@ export class MailboxDO extends DurableObject<Env> {
         }),
       );
     } catch (err) {
-      console.error("[durableObject.getEmails] 失敗", {
+      console.error("[durableObject.getEmails] failed", {
         context: { operation: "getEmails", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -322,9 +329,9 @@ export class MailboxDO extends DurableObject<Env> {
 
       return await (row?.total ?? 0);
     } catch (err) {
-      console.error("[durableObject.countEmails] 失敗", {
+      console.error("[durableObject.countEmails] failed", {
         context: { operation: "countEmails", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -447,7 +454,7 @@ export class MailboxDO extends DurableObject<Env> {
 					SUM(CASE WHEN read = 0 THEN 1 ELSE 0 END) as thread_unread_count,
 					SUM(CASE WHEN read = 1 THEN 1 ELSE 0 END) as thread_read_count,
 					GROUP_CONCAT(DISTINCT sender) as participants,
-					SUM(CASE WHEN folder_id = (SELECT id FROM folders WHERE name = 'draft' LIMIT 1) THEN 1 ELSE 0 END) as has_draft
+					SUM(CASE WHEN folder_id = '${Folders.DRAFT}' THEN 1 ELSE 0 END) as has_draft
 				FROM all_emails_with_conversation
 				WHERE conversation_id IN (
 					SELECT DISTINCT conversation_id FROM all_emails_with_conversation
@@ -480,8 +487,8 @@ export class MailboxDO extends DurableObject<Env> {
 				lif.in_reply_to, lif.email_references,
 				SUBSTR(lif.body, 1, 300) as snippet,
 				cs.thread_count, cs.thread_unread_count, cs.participants,
-				CASE WHEN lmc.folder_id != (SELECT id FROM folders WHERE name = 'sent' LIMIT 1)
-					AND lmc.folder_id != (SELECT id FROM folders WHERE name = 'draft' LIMIT 1)
+				CASE WHEN lmc.folder_id != '${Folders.SENT}'
+					AND lmc.folder_id != '${Folders.DRAFT}'
 					AND cs.thread_read_count > 0
 					THEN 1 ELSE 0 END as needs_reply,
 				CASE WHEN cs.has_draft > 0 THEN 1 ELSE 0 END as has_draft
@@ -511,9 +518,9 @@ export class MailboxDO extends DurableObject<Env> {
         }),
       );
     } catch (err) {
-      console.error("[durableObject.getThreadedEmails] 失敗", {
+      console.error("[durableObject.getThreadedEmails] failed", {
         context: { operation: "getThreadedEmails", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -568,9 +575,9 @@ export class MailboxDO extends DurableObject<Env> {
       ][0] as { total: number } | undefined;
       return await (row?.total ?? 0);
     } catch (err) {
-      console.error("[durableObject.countThreadedEmails] 失敗", {
+      console.error("[durableObject.countThreadedEmails] failed", {
         context: { operation: "countThreadedEmails", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -592,47 +599,42 @@ export class MailboxDO extends DurableObject<Env> {
 
       return await {
         ...email,
+        body: await this.bodies.read(email.id, email.body),
         read: !!email.read,
         starred: !!email.starred,
         attachments: emailAttachments,
       };
     } catch (err) {
-      console.error("[durableObject.getEmail] 失敗", {
+      console.error("[durableObject.getEmail] failed", {
         context: { operation: "getEmail", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
   }
 
   /**
-   * Fetch all emails in a thread with full bodies and attachments in
-   * two queries (one for emails, one for attachments) instead of
-   * N+1 individual getEmail calls.
+   * Fetch thread rows and attachments in two queries, hydrating external bodies from R2.
    */
   async getThreadEmails(threadId: string) {
     try {
       const emailRows = [
         ...this.ctx.storage.sql.exec(
-          `SELECT * FROM emails WHERE thread_id = ?1 ORDER BY date ASC`,
+          `SELECT e.*, b.object_key AS body_object_key FROM emails e
+           LEFT JOIN email_body_objects b ON b.email_id = e.id
+           WHERE e.thread_id = ?1 ORDER BY e.date ASC`,
           threadId,
         ),
-      ] as (typeof schema.emails.$inferSelect)[];
+      ] as (typeof schema.emails.$inferSelect & { body_object_key: string | null })[];
 
       if (emailRows.length === 0) return [];
 
-      const emailIds = emailRows.map(
-        /** emailRows.map callback のコールバックを実行します。 */ (e) => e.id as string,
-      );
-
-      // Batch-fetch all attachments for the thread in a single query
-      const placeholders = emailIds
-        .map(/** emailIds.map callback のコールバックを実行します。 */ (_, i) => `?${i + 1}`)
-        .join(",");
+      // Join by the indexed thread ID instead of binding one parameter per message.
       const attachmentRows = [
         ...this.ctx.storage.sql.exec(
-          `SELECT * FROM attachments WHERE email_id IN (${placeholders})`,
-          ...emailIds,
+          `SELECT a.* FROM attachments a JOIN emails e ON a.email_id = e.id
+           WHERE e.thread_id = ?`,
+          threadId,
         ),
       ] as (typeof schema.attachments.$inferSelect)[];
 
@@ -644,28 +646,21 @@ export class MailboxDO extends DurableObject<Env> {
         attachmentsByEmail.set(att.email_id, list);
       }
 
-      return await emailRows.map(
-        /** emailRows.map callback のコールバックを実行します。 */ (email) => {
-          try {
-            return {
-              ...email,
-              read: !!email.read,
-              starred: !!email.starred,
-              attachments: attachmentsByEmail.get(email.id) || [],
-            };
-          } catch (err) {
-            console.error("[durableObject.emailRows.map callback] 失敗", {
-              context: { operation: "emailRows.map callback", parameterCount: 1 },
-              err,
-            });
-            throw err;
-          }
-        },
-      );
+      const result = [];
+      for (const { body_object_key, ...email } of emailRows) {
+        result.push({
+          ...email,
+          body: await this.bodies.readObject(body_object_key, email.body),
+          read: !!email.read,
+          starred: !!email.starred,
+          attachments: attachmentsByEmail.get(email.id) || [],
+        });
+      }
+      return result;
     } catch (err) {
-      console.error("[durableObject.getThreadEmails] 失敗", {
+      console.error("[durableObject.getThreadEmails] failed", {
         context: { operation: "getThreadEmails", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -692,9 +687,9 @@ export class MailboxDO extends DurableObject<Env> {
 
       return await this.getEmail(id);
     } catch (err) {
-      console.error("[durableObject.updateEmail] 失敗", {
+      console.error("[durableObject.updateEmail] failed", {
         context: { operation: "updateEmail", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -708,9 +703,9 @@ export class MailboxDO extends DurableObject<Env> {
       );
       return await { threadId, markedRead: true };
     } catch (err) {
-      console.error("[durableObject.markThreadRead] 失敗", {
+      console.error("[durableObject.markThreadRead] failed", {
         context: { operation: "markThreadRead", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -735,13 +730,19 @@ export class MailboxDO extends DurableObject<Env> {
         .where(eq(schema.attachments.email_id, id))
         .all();
 
-      this.db.delete(schema.emails).where(eq(schema.emails.id, id)).run();
+      await this.#refreshAlarm(Date.now() + BODY_CLEANUP_RETRY_MS);
+      this.ctx.storage.transactionSync(/** Journal cleanup atomically with email deletion. */ () => {
+        this.bodies.prepareDeletion([id]);
+        this.db.delete(schema.emails).where(eq(schema.emails.id, id)).run();
+      });
+      await this.bodies.cleanup();
+      await this.#refreshAlarm();
 
       return await emailAttachments;
     } catch (err) {
-      console.error("[durableObject.deleteEmail] 失敗", {
+      console.error("[durableObject.deleteEmail] failed", {
         context: { operation: "deleteEmail", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -755,9 +756,9 @@ export class MailboxDO extends DurableObject<Env> {
         .where(eq(schema.attachments.id, id))
         .get() ?? null);
     } catch (err) {
-      console.error("[durableObject.getAttachment] 失敗", {
+      console.error("[durableObject.getAttachment] failed", {
         context: { operation: "getAttachment", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -782,9 +783,9 @@ export class MailboxDO extends DurableObject<Env> {
         .all();
       return await result;
     } catch (err) {
-      console.error("[durableObject.getFolders] 失敗", {
+      console.error("[durableObject.getFolders] failed", {
         context: { operation: "getFolders", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -804,7 +805,7 @@ export class MailboxDO extends DurableObject<Env> {
           .get();
         return await { ...result, unreadCount: 0 };
       } catch (e: unknown) {
-        console.error("[createFolder] 失敗", { context: { operation: "createFolder" }, err: e });
+        console.error("[createFolder] failed", { context: { operation: "createFolder" }, err: describeError(e) });
 
         if (e instanceof Error && e.message.includes("UNIQUE constraint failed")) {
           return null;
@@ -812,9 +813,9 @@ export class MailboxDO extends DurableObject<Env> {
         throw e;
       }
     } catch (err) {
-      console.error("[durableObject.createFolder] 失敗", {
+      console.error("[durableObject.createFolder] failed", {
         context: { operation: "createFolder", parameterCount: 3 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -830,9 +831,9 @@ export class MailboxDO extends DurableObject<Env> {
         .get();
       return await result;
     } catch (err) {
-      console.error("[durableObject.updateFolder] 失敗", {
+      console.error("[durableObject.updateFolder] failed", {
         context: { operation: "updateFolder", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -850,13 +851,21 @@ export class MailboxDO extends DurableObject<Env> {
         return false;
       }
 
-      this.db.delete(schema.folders).where(eq(schema.folders.id, id)).run();
+      const emailIds = this.db.select({ id: schema.emails.id }).from(schema.emails)
+        .where(eq(schema.emails.folder_id, id)).all();
+      await this.#refreshAlarm(Date.now() + BODY_CLEANUP_RETRY_MS);
+      this.ctx.storage.transactionSync(/** Journal every body before cascading folder deletion. */ () => {
+        this.bodies.prepareDeletion(emailIds.map(/** Extract IDs for body cleanup. */ (email) => email.id));
+        this.db.delete(schema.folders).where(eq(schema.folders.id, id)).run();
+      });
+      await this.bodies.cleanup();
+      await this.#refreshAlarm();
 
       return true;
     } catch (err) {
-      console.error("[durableObject.deleteFolder] 失敗", {
+      console.error("[durableObject.deleteFolder] failed", {
         context: { operation: "deleteFolder", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -880,9 +889,9 @@ export class MailboxDO extends DurableObject<Env> {
 
       return true;
     } catch (err) {
-      console.error("[durableObject.moveEmail] 失敗", {
+      console.error("[durableObject.moveEmail] failed", {
         context: { operation: "moveEmail", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -922,12 +931,12 @@ export class MailboxDO extends DurableObject<Env> {
     };
 
     if (query) {
-      const p1 = addParam(`%${query}%`);
-      const p2 = addParam(`%${query}%`);
-      const p3 = addParam(`%${query}%`);
-      const p4 = addParam(`%${query}%`);
+      const p1 = addParam(searchPattern(query));
+      const p2 = addParam(searchPattern(query));
+      const p3 = addParam(searchPattern(query));
+      const p4 = addParam(searchPattern(query));
       conditions.push(
-        `(${prefix}subject LIKE ${p1} OR ${prefix}body LIKE ${p2} OR ${prefix}sender LIKE ${p3} OR ${prefix}recipient LIKE ${p4} OR ${prefix}cc LIKE ${p4} OR ${prefix}bcc LIKE ${p4})`,
+        `(${prefix}subject LIKE ${p1} ESCAPE '\\' OR ${prefix}body LIKE ${p2} ESCAPE '\\' OR EXISTS (SELECT 1 FROM email_body_chunks bc WHERE bc.email_id = ${prefix}id AND bc.body LIKE ${p2} ESCAPE '\\') OR ${prefix}sender LIKE ${p3} ESCAPE '\\' OR ${prefix}recipient LIKE ${p4} ESCAPE '\\' OR ${prefix}cc LIKE ${p4} ESCAPE '\\' OR ${prefix}bcc LIKE ${p4} ESCAPE '\\')`,
       );
     }
     if (folder) {
@@ -937,18 +946,18 @@ export class MailboxDO extends DurableObject<Env> {
       );
     }
     if (from) {
-      const p = addParam(`%${from}%`);
-      conditions.push(`${prefix}sender LIKE ${p}`);
+      const p = addParam(searchPattern(from));
+      conditions.push(`${prefix}sender LIKE ${p} ESCAPE '\\'`);
     }
     if (to) {
-      const p = addParam(`%${to}%`);
+      const p = addParam(searchPattern(to));
       conditions.push(
-        `(${prefix}recipient LIKE ${p} OR ${prefix}cc LIKE ${p} OR ${prefix}bcc LIKE ${p})`,
+        `(${prefix}recipient LIKE ${p} ESCAPE '\\' OR ${prefix}cc LIKE ${p} ESCAPE '\\' OR ${prefix}bcc LIKE ${p} ESCAPE '\\')`,
       );
     }
     if (subject) {
-      const p = addParam(`%${subject}%`);
-      conditions.push(`${prefix}subject LIKE ${p}`);
+      const p = addParam(searchPattern(subject));
+      conditions.push(`${prefix}subject LIKE ${p} ESCAPE '\\'`);
     }
     if (date_start) {
       const p = addParam(date_start);
@@ -1005,9 +1014,9 @@ export class MailboxDO extends DurableObject<Env> {
         }),
       );
     } catch (err) {
-      console.error("[durableObject.searchEmails] 失敗", {
+      console.error("[durableObject.searchEmails] failed", {
         context: { operation: "searchEmails", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1018,7 +1027,7 @@ export class MailboxDO extends DurableObject<Env> {
    */
   async countSearchResults(options: SearchFilterOptions) {
     try {
-      const { conditions, params } = this.#buildSearchConditions(options);
+      const { conditions, params } = this.#buildSearchConditions(options, "emails");
 
       const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
       const query = `SELECT COUNT(*) as total FROM emails ${where}`;
@@ -1028,9 +1037,9 @@ export class MailboxDO extends DurableObject<Env> {
         | undefined;
       return await (row?.total ?? 0);
     } catch (err) {
-      console.error("[durableObject.countSearchResults] 失敗", {
+      console.error("[durableObject.countSearchResults] failed", {
         context: { operation: "countSearchResults", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1082,9 +1091,9 @@ export class MailboxDO extends DurableObject<Env> {
       }
       return null;
     } catch (err) {
-      console.error("[durableObject.findThreadBySubject] 失敗", {
+      console.error("[durableObject.findThreadBySubject] failed", {
         context: { operation: "findThreadBySubject", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1127,9 +1136,9 @@ export class MailboxDO extends DurableObject<Env> {
 
       return null;
     } catch (err) {
-      console.error("[durableObject.checkSendRateLimit] 失敗", {
+      console.error("[durableObject.checkSendRateLimit] failed", {
         context: { operation: "checkSendRateLimit", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1138,7 +1147,13 @@ export class MailboxDO extends DurableObject<Env> {
   // ── Email creation (Drizzle) ───────────────────────────────────
 
   async createEmail(folder: string, email: EmailData, attachments: AttachmentData[], classification?: Classification) {
+    let bodyKey: string | null = null;
     try {
+      bodyKey = this.bodies.reserve(email.body);
+      if (bodyKey) {
+        await this.#refreshAlarm();
+        await this.bodies.write(bodyKey, email.body);
+      }
       this.ctx.storage.transactionSync(/** Store the email, attachment metadata and classification together. */ () => {
         // Resolve folder name or ID to the actual folder ID.
         const folderRow = this.db
@@ -1173,7 +1188,7 @@ export class MailboxDO extends DurableObject<Env> {
             date: email.date,
             read: isSent ? 1 : email.read ? 1 : 0,
             starred: email.starred ? 1 : 0,
-            body: email.body,
+            body: bodyKey ? this.bodies.snippet(email.body) : email.body,
             in_reply_to: email.in_reply_to ?? null,
             email_references: email.email_references ?? null,
             thread_id: email.thread_id ?? null,
@@ -1187,16 +1202,24 @@ export class MailboxDO extends DurableObject<Env> {
           .run();
 
         if (attachments.length > 0) {
-          this.db.insert(schema.attachments).values(attachments).run();
+          // Drizzle binds seven columns per attachment, including nullable columns.
+          const attachmentsPerBatch = Math.floor(SQLITE_MAX_BOUND_PARAMETERS / ATTACHMENT_COLUMN_COUNT);
+          for (let start = 0; start < attachments.length; start += attachmentsPerBatch) {
+            this.db.insert(schema.attachments).values(attachments.slice(start, start + attachmentsPerBatch)).run();
+          }
         }
+        if (bodyKey) this.bodies.commit(bodyKey, email.id, email.body);
         if (classification) this.safety.recordClassification(classification);
       });
     } catch (err) {
-      console.error("[durableObject.createEmail] 失敗", {
+      if (bodyKey) await this.bodies.discard(bodyKey);
+      console.error("[durableObject.createEmail] failed", {
         context: { operation: "createEmail", parameterCount: 3 },
-        err,
+        err: describeError(err),
       });
       throw err;
+    } finally {
+      if (bodyKey) this.bodies.release(bodyKey);
     }
   }
 
@@ -1212,9 +1235,9 @@ export class MailboxDO extends DurableObject<Env> {
       ][0] as { value: string } | undefined;
       return await (row?.value ?? null);
     } catch (err) {
-      console.error("[durableObject.getMailboxSetting] 失敗", {
+      console.error("[durableObject.getMailboxSetting] failed", {
         context: { operation: "getMailboxSetting", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1233,9 +1256,9 @@ export class MailboxDO extends DurableObject<Env> {
         new Date().toISOString(),
       );
     } catch (err) {
-      console.error("[durableObject.setMailboxSetting] 失敗", {
+      console.error("[durableObject.setMailboxSetting] failed", {
         context: { operation: "setMailboxSetting", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1252,9 +1275,9 @@ export class MailboxDO extends DurableObject<Env> {
       for (const r of rows) out[r.key] = r.value;
       return await out;
     } catch (err) {
-      console.error("[durableObject.listMailboxSettings] 失敗", {
+      console.error("[durableObject.listMailboxSettings] failed", {
         context: { operation: "listMailboxSettings", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1268,9 +1291,9 @@ export class MailboxDO extends DurableObject<Env> {
         ...this.ctx.storage.sql.exec(`SELECT id, name, color FROM labels ORDER BY name`),
       ] as unknown as { id: string; name: string; color: string | null }[]);
     } catch (err) {
-      console.error("[durableObject.listLabels] 失敗", {
+      console.error("[durableObject.listLabels] failed", {
         context: { operation: "listLabels", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1291,9 +1314,9 @@ export class MailboxDO extends DurableObject<Env> {
       );
       return await { id, name, color };
     } catch (err) {
-      console.error("[durableObject.createLabel] 失敗", {
+      console.error("[durableObject.createLabel] failed", {
         context: { operation: "createLabel", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1303,9 +1326,9 @@ export class MailboxDO extends DurableObject<Env> {
     try {
       this.ctx.storage.sql.exec(`DELETE FROM labels WHERE id = ?`, id);
     } catch (err) {
-      console.error("[durableObject.deleteLabel] 失敗", {
+      console.error("[durableObject.deleteLabel] failed", {
         context: { operation: "deleteLabel", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1319,9 +1342,9 @@ export class MailboxDO extends DurableObject<Env> {
         labelId,
       );
     } catch (err) {
-      console.error("[durableObject.addEmailLabel] 失敗", {
+      console.error("[durableObject.addEmailLabel] failed", {
         context: { operation: "addEmailLabel", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1338,9 +1361,9 @@ export class MailboxDO extends DurableObject<Env> {
         labelId,
       );
     } catch (err) {
-      console.error("[durableObject.removeEmailLabel] 失敗", {
+      console.error("[durableObject.removeEmailLabel] failed", {
         context: { operation: "removeEmailLabel", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1357,9 +1380,9 @@ export class MailboxDO extends DurableObject<Env> {
         ),
       ] as unknown as { id: string; name: string; color: string | null }[]);
     } catch (err) {
-      console.error("[durableObject.labelsForEmail] 失敗", {
+      console.error("[durableObject.labelsForEmail] failed", {
         context: { operation: "labelsForEmail", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1382,9 +1405,9 @@ export class MailboxDO extends DurableObject<Env> {
         actions_json: string;
       }[]);
     } catch (err) {
-      console.error("[durableObject.listFilterRules] 失敗", {
+      console.error("[durableObject.listFilterRules] failed", {
         context: { operation: "listFilterRules", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1419,9 +1442,9 @@ export class MailboxDO extends DurableObject<Env> {
       );
       return await { id };
     } catch (err) {
-      console.error("[durableObject.upsertFilterRule] 失敗", {
+      console.error("[durableObject.upsertFilterRule] failed", {
         context: { operation: "upsertFilterRule", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1431,9 +1454,9 @@ export class MailboxDO extends DurableObject<Env> {
     try {
       this.ctx.storage.sql.exec(`DELETE FROM filter_rules WHERE id = ?`, id);
     } catch (err) {
-      console.error("[durableObject.deleteFilterRule] 失敗", {
+      console.error("[durableObject.deleteFilterRule] failed", {
         context: { operation: "deleteFilterRule", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1457,9 +1480,9 @@ export class MailboxDO extends DurableObject<Env> {
         action: string;
       }[]);
     } catch (err) {
-      console.error("[durableObject.listSpamRules] 失敗", {
+      console.error("[durableObject.listSpamRules] failed", {
         context: { operation: "listSpamRules", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1497,9 +1520,9 @@ export class MailboxDO extends DurableObject<Env> {
       );
       return await { id };
     } catch (err) {
-      console.error("[durableObject.upsertSpamRule] 失敗", {
+      console.error("[durableObject.upsertSpamRule] failed", {
         context: { operation: "upsertSpamRule", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1509,9 +1532,9 @@ export class MailboxDO extends DurableObject<Env> {
     try {
       this.ctx.storage.sql.exec(`DELETE FROM spam_rules WHERE id = ?`, id);
     } catch (err) {
-      console.error("[durableObject.deleteSpamRule] 失敗", {
+      console.error("[durableObject.deleteSpamRule] failed", {
         context: { operation: "deleteSpamRule", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1522,17 +1545,16 @@ export class MailboxDO extends DurableObject<Env> {
   async bayesLookup(tokens: string[]) {
     try {
       if (tokens.length === 0) return await { counts: {}, totals: { spam: 0, ham: 0 } };
-      const placeholders = tokens
-        .map(/** tokens.map callback のコールバックを実行します。 */ (_, i) => `?${i + 1}`)
-        .join(",");
-      const rows = [
-        ...this.ctx.storage.sql.exec(
-          `SELECT token, spam_count, ham_count FROM spam_tokens WHERE token IN (${placeholders})`,
-          ...tokens,
-        ),
-      ] as unknown as { token: string; spam_count: number; ham_count: number }[];
       const counts: Record<string, { spam_count: number; ham_count: number }> = {};
-      for (const r of rows) counts[r.token] = { spam_count: r.spam_count, ham_count: r.ham_count };
+      for (let start = 0; start < tokens.length; start += SQLITE_MAX_BOUND_PARAMETERS) {
+        const batch = tokens.slice(start, start + SQLITE_MAX_BOUND_PARAMETERS);
+        const placeholders = batch.map(/** Bind each token within the SQLite limit. */ () => "?").join(",");
+        const rows = this.ctx.storage.sql.exec<{ token: string; spam_count: number; ham_count: number }>(
+          `SELECT token, spam_count, ham_count FROM spam_tokens WHERE token IN (${placeholders})`,
+          ...batch,
+        );
+        for (const row of rows) counts[row.token] = { spam_count: row.spam_count, ham_count: row.ham_count };
+      }
       const totalsRow = [
         ...this.ctx.storage.sql.exec(
           `SELECT COALESCE((SELECT value FROM mailbox_settings WHERE key = 'bayes_spam_emails'), '0') AS spam,
@@ -1544,9 +1566,9 @@ export class MailboxDO extends DurableObject<Env> {
         totals: { spam: Number(totalsRow.spam) || 0, ham: Number(totalsRow.ham) || 0 },
       };
     } catch (err) {
-      console.error("[durableObject.bayesLookup] 失敗", {
+      console.error("[durableObject.bayesLookup] failed", {
         context: { operation: "bayesLookup", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1591,21 +1613,21 @@ export class MailboxDO extends DurableObject<Env> {
               now,
             );
           } catch (err) {
-            console.error("[durableObject.this.ctx.storage.transactionSync callback] 失敗", {
+            console.error("[durableObject.this.ctx.storage.transactionSync callback] failed", {
               context: {
                 operation: "this.ctx.storage.transactionSync callback",
                 parameterCount: 0,
               },
-              err,
+              err: describeError(err),
             });
             throw err;
           }
         },
       );
     } catch (err) {
-      console.error("[durableObject.bayesTrain] 失敗", {
+      console.error("[durableObject.bayesTrain] failed", {
         context: { operation: "bayesTrain", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1625,9 +1647,9 @@ export class MailboxDO extends DurableObject<Env> {
       ] as unknown as { token: string; spam_count: number; ham_count: number }[];
       return await { tokenCount: tokenCount.cnt, topSpamTokens: top };
     } catch (err) {
-      console.error("[durableObject.bayesStats] 失敗", {
+      console.error("[durableObject.bayesStats] failed", {
         context: { operation: "bayesStats", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1640,9 +1662,9 @@ export class MailboxDO extends DurableObject<Env> {
         `DELETE FROM mailbox_settings WHERE key IN ('bayes_spam_emails','bayes_ham_emails')`,
       );
     } catch (err) {
-      console.error("[durableObject.bayesReset] 失敗", {
+      console.error("[durableObject.bayesReset] failed", {
         context: { operation: "bayesReset", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1664,9 +1686,9 @@ export class MailboxDO extends DurableObject<Env> {
         body: string;
       }[]);
     } catch (err) {
-      console.error("[durableObject.listTemplates] 失敗", {
+      console.error("[durableObject.listTemplates] failed", {
         context: { operation: "listTemplates", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1694,9 +1716,9 @@ export class MailboxDO extends DurableObject<Env> {
       );
       return await { id };
     } catch (err) {
-      console.error("[durableObject.upsertTemplate] 失敗", {
+      console.error("[durableObject.upsertTemplate] failed", {
         context: { operation: "upsertTemplate", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1706,9 +1728,9 @@ export class MailboxDO extends DurableObject<Env> {
     try {
       this.ctx.storage.sql.exec(`DELETE FROM templates WHERE id = ?`, id);
     } catch (err) {
-      console.error("[durableObject.deleteTemplate] 失敗", {
+      console.error("[durableObject.deleteTemplate] failed", {
         context: { operation: "deleteTemplate", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1730,9 +1752,9 @@ export class MailboxDO extends DurableObject<Env> {
         system_prompt_override: string | null;
       }[]);
     } catch (err) {
-      console.error("[durableObject.listAliases] 失敗", {
+      console.error("[durableObject.listAliases] failed", {
         context: { operation: "listAliases", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1760,9 +1782,9 @@ export class MailboxDO extends DurableObject<Env> {
       );
       return await { subaddress: a.subaddress };
     } catch (err) {
-      console.error("[durableObject.upsertAlias] 失敗", {
+      console.error("[durableObject.upsertAlias] failed", {
         context: { operation: "upsertAlias", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1772,9 +1794,9 @@ export class MailboxDO extends DurableObject<Env> {
     try {
       this.ctx.storage.sql.exec(`DELETE FROM aliases WHERE subaddress = ?`, subaddress);
     } catch (err) {
-      console.error("[durableObject.deleteAlias] 失敗", {
+      console.error("[durableObject.deleteAlias] failed", {
         context: { operation: "deleteAlias", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1797,9 +1819,9 @@ export class MailboxDO extends DurableObject<Env> {
           }
         | undefined) || null);
     } catch (err) {
-      console.error("[durableObject.getAlias] 失敗", {
+      console.error("[durableObject.getAlias] failed", {
         context: { operation: "getAlias", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1822,9 +1844,9 @@ export class MailboxDO extends DurableObject<Env> {
         last_error: string | null;
       }[]);
     } catch (err) {
-      console.error("[durableObject.listScheduledSends] 失敗", {
+      console.error("[durableObject.listScheduledSends] failed", {
         context: { operation: "listScheduledSends", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1847,9 +1869,9 @@ export class MailboxDO extends DurableObject<Env> {
       await this.#refreshAlarm();
       return await { id };
     } catch (err) {
-      console.error("[durableObject.createScheduledSend] 失敗", {
+      console.error("[durableObject.createScheduledSend] failed", {
         context: { operation: "createScheduledSend", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1863,31 +1885,34 @@ export class MailboxDO extends DurableObject<Env> {
       );
       await this.#refreshAlarm();
     } catch (err) {
-      console.error("[durableObject.cancelScheduledSend] 失敗", {
+      console.error("[durableObject.cancelScheduledSend] failed", {
         context: { operation: "cancelScheduledSend", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
   }
 
-  /** #refreshAlarm の処理を実行します。 */ async #refreshAlarm() {
+  /** #refreshAlarm の処理を実行します。 */ async #refreshAlarm(cleanupDeadline?: number) {
     try {
       const row = [
         ...this.ctx.storage.sql.exec(
           `SELECT MIN(send_at) as next FROM scheduled_sends WHERE status = 'pending'`,
         ),
       ][0] as { next: string | null };
-      if (row.next) {
-        const ts = new Date(row.next).getTime();
-        if (!Number.isNaN(ts)) await this.ctx.storage.setAlarm(ts);
-      } else {
-        await this.ctx.storage.deleteAlarm();
-      }
+      const sendTime = row.next ? new Date(row.next).getTime() : NaN;
+      const cleanupTime = this.bodies.nextCleanup();
+      const next = Math.min(
+        Number.isNaN(sendTime) ? Infinity : sendTime,
+        cleanupTime ?? Infinity,
+        cleanupDeadline ?? Infinity,
+      );
+      if (Number.isFinite(next)) await this.ctx.storage.setAlarm(next);
+      else await this.ctx.storage.deleteAlarm();
     } catch (err) {
-      console.error("[durableObject.#refreshAlarm] 失敗", {
+      console.error("[durableObject.#refreshAlarm] failed", {
         context: { operation: "#refreshAlarm", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1895,6 +1920,7 @@ export class MailboxDO extends DurableObject<Env> {
 
   /** alarm の処理を実行します。 */ async alarm() {
     try {
+      await this.bodies.cleanup();
       const now = new Date().toISOString();
       const due = [
         ...this.ctx.storage.sql.exec(
@@ -1909,8 +1935,6 @@ export class MailboxDO extends DurableObject<Env> {
           const { sendEmail } = await import("../email-sender");
 
           const messageId = crypto.randomUUID();
-          const fromDomain = (draft.sender || "").split("@")[1] || "";
-          const outgoingMessageId = `${messageId}@${fromDomain}`;
           const resolvedAttachments = await resolveStoredAttachments(
             this.env as Env,
             job.draft_email_id,
@@ -1922,7 +1946,7 @@ export class MailboxDO extends DurableObject<Env> {
           const threading = draft.in_reply_to
             ? buildThreadingHeaders(draft.in_reply_to, references)
             : undefined;
-          await sendEmail(requireBinding(this.env as Env, "EMAIL"), {
+          const { messageId: outgoingMessageId } = await sendEmail(requireBinding(this.env as Env, "EMAIL"), {
             cc: draft.cc || undefined,
             bcc: draft.bcc || undefined,
             headers: threading,
@@ -1932,29 +1956,32 @@ export class MailboxDO extends DurableObject<Env> {
             html: draft.body || "",
             attachments: resolvedAttachments,
           });
-          const sentAttachmentData = await storeAttachments(
+          await withStoredAttachments(
             requireBinding(this.env as Env, "BUCKET"),
             messageId,
             resolvedAttachments,
-          );
-          // Mark sent: move draft to sent folder via createEmail
-          await this.createEmail(
-            Folders.SENT,
-            {
-              id: messageId,
-              subject: draft.subject || "",
-              sender: draft.sender || "",
-              recipient: draft.recipient || "",
-              date: new Date().toISOString(),
-              body: draft.body || "",
-              thread_id: draft.thread_id || messageId,
-              in_reply_to: draft.in_reply_to,
-              email_references: draft.email_references,
-              cc: draft.cc,
-              bcc: draft.bcc,
-              message_id: outgoingMessageId,
+            /** Store the sent copy before committing its new attachments. */
+            async (sentAttachmentData) => {
+              // Mark sent: move draft to sent folder via createEmail
+              await this.createEmail(
+                Folders.SENT,
+                {
+                  id: messageId,
+                  subject: draft.subject || "",
+                  sender: draft.sender || "",
+                  recipient: draft.recipient || "",
+                  date: new Date().toISOString(),
+                  body: draft.body || "",
+                  thread_id: draft.thread_id || messageId,
+                  in_reply_to: draft.in_reply_to,
+                  email_references: draft.email_references,
+                  cc: draft.cc,
+                  bcc: draft.bcc,
+                  message_id: outgoingMessageId,
+                },
+                sentAttachmentData,
+              );
             },
-            sentAttachmentData,
           );
           const oldAttachments = await this.deleteEmail(job.draft_email_id);
           if (oldAttachments?.length) {
@@ -1970,7 +1997,7 @@ export class MailboxDO extends DurableObject<Env> {
             job.id,
           );
         } catch (e) {
-          console.error("[alarm] 失敗", { context: { operation: "alarm" }, err: e });
+          console.error("[alarm] failed", { context: { operation: "alarm" }, err: describeError(e) });
 
           this.ctx.storage.sql.exec(
             `UPDATE scheduled_sends SET status = 'failed', attempts = attempts + 1, last_error = ? WHERE id = ?`,
@@ -1981,9 +2008,9 @@ export class MailboxDO extends DurableObject<Env> {
       }
       await this.#refreshAlarm();
     } catch (err) {
-      console.error("[durableObject.alarm] 失敗", {
+      console.error("[durableObject.alarm] failed", {
         context: { operation: "alarm", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -2000,9 +2027,9 @@ export class MailboxDO extends DurableObject<Env> {
         ),
       ][0] as { summary: string; model: string | null; generated_at: string } | undefined) || null);
     } catch (err) {
-      console.error("[durableObject.getThreadSummary] 失敗", {
+      console.error("[durableObject.getThreadSummary] failed", {
         context: { operation: "getThreadSummary", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -2023,9 +2050,9 @@ export class MailboxDO extends DurableObject<Env> {
         new Date().toISOString(),
       );
     } catch (err) {
-      console.error("[durableObject.setThreadSummary] 失敗", {
+      console.error("[durableObject.setThreadSummary] failed", {
         context: { operation: "setThreadSummary", parameterCount: 3 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -2046,9 +2073,9 @@ export class MailboxDO extends DurableObject<Env> {
       this.ctx.storage.sql.exec(`UPDATE emails SET folder_id = ? WHERE id = ?`, folder.id, emailId);
       return true;
     } catch (err) {
-      console.error("[durableObject.moveEmailToFolderName] 失敗", {
+      console.error("[durableObject.moveEmailToFolderName] failed", {
         context: { operation: "moveEmailToFolderName", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -2080,9 +2107,9 @@ export class MailboxDO extends DurableObject<Env> {
         ...params,
       );
     } catch (err) {
-      console.error("[durableObject.setEmailFlags] 失敗", {
+      console.error("[durableObject.setEmailFlags] failed", {
         context: { operation: "setEmailFlags", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -2113,9 +2140,9 @@ export class MailboxDO extends DurableObject<Env> {
         id,
       );
     } catch (err) {
-      console.error("[durableObject.addLabelByName] 失敗", {
+      console.error("[durableObject.addLabelByName] failed", {
         context: { operation: "addLabelByName", parameterCount: 3 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }

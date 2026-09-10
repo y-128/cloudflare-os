@@ -264,6 +264,12 @@ const HANDLED_CONFIG_KEYS = new Set([
   // gatekeeper-context's Artifacts binding is closed-beta and cannot be provisioned in arbitrary
   // user accounts; it is dropped from customer manifests (the gatekeeper degrades gracefully).
   "artifacts",
+  // Whether the worker gets its own public `*.workers.dev` hostname and preview URLs. Only the
+  // router should: every other worker is reached through a service binding, and a public hostname
+  // on those is a way around whatever guards the router's origin (Cloudflare Access, say). Not
+  // carried into the manifest — the deploy service decides hostnames for customer instances — but
+  // accepted here so a self-hosted deployment can close them in its own wrangler.jsonc.
+  "workers_dev", "preview_urls",
 ]);
 
 const ARTIFACTS_CUT_ALLOWED = new Set(["gatekeeper-context"]);

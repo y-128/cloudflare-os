@@ -1,3 +1,4 @@
+import { describeError } from "./describe-error";
 import type { Env } from '../types';
 import { canonicalize } from '../../shared/email-address';
 import { requireBinding } from './bindings';
@@ -17,5 +18,5 @@ export async function createMailbox(env: Env, rawEmail: string, name: string, se
     await requireBinding(env, 'MAILBOX').getByName(email).getFolders();
     if (!exists) await bucket.put(key, JSON.stringify(finalSettings));
     return { id: email, email, name, settings: finalSettings };
-  } catch (err) { console.error('[createMailbox] failed', { resume, err }); throw err; }
+  } catch (err) { console.error('[createMailbox] failed', { resume, err: describeError(err) }); throw err; }
 }

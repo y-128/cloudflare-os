@@ -6,7 +6,7 @@ Source: `git diff b07016d^..b07016d`. Regenerate with `node scripts/i18n/extract
 - Matched positional line pairs: **1622**
 - Changed lines: **1691 removed / 1691 added**
 - Unmatched lines: **69 removed / 69 added**
-- Supplemental entries (not extracted): **987**
+- Supplemental entries (not extracted): **1008**
 
 Each contiguous change run is paired positionally within its hunk. Only literal contents may differ; surrounding code, whitespace, delimiters, and literal kinds must match. JSX text is decoded as display text. Comments, interpolated templates, multiline quoted literals, structural edits, and non-Japanese replacements are never guessed. Repeated literals receive numeric key suffixes.
 

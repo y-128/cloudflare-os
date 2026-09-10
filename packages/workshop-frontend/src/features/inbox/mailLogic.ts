@@ -53,13 +53,60 @@ export const parseSearchQuery = (input: string): Record<string, string> => {
 }
 
 /** Extracts recipients from ordinary address lists, including display-name angle syntax. */
-export const splitAddresses = (value = '') => value.split(/[,;\n]/).map(address => (address.match(/<([^<>]+)>/)?.[1] ?? address).trim()).filter(Boolean)
+export const splitAddresses = (value = '') => {
+  const addresses: string[] = []
+  let start = 0
+  let quoted = false
+  let escaped = false
+  let angled = false
+  let addressStart = -1
+  let addressEnd = -1
+  /** Keeps angle syntax inside a quoted display name out of the extracted mailbox. */
+  const append = (end: number) => {
+    const address = value.slice(addressStart === -1 ? start : addressStart, addressEnd === -1 ? end : addressEnd).trim()
+    if (address) addresses.push(address)
+    start = end + 1; addressStart = -1; addressEnd = -1
+  }
+  for (let index = 0; index < value.length; index++) {
+    const character = value[index]
+    if (escaped) { escaped = false; continue }
+    if (quoted && character === '\\') { escaped = true; continue }
+    if (character === '"') { quoted = !quoted; continue }
+    if (quoted) continue
+    if (character === '<') { angled = true; addressStart = index + 1 }
+    else if (character === '>' && angled) { angled = false; addressEnd = index }
+    else if (!angled && /[,;\n]/.test(character)) append(index)
+  }
+  append(value.length)
+  return addresses
+}
 
 /** Escapes untrusted mail metadata before placing it in an editable quote. */
 export const escapeHtml = (text: string) => text.replace(/[&<>"']/g, value => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[value]!)
 
+/** Distinguishes legacy markup syntax from angle-bracketed email addresses when MIME metadata is absent. */
+export const inferBodyType = (body: string): 'text/plain' | 'text/html' => /<\/?[a-z][a-z0-9-]*(?:\s[^<>]*|\s*\/?)>/i.test(body) ? 'text/html' : 'text/plain'
+
+/** Uses a single-part MIME type when available; legacy and multipart records lack the selected part's type. */
+export const emailBodyType = (email: Email): 'text/plain' | 'text/html' => {
+  if (email.raw_headers) {
+    try {
+      const headers: unknown = JSON.parse(email.raw_headers)
+      if (Array.isArray(headers)) {
+        for (const header of headers as unknown[]) {
+          if (typeof header !== 'object' || header === null || !('key' in header) || typeof header.key !== 'string' || header.key.toLowerCase() !== 'content-type' || !('value' in header) || typeof header.value !== 'string') continue
+          const type = header.value.split(';')[0].trim().toLowerCase()
+          if (type === 'text/plain' || type === 'text/html') return type
+        }
+      }
+    } catch { /* Legacy header metadata can be absent or malformed; never log message headers. */ }
+  }
+  return inferBodyType(email.body ?? '')
+}
+
 /** Converts sanitized HTML into readable text without mounting remote content. */
-export const plainText = (body: string) => {
+export const plainText = (body: string, type = inferBodyType(body)) => {
+  if (type === 'text/plain') return body
   const clean = DOMPurify.sanitize(body, { ALLOWED_TAGS: ['p', 'br', 'div', 'li', 'blockquote'], ALLOWED_ATTR: [] })
   const document = new DOMParser().parseFromString(clean.replace(/<br\s*\/?\s*>|<\/(p|div|li|blockquote)>/gi, '\n'), 'text/html')
   return document.body.textContent?.trim() ?? ''
@@ -69,7 +116,7 @@ export const plainText = (body: string) => {
 export const initialComposeFields = (mode: ComposeMode, self: string, original?: Email): ComposeFields => {
   const empty: ComposeFields = { to: '', cc: '', bcc: '', subject: '', body: '', attachments: [] }
   if (!original) return empty
-  if (mode === 'draft') return { ...empty, to: original.recipient, cc: original.cc ?? '', bcc: original.bcc ?? '', subject: original.subject, body: original.body ?? '' }
+  if (mode === 'draft') return { ...empty, to: original.recipient, cc: original.cc ?? '', bcc: original.bcc ?? '', subject: original.subject, body: emailBodyType(original) === 'text/plain' ? escapeHtml(original.body ?? '').replace(/\n/g, '<br>') : original.body ?? '' }
   const forwarding = mode === 'forward'
   const prefix = forwarding ? 'Fwd' : 'Re'
   const seen = new Set([self.toLowerCase()])
@@ -83,7 +130,7 @@ export const initialComposeFields = (mode: ComposeMode, self: string, original?:
   const to = forwarding ? '' : unique(mode === 'reply-all' ? `${original.sender},${original.recipient}` : senderIsSelf ? original.recipient : original.sender)
   const cc = mode === 'reply-all' ? unique(original.cc ?? '') : ''
   const heading = t(`workshop-frontend.Inbox.${forwarding ? 'forwarded_message' : 'quoted_message'}`)
-  const quote = [heading, `${t('workshop-frontend.Inbox.from')}: ${original.sender}`, `${t('workshop-frontend.Inbox.to')}: ${original.recipient}`, `${t('workshop-frontend.Inbox.date')}: ${original.date}`, `${t('workshop-frontend.Inbox.subject')}: ${original.subject}`, '', plainText(original.body ?? '')].join('\n')
+  const quote = [heading, `${t('workshop-frontend.Inbox.from')}: ${original.sender}`, `${t('workshop-frontend.Inbox.to')}: ${original.recipient}`, `${t('workshop-frontend.Inbox.date')}: ${original.date}`, `${t('workshop-frontend.Inbox.subject')}: ${original.subject}`, '', plainText(original.body ?? '', emailBodyType(original))].join('\n')
   return { ...empty, to, cc, subject: new RegExp(`^${prefix}:\\s*`, 'i').test(original.subject) ? original.subject : `${prefix}: ${original.subject}`, body: `<p></p><blockquote>${escapeHtml(quote).replace(/\n/g, '<br>')}</blockquote>` }
 }
 
@@ -92,7 +139,7 @@ export const validateCompose = (fields: ComposeFields): string | null => {
   const to = splitAddresses(fields.to)
   const recipients = [...to, ...splitAddresses(fields.cc), ...splitAddresses(fields.bcc)]
   if (!to.length || recipients.some(address => !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(address))) return t('workshop-frontend.Inbox.invalid_recipient')
-  if (!plainText(fields.body)) return t('workshop-frontend.Inbox.empty_body')
+  if (!plainText(fields.body, 'text/html')) return t('workshop-frontend.Inbox.empty_body')
   return null
 }
 

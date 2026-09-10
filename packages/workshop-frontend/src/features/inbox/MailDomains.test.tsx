@@ -21,6 +21,12 @@ beforeEach(() => {
 })
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); setLocale('ja') })
 
+/** Reports whether the mailbox form refuses submission while its prerequisites are unmet. */
+const createBlocked = () =>
+  [...container.querySelectorAll('button')]
+    .filter(node => node.textContent?.includes(t('workshop-frontend.Inbox.create_mailbox')))
+    .every(node => node.disabled)
+
 /** Clicks the actual localized Kumo button so navigation and disabled states stay under test. */
 const click = async (label: string) => {
   const button = [...container.querySelectorAll('button')].find(element => element.textContent === label)
@@ -40,7 +46,7 @@ const mockApi = (current: () => DomainStatus) => vi.spyOn(globalThis, 'fetch').m
   const path = String(input)
   if (path.endsWith('/mail-domains') && init?.method === 'POST') return Response.json(status.domain)
   if (path.endsWith('/mail-domains')) return Response.json([status.domain])
-  if (path.endsWith('/mail-limits')) return Response.json({ daily: 100 })
+  if (path.endsWith('/mail-limits')) return Response.json({ available: true, limits: { daily: 100 } })
   if (path.endsWith('/mail-destinations')) return Response.json([{ tag: 'pending', email: 'pending@example.net', verified: null }, { tag: 'verified', email: 'verified@example.net', verified: '2026-09-09' }])
   if (path.endsWith('/mail-domains/domain')) return Response.json(current())
   if (init?.method === 'POST') return Response.json({ ok: true })
@@ -57,7 +63,10 @@ it.each(['ja', 'en'] as const)('renders every onboarding step with active %s tra
   expect(container.textContent).toContain(t('workshop-frontend.Inbox.destination_pending'))
   expect(container.textContent).toContain(t('workshop-frontend.Inbox.destination_verified'))
   expect(container.textContent).not.toContain('workshop-frontend.Inbox.')
-  expect(container.querySelector('fieldset')?.disabled).toBe(true)
+  // 送信は止まっていても入力自体はできること。以前は fieldset ごと無効化していたため、
+  // 「@ より前が入力できない」という手詰まりになっていた。
+  expect([...container.querySelectorAll('input')].some(node => node.disabled)).toBe(false)
+  expect(createBlocked()).toBe(true)
 })
 
 it('progresses from pending DNS to verified routing and mailbox creation using the authenticated API helper', async () => {
@@ -72,7 +81,7 @@ it('progresses from pending DNS to verified routing and mailbox creation using t
   expect(fetch.mock.calls.some(([path, options]) => String(path).endsWith('/catch-all') && options?.method === 'POST')).toBe(true)
   current = { ...current, catch_all_worker: 'cfos-router' }
   await click(t('workshop-frontend.Inbox.refresh_verification'))
-  expect(container.querySelector('fieldset')?.disabled).toBe(false)
+  expect(createBlocked()).toBe(false)
   await type(2, 'Operator')
   await act(async () => container.querySelectorAll('form')[1].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
   expect(onMailboxCreated).toHaveBeenCalledOnce()
@@ -94,7 +103,7 @@ it('shows actual DNS errors and prevents later steps after verification fails', 
   await act(async () => root.render(<MailSettings mailboxId="" screen="domains" />))
   await click('example.com')
   expect(container.textContent).toContain('RCODE 2')
-  expect(container.querySelector('fieldset')?.disabled).toBe(true)
+  expect(createBlocked()).toBe(true)
 })
 
 it('surfaces provider HTTP errors rather than only a generic status', async () => {
@@ -123,4 +132,41 @@ it('retains a failed mutation explanation after a successful status refresh', as
   await click('example.com')
   await click(t('workshop-frontend.Inbox.enable_mail_dns'))
   expect(container.textContent).toContain('DNS edit denied')
+})
+
+// 送信枠は参考表示にすぎない。Cloudflare がこのエンドポイントに必要な権限名を公開しておらず、
+// 他が揃ったトークンでも 403 になりうるため、取得できなくてもドメイン設定画面は使えること。
+it('keeps the domain settings usable when the sending quota is unavailable', async () => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const path = String(input)
+    if (path.endsWith('/mail-domains') && init?.method === 'POST') return Response.json(status.domain)
+    if (path.endsWith('/mail-domains')) return Response.json([status.domain])
+    if (path.endsWith('/mail-limits')) return Response.json({ available: false, reason: 'Cloudflare API (HTTP 403): 10000: Authentication error' })
+    if (path.endsWith('/mail-destinations')) return Response.json([])
+    if (path.endsWith('/mail-domains/domain')) return Response.json(status)
+    if (init?.method === 'POST') return Response.json({ ok: true })
+    throw new Error(`Unexpected API request ${path}`)
+  })
+  await act(async () => root.render(React.createElement(MailSettings, { mailboxId: '', screen: 'domains' })))
+  // 理由が読める形で出て、ドメイン追加の導線も残っている。
+  expect(container.textContent).toContain('Authentication error')
+  expect(container.textContent).toContain(t('workshop-frontend.Inbox.domain_step_domain'))
+})
+
+// ポーリングは effect の再実行やアンマウントのたびに in-flight のリクエストを中断する。
+// これは想定どおりの経路なので failed として記録してはいけない。実際、画面を触るだけで
+// [inboxFetch] failed AbortError がコンソールを埋め、本物のエラーが埋もれていた。
+it('does not log an aborted request as a failure', async () => {
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.spyOn(globalThis, 'fetch').mockImplementation((_input, init) =>
+    new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+    }))
+  await act(async () => root.render(<MailSettings mailboxId="" screen="domains" />))
+  // アンマウントで中断が起きる。
+  await act(async () => root.unmount())
+  const aborts = errors.mock.calls.filter(([label]) => typeof label === 'string' && label.includes('inbox'))
+  expect(aborts).toEqual([])
+  errors.mockRestore()
+  root = createRoot(container)
 })

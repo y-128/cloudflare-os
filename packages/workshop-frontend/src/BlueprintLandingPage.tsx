@@ -1386,7 +1386,11 @@ function BindingField({
           aria-label={t("workshop-frontend.BlueprintLandingPage.choose_an_ai_model")}
           className="w-full text-sm"
           placeholder={t("workshop-frontend.BlueprintLandingPage.choose_an_ai_model")}
-          value={(value as any).modelId || undefined}
+          // `null`, not `undefined`: Base UI treats an undefined value as an uncontrolled
+          // Select, so an unset binding that later gets a model would switch the component
+          // from uncontrolled to controlled and warn. `null` means "nothing selected" while
+          // keeping it controlled for its whole lifetime.
+          value={(value as any).modelId || null}
           onValueChange={(modelId) => onChange({ modelId } as any)}
           renderValue={(id) => models.find(m => m.id === id)?.name ?? String(id)}
           container={selectPortalContainer}
@@ -1407,9 +1411,11 @@ function BindingField({
   }
 
   if (binding.type === 'agentSpawner') {
+    // `null` rather than `undefined` for the unset case: an undefined value makes Base UI treat
+    // the Select as uncontrolled, so choosing a model later would flip it to controlled and warn.
     const selectedModelId = (value as any).modelId === null
       ? NO_AGENT_MODEL_ID
-      : (value as any).modelId ?? undefined
+      : (value as any).modelId ?? null
 
     return (
       <div>

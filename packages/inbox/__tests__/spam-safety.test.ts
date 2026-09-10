@@ -1,11 +1,10 @@
-import * as spamModule from "../workers/lib/spam";
 import {
   env as bindings,
   createExecutionContext,
   waitOnExecutionContext,
   runInDurableObject,
 } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Attachment } from "postal-mime";
 import type { Env } from "../workers/types";
 import { app, receiveEmail } from "../workers/index";
@@ -27,8 +26,6 @@ import { classifyIncoming } from "../workers/lib/spam-pipeline";
 import * as configModule from "../workers/lib/config";
 import { applyMigrations, mailboxMigrations } from "../workers/durableObject/migrations";
 
-/** Isolate the pre-existing DNSBL lookup from external DNS in these tests. */
-beforeEach(() => vi.spyOn(spamModule, "checkDNSBL").mockResolvedValue(false));
 
 const env = bindings as Env;
 const policy = SpamPolicySchema.parse({});
@@ -157,12 +154,13 @@ describe("anchored sender lists", () => {
       expect(matchSenderRule(sender, [rule])).toBeUndefined();
     },
   );
-  it("matches case-insensitively and anchors full addresses including plus tags", () => {
+  it("folds domain case and anchors case-sensitive addresses including plus tags", () => {
     expect(matchSenderRule("A@EXAMPLE.COM", [rule])).toEqual(rule);
     const addressRule = { ...rule, scope: "address" as const, pattern: "a@example.com" };
     expect(matchSenderRule("a+tag@example.com", [addressRule])).toBeUndefined();
     expect(matchSenderRule("aa@example.com", [addressRule])).toBeUndefined();
-    expect(matchSenderRule("A@EXAMPLE.COM", [addressRule])).toEqual(addressRule);
+    expect(matchSenderRule("A@EXAMPLE.COM", [addressRule])).toBeUndefined();
+    expect(matchSenderRule("a@EXAMPLE.COM", [addressRule])).toEqual(addressRule);
   });
   it("short-circuits config, legacy rules, scoring, Bayes and counters on allow", async () => {
     const { stub } = await mailbox();
@@ -273,13 +271,14 @@ describe("sliding window and legacy scoring", () => {
       (await stub.listClassifications())[0].stages.find((stage) => stage.stage === "rate")?.score,
     ).toBe(50);
   });
-  it("records the existing DNSBL stage independently", async () => {
+  it("does not query or score DNSBL service errors", async () => {
     const { id, stub } = await mailbox();
-    vi.mocked(spamModule.checkDNSBL).mockResolvedValueOnce(true);
-    await receive(id);
+    const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ Answer: [{ type: 1, data: "127.255.255.254" }] }));
+    await receive(id, { from: "contact@クレカ比較.com", mimeFrom: "contact@xn--lckh7p474tz0vb.com" });
     const [entry] = await stub.listClassifications();
-    expect(entry.score).toBe(30);
-    expect(entry.stages.find((stage) => stage.stage === "dnsbl")?.score).toBe(30);
+    expect(entry.score).toBe(0);
+    expect(entry.stages.find((stage) => stage.stage === "dnsbl")).toBeUndefined();
+    expect(fetch).not.toHaveBeenCalled();
   });
   it("retains declarative score rules and trained Bayesian contributions", async () => {
     const { id, stub } = await mailbox();
@@ -345,7 +344,6 @@ describe("sliding window and legacy scoring", () => {
       "dmarc",
       "envelope",
       "heuristics",
-      "dnsbl",
       "bayes",
       "rate",
       "attachments",

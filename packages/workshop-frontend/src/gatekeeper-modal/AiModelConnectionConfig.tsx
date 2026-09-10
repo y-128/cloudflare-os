@@ -28,7 +28,10 @@ export function AiModelConnectionConfig({
           className="w-full text-sm [&_button]:!h-9"
           container={selectContainer}
           placeholder={t("workshop-frontend.AiModelConnectionConfig.select_an_ai_model")}
-          value={selectedModelId}
+          // `null`, not the prop's `undefined`: Base UI treats an undefined value as an
+          // uncontrolled Select, so choosing a model would switch the component from
+          // uncontrolled to controlled and warn. The prop type stays as callers declare it.
+          value={selectedModelId ?? null}
           onValueChange={(v) => onSelectedModelIdChange(v as string | undefined)}
           renderValue={(id) => availableModels.find((m) => m.id === id)?.name ?? id}
         >

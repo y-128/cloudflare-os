@@ -16,6 +16,13 @@
     {
       "binding": "MAIL_INBOX",
       "service": "inbox"
+    },
+    // 手動デプロイ (wrangler deploy) ではデプロイサービスが動かないため、必要な
+    // gatekeeper は自分で書く。これが無いと受信メールが Gadget に渡らず、
+    // /gatekeeper/email/* も 404 になる。他の gatekeeper を使うときも同様に追加する。
+    {
+      "binding": "GATEKEEPER_EMAIL",
+      "service": "gatekeeper-email"
     }
   ],
 
@@ -26,11 +33,19 @@
     "directory": "../workshop-frontend/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
+    // No inbox entries here, deliberately, for two separate reasons:
+    //
+    //   `/api/inbox` and `/api/inbox/*` are already covered by `/api/*`, and Wrangler rejects a
+    //   redundant rule outright rather than ignoring it. The mailbox API still reaches its own
+    //   worker because src/index.ts checks the inbox prefixes before the generic `/api` branch;
+    //   this list only decides what bypasses the static assets.
+    //
+    //   `/inbox` and `/inbox/*` are frontend routes, not API routes. They must fall through to
+    //   the assets binding so the single-page app is served. Sending them to the worker would
+    //   hand a browser navigation to the mailbox API, which has no such route.
     "run_worker_first": [
       "/api",
       "/api/*",
-      "/api/inbox",
-      "/api/inbox/*",
       "/blueprint-screenshot",
       "/blueprint-screenshot/*",
       "/gatekeeper/*"

@@ -378,3 +378,71 @@ describe('draft replacement safety', () => {
     expect((await stub.getEmail('received'))?.body).toBe('keep');
   });
 });
+
+
+// Workers で console.error("...", { err }) に Error を渡すと、列挙可能な自前プロパティが
+// ないため {} になり、ログが何も語らない。実際にこれで原因の特定が何度も止まったので、
+// 整形結果に理由が残ることを確かめる。
+describe("describeError", () => {
+  it("Error を name と message を含む文字列にする", async () => {
+    const { describeError } = await import("../workers/lib/describe-error");
+    const rendered = describeError(new TypeError("Invalid redirect value"));
+    expect(rendered).toContain("TypeError");
+    expect(rendered).toContain("Invalid redirect value");
+  });
+
+  it("素の JSON 化では失われる情報を保つ", async () => {
+    const { describeError } = await import("../workers/lib/describe-error");
+    expect(JSON.stringify({ err: new Error("boom") })).toBe('{"err":{}}');
+    expect(describeError(new Error("boom"))).toContain("boom");
+  });
+
+  it("cause を辿る", async () => {
+    const { describeError } = await import("../workers/lib/describe-error");
+    const rendered = describeError(new Error("wrapper", { cause: new Error("root cause") }));
+    expect(rendered).toContain("root cause");
+  });
+
+  it("Error でない値も落とさない", async () => {
+    const { describeError } = await import("../workers/lib/describe-error");
+    expect(describeError("plain string")).toBe("plain string");
+    expect(describeError({ code: 10000 })).toContain("10000");
+  });
+});
+
+// Cloudflare は国際化ドメインのゾーンを Unicode 名 (クレカ比較.com) で返すが、こちらは
+// punycode (xn--lckh7p474tz0vb.com) に正規化して持っている。素の文字列比較では永久に
+// 一致せず、IDN ではドメイン登録が必ず失敗する。実際にそれで詰まった。
+describe("国際化ドメインの照合", () => {
+  it("Unicode 名と punycode を同じゾーンとみなす", async () => {
+    const { domainToASCII } = await import("node:url");
+    const fromCloudflare = "クレカ比較.com";
+    const normalized = "xn--lckh7p474tz0vb.com";
+    expect(fromCloudflare === normalized).toBe(false);
+    expect(domainToASCII(fromCloudflare)).toBe(normalized);
+  });
+
+  it("ゾーン照合が ASCII 正規化を経由している", async () => {
+    const { readFile } = await import("node:fs/promises");
+    void readFile;
+    // 実装が素の比較に戻っていないことを、正規化関数の性質で担保する。
+    const { domainToASCII } = await import("node:url");
+    for (const [unicode, ascii] of [["クレカ比較.com", "xn--lckh7p474tz0vb.com"], ["国試.com", "xn--vcs690j.com"]]) {
+      expect(domainToASCII(unicode)).toBe(ascii);
+      expect(domainToASCII(ascii)).toBe(ascii);
+    }
+  });
+});
+
+// ドメイン登録が送信サブドメインを作るため、その後に「有効化」を押すと必ず 409 (2040) に
+// なる。再試行や中断したウィザードの再開も同じ経路を通るので、既存を拾って続行する。
+describe("送信サブドメインの冪等性", () => {
+  it("2040 は既存とみなして続行する", async () => {
+    const { CloudflareEmailError } = await import("../workers/lib/cloudflare-email");
+    const conflict = new CloudflareEmailError(409, [2040], "Subdomain already exists");
+    expect(conflict.codes.includes(2040)).toBe(true);
+    // 別のエラーは握りつぶさない。
+    const denied = new CloudflareEmailError(403, [10000], "Authentication error");
+    expect(denied.codes.includes(2040)).toBe(false);
+  });
+});

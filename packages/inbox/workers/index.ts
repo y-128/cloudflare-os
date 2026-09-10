@@ -1,3 +1,5 @@
+import { searchPattern, SearchValidationError } from "./lib/search-pattern";
+import { describeError } from "./lib/describe-error";
 import { createMailbox } from "./lib/create-mailbox";
 import { onboardingApp } from "./routes/mail-onboarding";
 import { classifyIncoming } from "./lib/spam-pipeline";
@@ -22,13 +24,12 @@ import { z } from "zod";
 import { sendEmail } from "./email-sender";
 import {
   resolveOutboundAttachments,
-  storeAttachments,
+  withStoredAttachments,
   type StoredAttachment,
 } from "./lib/attachments";
 import {
   validateSender,
   SenderValidationError,
-  generateMessageId,
   buildThreadingHeaders,
   listMailboxes,
 } from "./lib/email-helpers";
@@ -474,13 +475,13 @@ app.post(
         thread_id,
       } = body;
 
-      let toStr: string, fromEmail: string, fromDomain: string;
+      let toStr: string, fromEmail: string;
       try {
-        ({ toStr, fromEmail, fromDomain } = validateSender(to, from, mailboxId));
+        ({ toStr, fromEmail } = validateSender(to, from, mailboxId));
       } catch (e) {
-        console.error("[app.post /api/inbox/v1/mailboxes/:mailboxId/emails] 失敗", {
+        console.error("[app.post /api/inbox/v1/mailboxes/:mailboxId/emails] failed", {
           context: { operation: "app.post /api/inbox/v1/mailboxes/:mailboxId/emails" },
-          err: e,
+          err: describeError(e),
         });
 
         if (e instanceof SenderValidationError)
@@ -488,7 +489,7 @@ app.post(
         throw e;
       }
 
-      const { messageId, outgoingMessageId } = generateMessageId(fromDomain);
+      const messageId = crypto.randomUUID();
       const stub = c.var.mailboxStub;
       const rateLimitError = await stub.checkSendRateLimit();
       if (rateLimitError) return await c.json({ error: rateLimitError }, HTTP.TOO_MANY_REQUESTS);
@@ -496,62 +497,64 @@ app.post(
         requireBinding(c.env, "BUCKET"),
         attachments,
       );
-      const attachmentData = await storeAttachments(
+      await withStoredAttachments(
         requireBinding(c.env, "BUCKET"),
         messageId,
         resolvedAttachments,
-      );
-
-      await sendEmail(requireBinding(c.env, "EMAIL"), {
-        to,
-        cc,
-        bcc,
-        from,
-        subject,
-        html,
-        text,
-        attachments: resolvedAttachments,
-        ...(in_reply_to ? { headers: buildThreadingHeaders(in_reply_to, references || []) } : {}),
-      });
-      await stub.createEmail(
-        Folders.SENT,
-        {
-          id: messageId,
-          subject,
-          sender: fromEmail,
-          recipient: toStr,
-          cc: cc ? (Array.isArray(cc) ? cc.join(", ") : cc).toLowerCase() : null,
-          bcc: bcc ? (Array.isArray(bcc) ? bcc.join(", ") : bcc).toLowerCase() : null,
-          date: new Date().toISOString(),
-          body: html || text || "",
-          in_reply_to: in_reply_to || null,
-          email_references: references ? JSON.stringify(references) : null,
-          thread_id: thread_id || in_reply_to || messageId,
-          message_id: outgoingMessageId,
-          raw_headers: JSON.stringify([
+        /** Store metadata before committing ownership of the new objects. */
+        async (attachmentData) => {
+          const { messageId: outgoingMessageId } = await sendEmail(requireBinding(c.env, "EMAIL"), {
+            to,
+            cc,
+            bcc,
+            from,
+            subject,
+            html,
+            text,
+            attachments: resolvedAttachments,
+            ...(in_reply_to ? { headers: buildThreadingHeaders(in_reply_to, references || []) } : {}),
+          });
+          await stub.createEmail(
+            Folders.SENT,
             {
-              key: "from",
-              value: typeof from === "string" ? from : `${from.name} <${from.email}>`,
+              id: messageId,
+              subject,
+              sender: fromEmail,
+              recipient: toStr,
+              cc: cc ? (Array.isArray(cc) ? cc.join(", ") : cc).toLowerCase() : null,
+              bcc: bcc ? (Array.isArray(bcc) ? bcc.join(", ") : bcc).toLowerCase() : null,
+              date: new Date().toISOString(),
+              body: html || text || "",
+              in_reply_to: in_reply_to || null,
+              email_references: references ? JSON.stringify(references) : null,
+              thread_id: thread_id || in_reply_to || messageId,
+              message_id: outgoingMessageId,
+              raw_headers: JSON.stringify([
+                {
+                  key: "from",
+                  value: typeof from === "string" ? from : `${from.name} <${from.email}>`,
+                },
+                { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
+                ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
+                ...(bcc ? [{ key: "bcc", value: Array.isArray(bcc) ? bcc.join(", ") : bcc }] : []),
+                { key: "subject", value: subject },
+                { key: "date", value: new Date().toISOString() },
+                { key: "message-id", value: `<${outgoingMessageId}>` },
+              ]),
             },
-            { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
-            ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
-            ...(bcc ? [{ key: "bcc", value: Array.isArray(bcc) ? bcc.join(", ") : bcc }] : []),
-            { key: "subject", value: subject },
-            { key: "date", value: new Date().toISOString() },
-            { key: "message-id", value: `<${outgoingMessageId}>` },
-          ]),
+            attachmentData,
+          );
         },
-        attachmentData,
       );
 
       return await c.json({ id: messageId, status: "sent" }, HTTP.ACCEPTED);
     } catch (err) {
-      console.error("[workers.app.post /api/inbox/v1/mailboxes/:mailboxId/emails] 失敗", {
+      console.error("[workers.app.post /api/inbox/v1/mailboxes/:mailboxId/emails] failed", {
         context: {
           operation: "app.post /api/inbox/v1/mailboxes/:mailboxId/emails",
           parameterCount: 1,
         },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -587,27 +590,30 @@ app.post(
         requireBinding(c.env, "BUCKET"),
         attachments,
       );
-      const attachmentData = await storeAttachments(
+      await withStoredAttachments(
         requireBinding(c.env, "BUCKET"),
         messageId,
         resolvedAttachments,
-      );
-      await stub.createEmail(
-        Folders.DRAFT,
-        {
-          id: messageId,
-          subject: subject || "",
-          sender: draftSender,
-          recipient: (to || "").toLowerCase(),
-          cc: cc?.toLowerCase() || null,
-          bcc: bcc?.toLowerCase() || null,
-          date: now,
-          body,
-          in_reply_to: in_reply_to || null,
-          email_references: null,
-          thread_id: thread_id || in_reply_to || messageId,
+        /** Store metadata before committing ownership of the new objects. */
+        async (attachmentData) => {
+          await stub.createEmail(
+            Folders.DRAFT,
+            {
+              id: messageId,
+              subject: subject || "",
+              sender: draftSender,
+              recipient: (to || "").toLowerCase(),
+              cc: cc?.toLowerCase() || null,
+              bcc: bcc?.toLowerCase() || null,
+              date: now,
+              body,
+              in_reply_to: in_reply_to || null,
+              email_references: null,
+              thread_id: thread_id || in_reply_to || messageId,
+            },
+            attachmentData,
+          );
         },
-        attachmentData,
       );
       // Delivery of the saved ID must not be turned into failure by best-effort old-blob cleanup.
       try {
@@ -623,19 +629,19 @@ app.post(
           }
         }
       } catch (err) {
-        console.error("[cleanupReplacedDraft] failed", { err });
+        console.error("[cleanupReplacedDraft] failed", { err: describeError(err) });
       }
       return await c.json(
         { id: messageId, status: "draft", subject: subject || "", recipient: to || "", date: now },
         HTTP.CREATED,
       );
     } catch (err) {
-      console.error("[workers.app.post /api/inbox/v1/mailboxes/:mailboxId/drafts] 失敗", {
+      console.error("[workers.app.post /api/inbox/v1/mailboxes/:mailboxId/drafts] failed", {
         context: {
           operation: "app.post /api/inbox/v1/mailboxes/:mailboxId/drafts",
           parameterCount: 1,
         },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -917,6 +923,10 @@ app.get(
         is_starred: boolQuery(c, "is_starred"),
         has_attachment: boolQuery(c, "has_attachment"),
       };
+      // Validate locally because custom Error subclasses do not survive a DO RPC boundary.
+      for (const value of [searchOpts.query, searchOpts.from, searchOpts.to, searchOpts.subject]) {
+        if (value) searchPattern(value);
+      }
       const stub = c.var.mailboxStub;
       const emails = await stub.searchEmails({
         ...searchOpts,
@@ -926,12 +936,15 @@ app.get(
       const totalCount = await stub.countSearchResults(searchOpts);
       return await c.json({ emails, totalCount });
     } catch (err) {
-      console.error("[workers.app.get /api/inbox/v1/mailboxes/:mailboxId/search] 失敗", {
+      if (err instanceof SearchValidationError) {
+        return c.json({ error: err.message }, HTTP.BAD_REQUEST);
+      }
+      console.error("[workers.app.get /api/inbox/v1/mailboxes/:mailboxId/search] failed", {
         context: {
           operation: "app.get /api/inbox/v1/mailboxes/:mailboxId/search",
           parameterCount: 1,
         },
-        err,
+        err: describeError(err),
       });
       throw err;
     }

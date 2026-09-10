@@ -1,4 +1,4 @@
-import { inboxFetch, mailboxPath } from './api'
+import { inboxFetch, isAbort, mailboxPath } from './api'
 import type { Attachment, OutboundAttachment } from './types'
 
 /** Downloads attachments with the same authentication headers as mailbox reads. */
@@ -12,7 +12,8 @@ export const downloadAttachment = async (mailboxId: string, emailId: string, att
     // Revocation in the next task lets the browser start the download first.
     setTimeout(() => URL.revokeObjectURL(url), 0)
   } catch (err) {
-    console.error('[downloadAttachment] failed', { err }); throw err
+    if (!isAbort(err)) console.error('[downloadAttachment] failed', { err })
+    throw err
   }
 }
 
@@ -29,6 +30,7 @@ export const restoreAttachments = async (mailboxId: string, emailId: string, att
     }
     return result
   } catch (err) {
-    console.error('[restoreAttachments] failed', { err }); throw err
+    if (!isAbort(err)) console.error('[restoreAttachments] failed', { err })
+    throw err
   }
 }

@@ -27,7 +27,7 @@ describe('FrontendErrorBoundary', () => {
       </FrontendErrorBoundary>,
     ))
     expect(container.textContent).toContain(t("gatekeeper-scheduler.ErrorBoundary.something_went_wrong"))
-    expect(container.querySelector('button')?.textContent).toContain(t("gatekeeper-scheduler.ErrorBoundary.reload"))
+    expect(container.querySelector('button')?.textContent).toContain(t("workshop-frontend.FrontendErrorBoundary.reload"))
     expect(reportIssue).toHaveBeenCalledWith('workshop.react-render', expect.any(Error),
       expect.objectContaining({ captureMechanism: 'react', handled: false }))
     container.remove()

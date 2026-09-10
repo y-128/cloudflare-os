@@ -1,3 +1,5 @@
+import { describeError } from "./describe-error";
+import { canonicalize } from "../../shared/email-address";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { requireBinding } from "./bindings";
 // Copyright (c) 2026 y-128
@@ -31,8 +33,8 @@ type Vectorize = VectorizeIndex | undefined;
   const enc = new TextEncoder();
   const bytes = enc.encode(text);
   if (bytes.length <= MAX_TEXT_BYTES) return text;
-  const sliced = bytes.subarray(0, MAX_TEXT_BYTES);
-  return new TextDecoder().decode(sliced);
+  // Streaming decode retains an incomplete final code point instead of emitting U+FFFD.
+  return new TextDecoder().decode(bytes.subarray(0, MAX_TEXT_BYTES), { stream: true });
 }
 
 /** embed の処理を実行します。 */ async function embed(
@@ -49,12 +51,12 @@ type Vectorize = VectorizeIndex | undefined;
         : (res as { data: number[] }).data;
       return await (Array.isArray(arr) ? arr : null);
     } catch (e) {
-      console.error("[embed] 失敗", { context: { operation: "embed" }, err: e });
+      console.error("[embed] 失敗", { context: { operation: "embed" }, err: describeError(e) });
 
       throw e;
     }
   } catch (err) {
-    console.error("[lib.embed] 失敗", { context: { operation: "embed", parameterCount: 2 }, err });
+    console.error("[lib.embed] 失敗", { context: { operation: "embed", parameterCount: 2 }, err: describeError(err) });
     throw err;
   }
 }
@@ -73,7 +75,7 @@ type Vectorize = VectorizeIndex | undefined;
     await idx.upsert([
       {
         id: email.id,
-        namespace: mailboxId,
+        namespace: canonicalize(mailboxId),
         values: vector,
         metadata: { subject: email.subject, sender: email.sender, date: email.date },
       },
@@ -82,7 +84,7 @@ type Vectorize = VectorizeIndex | undefined;
   } catch (err) {
     console.error("[lib.upsertEmail] 失敗", {
       context: { operation: "upsertEmail", parameterCount: 3 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -101,7 +103,7 @@ type Vectorize = VectorizeIndex | undefined;
     } catch (caught) {
       console.error("[deleteEmailVector] 失敗", {
         context: { operation: "deleteEmailVector" },
-        err: caught,
+        err: describeError(caught),
       });
 
       // ignore
@@ -110,7 +112,7 @@ type Vectorize = VectorizeIndex | undefined;
   } catch (err) {
     console.error("[lib.deleteEmailVector] 失敗", {
       context: { operation: "deleteEmailVector", parameterCount: 3 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -130,7 +132,7 @@ type Vectorize = VectorizeIndex | undefined;
       );
     const vector = await embed(env, query);
     if (!vector) return [];
-    const res = await idx.query(vector, { topK, namespace: mailboxId, returnMetadata: false });
+    const res = await idx.query(vector, { topK, namespace: canonicalize(mailboxId), returnMetadata: false });
     return await res.matches.map(
       /** res.matches.map callback のコールバックを実行します。 */ (m) => ({
         id: m.id,
@@ -140,7 +142,7 @@ type Vectorize = VectorizeIndex | undefined;
   } catch (err) {
     console.error("[lib.semanticSearch] 失敗", {
       context: { operation: "semanticSearch", parameterCount: 4 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }

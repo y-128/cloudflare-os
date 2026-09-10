@@ -1076,8 +1076,11 @@
         }
       },
       "vars": {
-        "DOMAINS": "",
-        "EMAIL_ADDRESSES": "[]"
+        "DOMAINS": [
+          "xn--vcs690j.com",
+          "xn--lckh7p474tz0vb.com"
+        ],
+        "EMAIL_ADDRESSES": []
       }
     },
     "router": {
@@ -1086,8 +1089,6 @@
         "run_worker_first": [
           "/api",
           "/api/*",
-          "/api/inbox",
-          "/api/inbox/*",
           "/blueprint-screenshot",
           "/blueprint-screenshot/*",
           "/gatekeeper/*"
@@ -1124,6 +1125,11 @@
         {
           "name": "MAIL_INBOX",
           "service": "$WORKER_NAME(inbox)",
+          "type": "service"
+        },
+        {
+          "name": "GATEKEEPER_EMAIL",
+          "service": "$WORKER_NAME(gatekeeper-email)",
           "type": "service"
         },
         {

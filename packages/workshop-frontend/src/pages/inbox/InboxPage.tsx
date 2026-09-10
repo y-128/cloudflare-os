@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Input, Select } from '@cloudflare/kumo'
 import { useTranslation } from '@gadgets/i18n'
 import { useDocumentTitle } from '../../useDocumentTitle'
@@ -34,7 +34,8 @@ export const InboxPage = ({ mailboxId, emailId, onNavigate }: { mailboxId?: stri
 const MailboxView = ({ mailboxId, emailId, mailboxes, onNavigate, onMailboxCreated }: { onMailboxCreated: () => void; mailboxId: string; emailId?: string; mailboxes: Mailbox[]; onNavigate: (mailboxId?: string, emailId?: string) => void }) => {
   const { t } = useTranslation()
   const [folder, setFolder] = useState('inbox')
-  const [screen, setScreen] = useState<'mail' | 'spam' | 'notifications' | 'domains' | 'smtp'>('mail')
+  const [requestedScreen, setScreen] = useState<'mail' | 'spam' | 'notifications' | 'domains' | 'smtp'>('mail')
+  const screen = emailId ? 'mail' : requestedScreen
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
@@ -44,6 +45,13 @@ const MailboxView = ({ mailboxId, emailId, mailboxes, onNavigate, onMailboxCreat
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
+  const focusSearchOnReturn = useRef(false)
+  useEffect(() => {
+    if (!emailId && screen === 'mail' && focusSearchOnReturn.current) {
+      focusSearchOnReturn.current = false
+      searchRef.current?.focus()
+    }
+  }, [emailId, screen])
   const folders = useInboxResource<Folder[]>(mailboxPath(mailboxId, '/folders'), revision)
   const params = new URLSearchParams(query ? parseSearchQuery(query) : { folder, threaded: 'true' })
   params.set('page', String(page)); params.set('limit', String(PAGE_SIZE))
@@ -53,7 +61,7 @@ const MailboxView = ({ mailboxId, emailId, mailboxes, onNavigate, onMailboxCreat
   /** Refreshes list and unread counts after a successful mail mutation. */
   const refresh = () => setRevision(current => current + 1)
   /** Returns focus to list navigation when closing a message at any viewport width. */
-  const back = () => { onNavigate(mailboxId); searchRef.current?.focus() }
+  const back = () => { focusSearchOnReturn.current = true; setScreen('mail'); onNavigate(mailboxId) }
   /** Creates a named folder through the existing worker API. */
   const createFolder = async () => {
     if (busy || !folderName.trim()) return

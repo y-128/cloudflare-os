@@ -6,6 +6,7 @@ import { useInboxResource } from './useInboxResource'
 import { EmailBody } from './EmailBody'
 import { SpamExplanation } from './SpamExplanation'
 import { downloadAttachment } from './attachments'
+import { emailBodyType } from './mailLogic'
 import type { Classification, ComposeMode, Email, Folder } from './types'
 
 /** Opens a message by exact ID, then loads its complete conversation even outside the current list page. */
@@ -21,6 +22,11 @@ export const MessageView = ({ mailboxId, emailId, folders, onBack, onChanged, on
   const thread = useInboxResource<Email[]>(email.data?.thread_id ? mailboxPath(mailboxId, `/threads/${encodeURIComponent(email.data.thread_id)}`) : null, revision)
   const classification = useInboxResource<Classification | null>(mailboxPath(mailboxId, `/emails/${encodeURIComponent(emailId)}/classification`), revision)
   const heading = useRef<HTMLHeadingElement>(null)
+  const selection = useRef<object | null>(null)
+  useEffect(() => {
+    selection.current = {}
+    return () => { selection.current = null }
+  }, [mailboxId, emailId])
   useEffect(() => { if (email.data) heading.current?.focus() }, [email.data?.id])
   useEffect(() => {
     const controller = new AbortController()
@@ -42,12 +48,16 @@ export const MessageView = ({ mailboxId, emailId, folders, onBack, onChanged, on
   /** Applies one message action and refreshes list counts only after success. */
   const mutate = async (path: string, options: RequestInit, close = false) => {
     if (busy) return
+    const startedFor = selection.current
     setBusy(true); setError('')
     try {
       await inboxApi(mailboxPath(mailboxId, `/emails/${encodeURIComponent(emailId)}${path}`), options)
+      if (selection.current !== startedFor) return
       setRevision(current => current + 1); onChanged(); if (close) onBack()
-    } catch (err) { console.error('[organizeInboxMessage] failed', { err }); setError(t('workshop-frontend.Inbox.action_failed')) }
-    finally { setBusy(false) }
+    } catch (err) {
+      if (selection.current !== startedFor) return
+      console.error('[organizeInboxMessage] failed', { err }); setError(t('workshop-frontend.Inbox.action_failed'))
+    } finally { if (selection.current === startedFor) setBusy(false) }
   }
   if (email.error) return <div className="p-5"><Button onClick={onBack}>{t('workshop-frontend.Inbox.back')}</Button><p role="alert">{email.error.message}</p></div>
   if (!email.data) return <p role="status" className="p-5">{t('workshop-frontend.Inbox.loading')}</p>
@@ -70,7 +80,7 @@ export const MessageView = ({ mailboxId, emailId, folders, onBack, onChanged, on
       <summary className="cursor-pointer break-words p-3 text-sm"><strong>{message.sender}</strong><span className="ml-2 text-kumo-subtle">{message.date}</span>{message.folder_id === 'draft' && <span> · {t('workshop-frontend.Inbox.folder_draft')}</span>}</summary>
       <article className="space-y-3 border-t border-kumo-line p-3">
         <p className="break-all text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.to')}: {message.recipient}{message.cc && <> · {t('workshop-frontend.Inbox.cc')}: {message.cc}</>}</p>
-        <EmailBody body={message.body ?? ''} />
+        <EmailBody body={message.body ?? ''} type={emailBodyType(message)} />
         <ul aria-label={t('workshop-frontend.Inbox.attachments')} className="space-y-1">{message.attachments?.map(attachment => <li key={attachment.id}><Button size="sm" variant="secondary" onClick={() => {
           void downloadAttachment(mailboxId, message.id, attachment).catch(err => { console.error('[downloadMessageAttachment] failed', { err }); setError(t('workshop-frontend.Inbox.download_failed')) })
         }}>{t('workshop-frontend.Inbox.download_attachment', { name: attachment.filename, bytes: attachment.size })}</Button></li>)}</ul>

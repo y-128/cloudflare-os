@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest'
-import { setLocale } from '@gadgets/i18n'
-import { composeEndpoint, groupThreads, initialComposeFields, parseInboxSearch, parseSearchQuery, validateCompose } from './mailLogic'
+import { setLocale, t } from '@gadgets/i18n'
+import { composeEndpoint, groupThreads, initialComposeFields, parseInboxSearch, parseSearchQuery, splitAddresses, plainText, validateCompose } from './mailLogic'
 import { emailDocument } from './EmailBody'
 import type { Email } from './types'
 
@@ -43,7 +43,7 @@ describe('compose headers and validation', () => {
   it('constructs forward headers and quoted metadata without setting reply threading', () => {
     const fields = initialComposeFields('forward', 'me@example.com', original)
     expect(fields).toMatchObject({ to: '', cc: '', bcc: '', subject: 'Fwd: Status' })
-    expect(fields.body).toContain('Forwarded message')
+    expect(fields.body).toContain(t('workshop-frontend.Inbox.forwarded_message'))
     expect(fields.body).toContain('Writer &lt;writer@example.com&gt;')
     expect(composeEndpoint('forward', original)).toBe('/emails/internal%2Fid/forward')
     expect(initialComposeFields('reply', 'me@example.com', { ...original, subject: 're: Status' }).subject).toBe('re: Status')
@@ -54,9 +54,9 @@ describe('compose headers and validation', () => {
   })
   it('rejects missing recipients, malformed Cc and empty HTML, accepting valid rich mail', () => {
     const fields = initialComposeFields('new', 'me@example.com')
-    expect(validateCompose(fields)).toContain('recipient')
-    expect(validateCompose({ ...fields, to: 'valid@example.com', cc: 'bad', body: '<p>Hello</p>' })).toContain('recipient')
-    expect(validateCompose({ ...fields, to: 'valid@example.com', body: '<p><br></p>' })).toContain('body')
+    expect(validateCompose(fields)).toBe(t('workshop-frontend.Inbox.invalid_recipient'))
+    expect(validateCompose({ ...fields, to: 'valid@example.com', cc: 'bad', body: '<p>Hello</p>' })).toBe(t('workshop-frontend.Inbox.invalid_recipient'))
+    expect(validateCompose({ ...fields, to: 'valid@example.com', body: '<p><br></p>' })).toBe(t('workshop-frontend.Inbox.empty_body'))
     expect(validateCompose({ ...fields, to: 'valid@example.com', body: '<p>Hello <strong>world</strong></p>' })).toBeNull()
   })
 })
@@ -68,4 +68,19 @@ it('sanitizes active content and forbids external tracking and script execution 
   expect(document).not.toContain('<form')
   expect(document).toContain("script-src 'none'")
   expect(document).toContain("img-src data:")
+})
+
+it('parses quoted display names before splitting recipients', () => {
+  expect(splitAddresses('"Doe, Jane" <jane@example.com>, "Team; West" <west@example.com>; last@example.com')).toEqual(['jane@example.com', 'west@example.com', 'last@example.com'])
+  expect(splitAddresses(String.raw`"Doe, \"Jane\" <team>" <jane@example.com>, last@example.com`)).toEqual(['jane@example.com', 'last@example.com'])
+  const reply = initialComposeFields('reply-all', 'me@example.com', { ...original, sender: '"Doe, Jane" <jane@example.com>' })
+  expect(reply.to).toBe('jane@example.com, colleague@example.com')
+})
+
+it('preserves angle-bracketed addresses in plain display and forwarding', () => {
+  const body = 'Please contact <support@example.com> today.'
+  const doc = new DOMParser().parseFromString(emailDocument(body), 'text/html')
+  expect(doc.body.textContent).toBe(body)
+  expect(plainText(body)).toBe(body)
+  expect(initialComposeFields('forward', 'me@example.com', { ...original, body }).body).toContain('Please contact &lt;support@example.com&gt; today.')
 })

@@ -1,4 +1,6 @@
+import { describeError } from "./describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
+import { canonicalize } from "../../shared/email-address";
 import { HTTP } from "./http-status";
 import { requireBinding } from "./bindings";
 // Copyright (c) 2026 Cloudflare, Inc.
@@ -26,7 +28,7 @@ export const requireMailbox = createMiddleware<MailboxContext>(
     try {
       const rawId = c.req.param("mailboxId");
       if (!rawId) return await c.json({ error: "Mailbox ID required" }, HTTP.BAD_REQUEST);
-      const mailboxId = decodeURIComponent(rawId);
+      const mailboxId = canonicalize(rawId);
 
       // Verify mailbox exists
       const key = `mailboxes/${mailboxId}.json`;
@@ -46,7 +48,7 @@ export const requireMailbox = createMiddleware<MailboxContext>(
     } catch (err) {
       console.error("[lib.createMiddleware callback] 失敗", {
         context: { operation: "createMiddleware callback", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }

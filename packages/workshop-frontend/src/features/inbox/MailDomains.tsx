@@ -14,7 +14,10 @@ export const MailDomains = ({ onMailboxCreated }: { onMailboxCreated?: () => voi
   const { t } = useTranslation()
   const [revision, setRevision] = useState(0)
   const domains = useInboxResource<MailDomain[]>('/admin/mail-domains', revision)
-  const limits = useInboxResource<Record<string, unknown>>('/admin/mail-limits', revision)
+  // 送信枠は参考表示なので、取得できなくても画面は成立させる。ワーカー側も 500 を返さず
+  // available: false と理由を返す (Cloudflare がこの権限名を公開していないため、他が揃った
+  // トークンでも拒否されうる)。
+  const limits = useInboxResource<{ available: boolean; limits?: Record<string, unknown>; reason?: string }>('/admin/mail-limits', revision)
   const [domain, setDomain] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -36,7 +39,7 @@ export const MailDomains = ({ onMailboxCreated }: { onMailboxCreated?: () => voi
     {(error || domains.error) && <p role="alert" className="text-kumo-danger">{error || domains.error?.message}</p>}
     <nav aria-label={t('workshop-frontend.Inbox.domain_settings')} className="flex flex-wrap gap-2">{domains.data?.map(item => <Button key={item.id} variant={selected === item.id ? 'primary' : 'secondary'} onClick={() => setSelected(item.id)}>{item.domain}</Button>)}</nav>
     {selected && <DomainWizard key={selected} domainId={selected} onMailboxCreated={onMailboxCreated} />}
-    <section className="space-y-2 border-t border-kumo-line pt-5"><h3 className="font-semibold">{t('workshop-frontend.Inbox.sending_quota')}</h3><p className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.quota_hint')}</p>{limits.error ? <p role="alert">{limits.error.message}</p> : limits.data ? <pre className="overflow-x-auto rounded-lg border border-kumo-line p-3 text-sm">{JSON.stringify(limits.data, null, 2)}</pre> : <p role="status">{t('workshop-frontend.Inbox.loading')}</p>}<Button variant="secondary" onClick={() => setRevision(value => value + 1)}>{t('workshop-frontend.Inbox.refresh')}</Button></section>
+    <section className="space-y-2 border-t border-kumo-line pt-5"><h3 className="font-semibold">{t('workshop-frontend.Inbox.sending_quota')}</h3><p className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.quota_hint')}</p>{limits.error ? <p role="alert">{limits.error.message}</p> : !limits.data ? <p role="status">{t('workshop-frontend.Inbox.loading')}</p> : limits.data.available ? <pre className="overflow-x-auto rounded-lg border border-kumo-line p-3 text-sm">{JSON.stringify(limits.data.limits, null, 2)}</pre> : <p role="status" className="text-sm text-kumo-subtle">{limits.data.reason}</p>}<Button variant="secondary" onClick={() => setRevision(value => value + 1)}>{t('workshop-frontend.Inbox.refresh')}</Button></section>
     <MailDestinations />
   </div>
 }
@@ -48,6 +51,8 @@ const DomainWizard = ({ domainId, onMailboxCreated }: { domainId: string; onMail
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [loadError, setLoadError] = useState('')
+  // 既存 DNS レコードとの競合で中断したか。true のときだけ「既存を使う」を出す。
+  const [conflict, setConflict] = useState(false)
   const [status, setStatus] = useState<DomainStatus | null>(null)
   const [localPart, setLocalPart] = useState('postmaster')
   const [displayName, setDisplayName] = useState('')
@@ -77,12 +82,23 @@ const DomainWizard = ({ domainId, onMailboxCreated }: { domainId: string; onMail
     setBusy(true); setError('')
     try {
       await inboxApi(`${path}/${suffix}`, jsonRequest('POST', body))
+      setConflict(false)
       if (suffix === 'addresses') onMailboxCreated?.()
-    } catch (err) { console.error('[updateMailDomain] failed', { err }); setError(err instanceof Error ? err.message : t('workshop-frontend.Inbox.save_failed')) }
+    } catch (err) {
+      console.error('[updateMailDomain] failed', { err })
+      const message = err instanceof Error ? err.message : t('workshop-frontend.Inbox.save_failed')
+      setError(message)
+      // 既存の DNS レコードと競合したときだけ、そのまま使って続行する選択肢を出す。
+      setConflict(suffix === 'enable' && message.includes(t('workshop-frontend.Inbox.dns_conflict_marker')))
+    }
     finally { setBusy(false); setRevision(value => value + 1) }
   }
+  // メールボックスを作れる前提: DNS が検証済みで、catch-all が自分の Worker を指していること。
+  // 満たないうちに作っても受信できないため、送信だけを止める。
+  const addressReady = !busy && !loadError && status?.state === 'verified' && status.catch_all_worker === status.target_worker
   return <section className="space-y-5 rounded-lg border border-kumo-line p-4" aria-busy={busy}>
-    {(error || loadError) && <p role="alert" className="text-kumo-danger">{t('workshop-frontend.Inbox.dns_failed')}: {error || loadError}</p>}
+    {(error || loadError) && <p role="alert" className="whitespace-pre-line text-kumo-danger">{t('workshop-frontend.Inbox.dns_failed')}: {error || loadError}</p>}
+    {conflict && <Button variant="secondary" disabled={busy} onClick={() => void mutate('enable', { keep_conflicting_records: true })}>{t('workshop-frontend.Inbox.keep_existing_dns')}</Button>}
     <Button variant="secondary" disabled={busy} onClick={() => setRevision(value => value + 1)}>{t('workshop-frontend.Inbox.refresh_verification')}</Button>
     {status ? <>
       <DomainDnsStep status={status} busy={busy} onEnable={() => void mutate('enable')} />
@@ -92,11 +108,14 @@ const DomainWizard = ({ domainId, onMailboxCreated }: { domainId: string; onMail
       </section>
       <section className="space-y-3 border-t border-kumo-line pt-4"><h3 className="font-semibold">{t('workshop-frontend.Inbox.domain_step_address')}</h3>
         <ul>{status.addresses.map(address => <li key={address.id} className="break-all">{address.id} — {t(`workshop-frontend.Inbox.${address.mailbox_initialized ? 'mailbox_ready' : 'mailbox_pending'}`)}</li>)}</ul>
-        <form className="space-y-3" onSubmit={event => { event.preventDefault(); void mutate('addresses', { local_part: localPart, display_name: displayName, catch_all: catchAll }) }}><fieldset disabled={busy || status.state !== 'verified' || status.catch_all_worker !== status.target_worker || !!loadError} className="space-y-3">
+        <form className="space-y-3" onSubmit={event => { event.preventDefault(); void mutate('addresses', { local_part: localPart, display_name: displayName, catch_all: catchAll }) }}><fieldset disabled={busy} className="space-y-3">
           <Input label={t('workshop-frontend.Inbox.address_local_part')} description={`@${status.domain.domain}`} value={localPart} onChange={event => setLocalPart(event.target.value)} required />
           <Input label={t('workshop-frontend.Inbox.address_display_name')} value={displayName} onChange={event => setDisplayName(event.target.value)} required />
           <Checkbox label={t('workshop-frontend.Inbox.address_catch_all')} checked={catchAll} onCheckedChange={setCatchAll} />
-          <Button type="submit">{t('workshop-frontend.Inbox.create_mailbox')}</Button>
+          {/* 入力は常に可能にし、送信だけ前提が揃うまで止める。以前は fieldset ごと
+              無効化していたため、なぜ打てないのか分からないまま操作不能になっていた。 */}
+          <Button type="submit" disabled={!addressReady}>{t('workshop-frontend.Inbox.create_mailbox')}</Button>
+          {!addressReady && <p role="status" className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.address_blocked_hint')}</p>}
         </fieldset></form>
       </section>
     </> : !loadError && <p role="status">{t('workshop-frontend.Inbox.loading')}</p>}

@@ -20,6 +20,7 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
   const [restoreFailed, setRestoreFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [saveFailed, setSaveFailed] = useState(false)
   const [status, setStatus] = useState('')
   const [instruction, setInstruction] = useState('')
   const draftId = useRef(session.mode === 'draft' ? session.original?.id : undefined)
@@ -30,8 +31,8 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
   const stopped = useRef(false)
   const operationBusy = useRef(false)
   const ready = !restoring && !restoreFailed
-  const hasContent = !!(fields.to || fields.cc || fields.bcc || fields.subject || plainText(fields.body) || fields.attachments.length)
-  const dirty = hasContent && JSON.stringify(fields) !== saved.current
+  const hasContent = !!(fields.to || fields.cc || fields.bcc || fields.subject || plainText(fields.body, 'text/html') || fields.attachments.length)
+  const dirty = (!!draftId.current || hasContent) && JSON.stringify(fields) !== saved.current
 
   /** Queues a snapshot after earlier saves so each replacement uses the newest draft ID. */
   const save = async (snapshot: ComposeFields) => {
@@ -49,9 +50,10 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
         saved.current = JSON.stringify(snapshot)
         setStatus(t('workshop-frontend.Inbox.draft_saved'))
         setError('')
+        setSaveFailed(false)
         onSaved()
       } catch (err) {
-        console.error('[saveComposeDraft] failed', { err }); setStatus(''); throw err
+        console.error('[saveComposeDraft] failed', { err }); setStatus(''); setSaveFailed(true); throw err
       }
     })
     queue.current = task.catch(() => {}) // A handled failure must not poison future explicit saves.
@@ -113,6 +115,13 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
     } finally { operationBusy.current = false; setBusy(false) }
   }
 
+  /** Discards only unsaved edits after a failed save, leaving the last server draft intact. */
+  const closeWithoutSaving = () => {
+    if (operationBusy.current || restoring) return
+    stopped.current = true
+    onClose()
+  }
+
   /** Sends once, then treats draft cleanup failures separately from delivery failures. */
   const send = async () => {
     if (operationBusy.current || !ready) return
@@ -125,7 +134,7 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
         from: mailboxId, to: splitAddresses(fields.to),
         cc: fields.cc.trim() ? splitAddresses(fields.cc) : undefined,
         bcc: fields.bcc.trim() ? splitAddresses(fields.bcc) : undefined,
-        subject: fields.subject, html: fields.body, text: plainText(fields.body), attachments: fields.attachments,
+        subject: fields.subject, html: fields.body, text: plainText(fields.body, 'text/html'), attachments: fields.attachments,
       }))
       stopped.current = true
       if (draftId.current) {
@@ -163,7 +172,7 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
     if (operationBusy.current) return
     operationBusy.current = true; setBusy(true); setError('')
     try {
-      const result = await inboxApi<{ subject?: string; body: string }>(mailboxPath(mailboxId, '/compose-assist'), jsonRequest('POST', { mode, instruction, to: fields.to, subject: fields.subject, body: plainText(fields.body), lang: locale }))
+      const result = await inboxApi<{ subject?: string; body: string }>(mailboxPath(mailboxId, '/compose-assist'), jsonRequest('POST', { mode, instruction, to: fields.to, subject: fields.subject, body: plainText(fields.body, 'text/html'), lang: locale }))
       setFields(current => ({ ...current, subject: result.subject ?? current.subject, body: `<p>${escapeHtml(result.body).replace(/\n/g, '<br>')}</p>` }))
     } catch (err) {
       console.error('[assistComposeMessage] failed', { err }); setError(t('workshop-frontend.Inbox.assist_failed'))
@@ -177,6 +186,10 @@ export const ComposeDialog = ({ mailboxId, session, onClose, onSaved }: { mailbo
       <form className="mt-4 max-h-[75vh] space-y-3 overflow-y-auto" onSubmit={event => { event.preventDefault(); void send() }}>
         <p className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.from')}: {mailboxId}</p>
         {error && <p role="alert" className="text-sm text-kumo-danger">{error}</p>}
+        {saveFailed && <div className="space-y-2">
+          <p id="compose-discard-hint" className="text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.discard_hint')}</p>
+          <Button type="button" variant="secondary" disabled={busy || restoring} aria-describedby="compose-discard-hint" onClick={closeWithoutSaving}>{t('workshop-frontend.Inbox.close_without_saving')}</Button>
+        </div>}
         <fieldset disabled={busy || !ready || stopped.current} className="space-y-3">
           {(['to', 'cc', 'bcc', 'subject'] as const).map(name => <Input key={name} label={t(`workshop-frontend.Inbox.${name}`)} value={fields[name]} onChange={event => setFields(current => ({ ...current, [name]: event.target.value }))} />)}
           <RichTextEditor value={fields.body} disabled={busy || !ready || stopped.current} onChange={body => setFields(current => ({ ...current, body }))} />

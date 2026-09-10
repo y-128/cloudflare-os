@@ -1,3 +1,4 @@
+import { describeError } from "./describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { requireBinding } from "./bindings";
 // Copyright (c) 2026 Cloudflare, Inc.
@@ -8,7 +9,7 @@ import { requireBinding } from "./bindings";
 /**
  * Shared email helpers to eliminate duplication across API routes, MCP, and agent.
  *
- * Includes: DO stub helpers, sender validation, message-ID generation,
+ * Includes: DO stub helpers, sender validation,
  * threading, HTML utilities, and tool-logic (getFullEmail / getFullThread).
  */
 import type { MailboxDO } from "../durableObject";
@@ -16,7 +17,7 @@ import type { EmailFull } from "./schemas";
 import { Folders } from "../../shared/folders";
 import type { Env } from "../types";
 import { formatQuotedDate } from "../../shared/dates";
-import { canonicalize } from "../../shared/email-address";
+import { canonicalize, normalizeAddress, normalizeAddressList } from "../../shared/email-address";
 
 // ── DO Stub ────────────────────────────────────────────────────────
 
@@ -27,16 +28,19 @@ import { canonicalize } from "../../shared/email-address";
 export function getMailboxStub(env: Env, mailboxId: string): DurableObjectStub<MailboxDO> {
   try {
     const ns = requireBinding(env, "MAILBOX");
-    const id = ns.idFromName(mailboxId);
+    const id = ns.idFromName(canonicalize(mailboxId));
     return ns.get(id);
   } catch (err) {
     console.error("[lib.getMailboxStub] 失敗", {
       context: { operation: "getMailboxStub", parameterCount: 2 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
 }
+
+const MAILBOX_PREFIX = "mailboxes/";
+const MAILBOX_EXTENSION = ".json";
 
 // ── Mailbox Listing ────────────────────────────────────────────────
 
@@ -45,21 +49,22 @@ export function getMailboxStub(env: Env, mailboxId: string): DurableObjectStub<M
  */
 export async function listMailboxes(bucket: R2Bucket): Promise<{ id: string; email: string }[]> {
   try {
-    const mailboxes: { id: string; email: string }[] = [];
+    const mailboxes = new Map<string, { id: string; email: string }>();
     let cursor: string | undefined;
     do {
-      const page = await bucket.list({ prefix: "mailboxes/", cursor });
+      const page = await bucket.list({ prefix: MAILBOX_PREFIX, cursor });
       for (const object of page.objects) {
-        const id = object.key.replace("mailboxes/", "").replace(".json", "");
-        mailboxes.push({ id, email: id });
+        if (!object.key.startsWith(MAILBOX_PREFIX) || !object.key.endsWith(MAILBOX_EXTENSION)) continue;
+        const id = canonicalize(object.key.slice(MAILBOX_PREFIX.length, -MAILBOX_EXTENSION.length));
+        mailboxes.set(id, { id, email: id });
       }
       cursor = page.truncated ? page.cursor : undefined;
     } while (cursor);
-    return mailboxes;
+    return [...mailboxes.values()];
   } catch (err) {
     console.error("[lib.listMailboxes] 失敗", {
       context: { operation: "listMailboxes", parameterCount: 1 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -76,10 +81,10 @@ export function validateSender(
   from: string | { email: string; name: string },
   mailboxId: string,
 ): { toStr: string; fromEmail: string; fromDomain: string } {
-  const toStr = (Array.isArray(to) ? to.join(", ") : to).toLowerCase();
-  const fromEmail = (typeof from === "string" ? from : from.email).toLowerCase();
+  const toStr = Array.isArray(to) ? to.map(normalizeAddress).join(", ") : normalizeAddressList(to);
+  const fromEmail = normalizeAddress(typeof from === "string" ? from : from.email);
 
-  if (canonicalize(fromEmail) !== mailboxId.toLowerCase()) {
+  if (canonicalize(fromEmail) !== canonicalize(mailboxId)) {
     throw new SenderValidationError("From address must match the mailbox email address");
   }
 
@@ -96,20 +101,6 @@ export class SenderValidationError extends Error {
     super(message);
     this.name = "SenderValidationError";
   }
-}
-
-// ── Message ID ─────────────────────────────────────────────────────
-
-/**
- * Generate an internal UUID and a proper RFC 2822 Message-ID.
- */
-export function generateMessageId(fromDomain: string): {
-  messageId: string;
-  outgoingMessageId: string;
-} {
-  const messageId = crypto.randomUUID();
-  const outgoingMessageId = `${messageId}@${fromDomain}`;
-  return { messageId, outgoingMessageId };
 }
 
 // ── Threading ──────────────────────────────────────────────────────
@@ -132,7 +123,7 @@ export function buildReferencesChain(original: EmailFull): {
     } catch (caught) {
       console.error("[buildReferencesChain] 失敗", {
         context: { operation: "buildReferencesChain" },
-        err: caught,
+        err: describeError(caught),
       });
 
       // Malformed JSON in email_references — treat as empty
@@ -188,7 +179,7 @@ export async function resolveOriginalEmail(
   } catch (err) {
     console.error("[lib.resolveOriginalEmail] 失敗", {
       context: { operation: "resolveOriginalEmail", parameterCount: 2 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -282,7 +273,7 @@ export async function getFullEmail(stub: DurableObjectStub<MailboxDO>, emailId: 
   } catch (err) {
     console.error("[lib.getFullEmail] 失敗", {
       context: { operation: "getFullEmail", parameterCount: 2 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -314,7 +305,7 @@ export async function getFullThread(stub: DurableObjectStub<MailboxDO>, threadId
   } catch (err) {
     console.error("[lib.getFullThread] 失敗", {
       context: { operation: "getFullThread", parameterCount: 2 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }

@@ -1,3 +1,4 @@
+import { describeError } from "../lib/describe-error";
 import { validateRpc } from "capnweb-validate";
 import type { MailDomain, MailAddress } from "../../shared/mail-onboarding";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
@@ -46,9 +47,9 @@ export class ConfigDO extends DurableObject<Env> {
     try {
       applyMigrations(this.ctx.storage.sql, configMigrations, this.ctx.storage);
     } catch (err) {
-      console.error("[durableObject.constructor] 失敗", {
+      console.error("[durableObject.constructor] failed", {
         context: { operation: "constructor", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -58,7 +59,7 @@ export class ConfigDO extends DurableObject<Env> {
   /** Lists the deployment's onboarding records, including partially enabled domains. */
   async listMailDomains(): Promise<MailDomain[]> {
     try { return this.ctx.storage.sql.exec<MailDomain & Record<string, SqlStorageValue>>("SELECT * FROM mail_domains ORDER BY domain").toArray(); }
-    catch (err) { console.error('[listMailDomains] failed', { err }); throw err; }
+    catch (err) { console.error('[listMailDomains] failed', { err: describeError(err) }); throw err; }
   }
 
   /** Reserves a stable domain ID before the first external mutation so retries can resume. */
@@ -66,19 +67,19 @@ export class ConfigDO extends DurableObject<Env> {
     try {
       this.ctx.storage.sql.exec("INSERT INTO mail_domains (id, domain, zone_id) VALUES (?, ?, ?) ON CONFLICT(domain) DO NOTHING", crypto.randomUUID(), domain, zoneId);
       return this.ctx.storage.sql.exec<MailDomain & Record<string, SqlStorageValue>>("SELECT * FROM mail_domains WHERE domain = ?", domain).one();
-    } catch (err) { console.error('[registerMailDomain] failed', { err }); throw err; }
+    } catch (err) { console.error('[registerMailDomain] failed', { err: describeError(err) }); throw err; }
   }
 
   /** Saves a complete provider observation, clearing obsolete DNS verification timestamps. */
   async updateMailDomain(id: string, sending: boolean, routing: boolean, verifiedAt: string | null, dmarc: boolean): Promise<void> {
     try { this.ctx.storage.sql.exec("UPDATE mail_domains SET sending_enabled = ?, routing_enabled = ?, dns_verified_at = ?, dmarc_present = ? WHERE id = ?", Number(sending), Number(routing), verifiedAt, Number(dmarc), id); }
-    catch (err) { console.error('[updateMailDomain] failed', { id, err }); throw err; }
+    catch (err) { console.error('[updateMailDomain] failed', { id, err: describeError(err) }); throw err; }
   }
 
   /** Lists addresses for one domain, including recoverable mailbox initialization failures. */
   async listMailAddresses(domainId: string): Promise<MailAddress[]> {
     try { return this.ctx.storage.sql.exec<MailAddress & Record<string, SqlStorageValue>>("SELECT * FROM mail_addresses WHERE domain_id = ? ORDER BY local_part", domainId).toArray(); }
-    catch (err) { console.error('[listMailAddresses] failed', { domainId, err }); throw err; }
+    catch (err) { console.error('[listMailAddresses] failed', { domainId, err: describeError(err) }); throw err; }
   }
 
   /** Registers an address and the existing delivery allowlist atomically; R2 gates mailbox availability. */
@@ -91,13 +92,13 @@ export class ConfigDO extends DurableObject<Env> {
         this.ctx.storage.sql.exec("INSERT INTO addresses (email, domain, created_at, enabled) VALUES (?, ?, ?, 1) ON CONFLICT(email) DO NOTHING", email, domain.domain, new Date().toISOString());
         return this.ctx.storage.sql.exec<MailAddress & Record<string, SqlStorageValue>>("SELECT * FROM mail_addresses WHERE id = ?", email).one();
       });
-    } catch (err) { console.error('[registerMailAddress] failed', { domainId, err }); throw err; }
+    } catch (err) { console.error('[registerMailAddress] failed', { domainId, err: describeError(err) }); throw err; }
   }
 
   /** Marks the mailbox ready only after its DO and R2 metadata both exist. */
   async markMailAddressInitialized(id: string): Promise<void> {
     try { this.ctx.storage.sql.exec("UPDATE mail_addresses SET mailbox_initialized = 1 WHERE id = ?", id); }
-    catch (err) { console.error('[markMailAddressInitialized] failed', { err }); throw err; }
+    catch (err) { console.error('[markMailAddressInitialized] failed', { err: describeError(err) }); throw err; }
   }
 
   // ── Addresses ──────────────────────────────────────────────────
@@ -110,9 +111,9 @@ export class ConfigDO extends DurableObject<Env> {
         ),
       ] as unknown as AddressRow[]);
     } catch (err) {
-      console.error("[durableObject.listAddresses] 失敗", {
+      console.error("[durableObject.listAddresses] failed", {
         context: { operation: "listAddresses", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -137,7 +138,7 @@ export class ConfigDO extends DurableObject<Env> {
           new Date().toISOString(),
         );
       } catch (e) {
-        console.error("[addAddress] 失敗", { context: { operation: "addAddress" }, err: e });
+        console.error("[addAddress] failed", { context: { operation: "addAddress" }, err: describeError(e) });
 
         if ((e as Error).message.includes("UNIQUE")) {
           return await { ok: false, error: "Address already exists" };
@@ -146,9 +147,9 @@ export class ConfigDO extends DurableObject<Env> {
       }
       return await { ok: true, email };
     } catch (err) {
-      console.error("[durableObject.addAddress] 失敗", {
+      console.error("[durableObject.addAddress] failed", {
         context: { operation: "addAddress", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -162,9 +163,9 @@ export class ConfigDO extends DurableObject<Env> {
       this.ctx.storage.sql.exec(`DELETE FROM addresses WHERE email = ?`, email);
       return await { ok: true };
     } catch (err) {
-      console.error("[durableObject.removeAddress] 失敗", {
+      console.error("[durableObject.removeAddress] failed", {
         context: { operation: "removeAddress", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -183,9 +184,9 @@ export class ConfigDO extends DurableObject<Env> {
       );
       return await { ok: true };
     } catch (err) {
-      console.error("[durableObject.setAddressEnabled] 失敗", {
+      console.error("[durableObject.setAddressEnabled] failed", {
         context: { operation: "setAddressEnabled", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -203,9 +204,9 @@ export class ConfigDO extends DurableObject<Env> {
       ][0] as { email: string } | undefined;
       return await (row?.email ?? null);
     } catch (err) {
-      console.error("[durableObject.resolveAddress] 失敗", {
+      console.error("[durableObject.resolveAddress] failed", {
         context: { operation: "resolveAddress", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -220,9 +221,9 @@ export class ConfigDO extends DurableObject<Env> {
       ][0] as { value: string } | undefined;
       return await (row?.value ?? null);
     } catch (err) {
-      console.error("[durableObject.getSetting] 失敗", {
+      console.error("[durableObject.getSetting] failed", {
         context: { operation: "getSetting", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -241,9 +242,9 @@ export class ConfigDO extends DurableObject<Env> {
         new Date().toISOString(),
       );
     } catch (err) {
-      console.error("[durableObject.setSetting] 失敗", {
+      console.error("[durableObject.setSetting] failed", {
         context: { operation: "setSetting", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -258,9 +259,9 @@ export class ConfigDO extends DurableObject<Env> {
       for (const r of rows) out[r.key] = r.value;
       return await out;
     } catch (err) {
-      console.error("[durableObject.listSettings] 失敗", {
+      console.error("[durableObject.listSettings] failed", {
         context: { operation: "listSettings", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -306,9 +307,9 @@ export class ConfigDO extends DurableObject<Env> {
         subject: `mailto:postmaster@${getDomains(this.env)[0]}`,
       };
     } catch (err) {
-      console.error("[durableObject.getOrCreateVapidKeys] 失敗", {
+      console.error("[durableObject.getOrCreateVapidKeys] failed", {
         context: { operation: "getOrCreateVapidKeys", parameterCount: 0 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -334,9 +335,9 @@ export class ConfigDO extends DurableObject<Env> {
       );
       return await { id };
     } catch (err) {
-      console.error("[durableObject.addPushSubscription] 失敗", {
+      console.error("[durableObject.addPushSubscription] failed", {
         context: { operation: "addPushSubscription", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -348,9 +349,9 @@ export class ConfigDO extends DurableObject<Env> {
     try {
       this.ctx.storage.sql.exec(`DELETE FROM push_subscriptions WHERE endpoint = ?`, endpoint);
     } catch (err) {
-      console.error("[durableObject.removePushSubscription] 失敗", {
+      console.error("[durableObject.removePushSubscription] failed", {
         context: { operation: "removePushSubscription", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -367,9 +368,9 @@ export class ConfigDO extends DurableObject<Env> {
         ),
       ] as unknown as PushSubscriptionRow[]);
     } catch (err) {
-      console.error("[durableObject.listPushSubscriptions] 失敗", {
+      console.error("[durableObject.listPushSubscriptions] failed", {
         context: { operation: "listPushSubscriptions", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -388,9 +389,9 @@ export class ConfigDO extends DurableObject<Env> {
         new Date().toISOString(),
       );
     } catch (err) {
-      console.error("[durableObject.addToList] 失敗", {
+      console.error("[durableObject.addToList] failed", {
         context: { operation: "addToList", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -407,9 +408,9 @@ export class ConfigDO extends DurableObject<Env> {
         entry.trim().toLowerCase(),
       );
     } catch (err) {
-      console.error("[durableObject.removeFromList] 失敗", {
+      console.error("[durableObject.removeFromList] failed", {
         context: { operation: "removeFromList", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -434,9 +435,9 @@ export class ConfigDO extends DurableObject<Env> {
       }
       return null;
     } catch (err) {
-      console.error("[durableObject.checkList] 失敗", {
+      console.error("[durableObject.checkList] failed", {
         context: { operation: "checkList", parameterCount: 2 },
-        err,
+        err: describeError(err),
       });
       throw err;
     }

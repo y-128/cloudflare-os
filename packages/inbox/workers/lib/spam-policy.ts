@@ -1,3 +1,4 @@
+import { normalizeAddress, normalizeAddressDomain } from "../../shared/email-address";
 import { z } from "zod";
 
 /** Preserve the existing spam cutoff; rejection requires multiple strong signals. */
@@ -96,14 +97,16 @@ export const SenderRuleSchema = z
       .string()
       .trim()
       .min(1)
-      .max(MAX_RULE_TEXT)
-      .transform(
-        /** Fold rule patterns for exact case-insensitive comparison. */ (value) =>
-          value.toLowerCase(),
-      ),
+      .max(MAX_RULE_TEXT),
     note: z.string().max(MAX_RULE_TEXT).default(""),
   })
   .strict()
+  .transform(
+    /** Normalize saved patterns with the same rules used during matching. */ (rule) => ({
+      ...rule,
+      pattern: rule.scope === "domain" ? normalizeAddressDomain(rule.pattern) : normalizeAddress(rule.pattern),
+    }),
+  )
   .superRefine(
     /** Reject wildcard and malformed sender patterns. */ (rule, ctx) => {
       const domainPattern =
@@ -146,16 +149,17 @@ export interface Classification {
 
 /** Extract a sender domain without removing plus-address tags. */
 export function senderDomain(address: string): string {
-  return /^[^\s@]+@([^\s@]+)$/.exec(address.trim().toLowerCase())?.[1] ?? "";
+  const domain = /^[^\s@]+@([^\s@]+)$/.exec(address.trim())?.[1];
+  return domain ? normalizeAddressDomain(domain) : "";
 }
 
 /** Match only the complete envelope address or its complete domain. */
 export function matchSenderRule(sender: string, rules: SenderRule[]): SenderRule | undefined {
-  const normalized = sender.trim().toLowerCase();
+  const normalized = normalizeAddress(sender);
   const matches = rules.filter(
     /** Compare anchored, normalized values without substring matching. */ (rule) =>
       (rule.scope === "address" ? normalized : senderDomain(normalized)) ===
-      rule.pattern.toLowerCase(),
+      (rule.scope === "address" ? normalizeAddress(rule.pattern) : normalizeAddressDomain(rule.pattern)),
   );
   return (
     matches.find(/** Give explicit allow rules precedence. */ (rule) => rule.type === "allow") ??

@@ -1,6 +1,11 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "inbox",
+  // router 以外は公開 URL を持たない。呼び出しは router からのサービスバインディング
+  // 経由だけで、*.workers.dev を開けておくと Access を迂回する裏口になる。
+  "workers_dev": false,
+  "preview_urls": false,
+
   "compatibility_date": "2026-09-04",
   "main": ".wrangler/validate/workers/app.ts",
   "build": {
@@ -17,8 +22,11 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     // Email Routingを有効にしたドメインを設定してください（例: example.com）。
-    "DOMAINS": "",
-    "EMAIL_ADDRESSES": "[]",
+    "DOMAINS": ["xn--vcs690j.com", "xn--lckh7p474tz0vb.com"],
+    // 受信を許可するアドレス。空配列にすると DOMAINS 内の作成済みメールボックスだけを
+    // 許可する。ここに書いた値はデプロイのたびにダッシュボード側の設定を上書きするので、
+    // ダッシュボードではなくこのファイルを正とすること。
+    "EMAIL_ADDRESSES": [],
   },
   // 実メール送信は明示的な選択が必要です。ローカル開発では remote: true を設定しません。
   "services": [{ "binding": "WORKSHOP_AUTH", "service": "workshop-backend" }],
