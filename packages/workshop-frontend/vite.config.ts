@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
 import { vitestTask } from '@gadgets/scripts/vitest-task'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // `dist/` is this package's own build output, excluded from the inputs of the bundle and test
 // tasks: vp declines to cache a task that reads a path it also wrote. Package-relative rather than
@@ -78,12 +79,44 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       tsconfigPaths(),
+      VitePWA({
+        strategies: 'generateSW',
+        registerType: 'autoUpdate',
+        // The Toasty integration registers the worker without forcing a reload of unsaved forms.
+        injectRegister: false,
+        manifest: {
+          name: 'Cloudflare OS',
+          short_name: 'CF OS',
+          display: 'standalone',
+          start_url: '/',
+          scope: '/',
+          lang: 'ja',
+          theme_color: '#ff4801',
+          background_color: '#fcfcfb',
+          icons: [
+            { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            { src: '/pwa-maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ],
+        },
+        workbox: {
+          // Explicit because custom registration disables the plugin's automatic defaults.
+          skipWaiting: true,
+          clientsClaim: true,
+          // Only build-time shell files belong here. Never add API/runtime response caching.
+          globPatterns: ['**/*.{js,css,html,woff,woff2,ttf,otf,png,svg,ico}'],
+          globIgnores: ['api/**', 'cdn-cgi/**'],
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api(?:[/?]|$)/, /^\/cdn-cgi(?:[/?]|$)/, /^\/gatekeeper(?:[/?]|$)/, /^\/blueprint-screenshot(?:[/?]|$)/],
+          runtimeCaching: [],
+        },
+      }),
     ],
     server: {
       port: 3000,
       host: true,
       proxy: {
-        '/api/inbox': `http://${backendHost}`,
+        '/api/inbox': { target: `http://${backendHost}`, ws: true },
         '/api/client-errors': `http://${backendHost}`,
         '/blueprint-screenshot': `http://${backendHost}`,
         '/api/site-logo': `http://${backendHost}`,

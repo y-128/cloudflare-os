@@ -6,13 +6,15 @@ import { HTTP } from "./lib/http-status";
 // Copyright (c) 2026 Cloudflare, Inc.
 // Modifications Copyright (c) 2026 y-128
 // Licensed under the Apache 2.0 license found in the LICENSE file.
-import { routeAgentRequest } from "agents";
+import { getAgentByName } from "agents";
 import { Hono } from "hono";
+import { getPath } from "hono/utils/url";
 import { jwtVerify, createRemoteJWKSet } from "jose";
 import { ZodError } from "zod";
 import { app as apiApp, receiveEmail } from "./index";
 import { EmailMCP } from "./mcp";
 import { ConfigurationError, requireString } from "./lib/config";
+import { describeError } from "./lib/describe-error";
 import type { Env } from "./types";
 
 export { MailboxDO, ConfigDO } from "./durableObject";
@@ -31,7 +33,13 @@ function getAccessUrls(teamDomain: string) {
   return { issuer: teamUrl.origin, certsUrl: new URL(certsPath, teamUrl.origin) };
 }
 
-export const app = new Hono<{ Bindings: Env }>();
+export const app = new Hono<{ Bindings: Env }>({
+  getPath: request => {
+    const path = new URL(request.url).pathname;
+    // Keep agent names encoded until validation, including CR/LF that cannot pass Hono's router.
+    return path.startsWith("/api/inbox/agents/") ? path : getPath(request);
+  },
+});
 
 // All routes, including authentication failures and SDK endpoints, share lifecycle logging.
 app.use(
@@ -76,6 +84,14 @@ app.onError(
 app.use(
   "*",
   /** app.use * のコールバックを実行します。 */ async (c, next) => {
+    const isAgentWebSocket = c.req.path.startsWith("/api/inbox/agents/") &&
+      c.req.header("Upgrade")?.toLowerCase() === "websocket";
+    // Browsers cannot add our CSRF header to a WebSocket handshake. Require an explicit,
+    // same-origin handshake before supplying that marker to the existing auth authority.
+    // Access JWT verification and the Workshop administrator check still run below.
+    if (isAgentWebSocket && (c.req.method !== "GET" || c.req.header("Origin") !== new URL(c.req.url).origin)) {
+      return c.json({ error: "Agent connections require the same origin." }, HTTP.FORBIDDEN);
+    }
     // In cfos, verify every HTTP request through the existing Workshop authentication system.
     // This service binding is deployment-owned; client headers never grant mailbox authority.
     if (c.env.WORKSHOP_AUTH) {
@@ -89,6 +105,7 @@ app.use(
           const value = c.req.header(name);
           if (value) headers.set(name, value);
         }
+        if (isAgentWebSocket) headers.set("X-Inbox-Request", "1");
         const response = await c.env.WORKSHOP_AUTH.fetch(new Request(authUrl, {
           method: "GET", headers,
         }));
@@ -99,7 +116,7 @@ app.use(
         c.header("X-Content-Type-Options", "nosniff");
         return;
       } catch (err) {
-        console.error("[authorizeInboxRequest] failed", { err });
+        console.error("[authorizeInboxRequest] failed", { err: describeError(err) });
         return c.json({ error: "Mail authentication is unavailable." }, HTTP.FORBIDDEN);
       }
     }
@@ -135,10 +152,25 @@ app.route("/", apiApp);
 app.all(
   "/api/inbox/agents/*",
   /** app.all /api/inbox/agents/* のコールバックを実行します。 */ async (c) => {
-    const url = new URL(c.req.url);
-    url.pathname = url.pathname.replace(/^\/api\/inbox/, "");
-    const response = await routeAgentRequest(new Request(url, c.req.raw), c.env);
-    return response ?? c.json({ error: "Agent not found" }, HTTP.NOT_FOUND);
+    const match = /^\/api\/inbox\/agents\/email-agent\/([^/]+)(?:\/get-messages)?$/.exec(c.req.path);
+    if (!match) return c.json({ error: "Agent not found" }, HTTP.NOT_FOUND);
+    // partyserver 0.3.3 does not decode the room segment. Decode exactly once here so
+    // encoded addresses select the same DO as inbound mail's getAgentByName(mailboxId).
+    let mailboxId: string;
+    try {
+      mailboxId = decodeURIComponent(match[1]);
+      if (/\p{Cc}/u.test(mailboxId)) throw new Error("Agent address contains control characters");
+    } catch (err) {
+      console.error("[routeEmailAgent] failed", { err: describeError(err) });
+      return c.json({ error: "Invalid agent address" }, HTTP.BAD_REQUEST);
+    }
+    try {
+      const agent = await getAgentByName(c.env.EMAIL_AGENT, mailboxId);
+      return await agent.fetch(c.req.raw);
+    } catch (err) {
+      console.error("[routeEmailAgent] failed", { err: describeError(err) });
+      throw err;
+    }
   },
 );
 

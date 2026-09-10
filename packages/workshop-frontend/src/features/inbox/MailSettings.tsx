@@ -1,43 +1,44 @@
+import { MailSenderSettings } from "./MailSenderSettings"
 import { MailDomains } from "./MailDomains"
 import { MailSmtpSettings } from "./MailSmtpSettings"
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
+import { SettingsResource } from './SettingsResource'
+import { MailFilters } from './MailFilters'
+import { MailAliases } from './MailAliases'
+import { MailAiSettings } from './MailAiSettings'
+import { MailSpamActivity } from './MailSpamActivity'
+import { MAIL_SETTINGS_SCREENS, type MailSettingsScreen } from './mailSettingsScreens'
 import { Button, Checkbox, Input, Select } from '@cloudflare/kumo'
 import { useTranslation } from '@gadgets/i18n'
-import { inboxApi, jsonRequest, mailboxPath } from './api'
+import { inboxApi, inboxErrorMessage, InboxRequestError, isAbort, jsonRequest, mailboxPath } from './api'
+import { describeError } from '../../../../inbox/workers/lib/describe-error'
 import { useInboxResource } from './useInboxResource'
 import type { DiscordRule, SenderRule, SpamThresholds } from './types'
 
 const MAX_SPAM_SCORE = 100 // Phase 4 stores normalized scores from zero through one hundred.
 
 /** Loads mailbox-specific settings and remounts forms only after switching mailbox or screen. */
-export const MailSettings = ({ mailboxId, screen, onMailboxCreated }: { mailboxId: string; screen: 'spam' | 'notifications' | 'domains' | 'smtp'; onMailboxCreated?: () => void }) => {
+export const MailSettings = ({ mailboxId, screen, onMailboxCreated }: { mailboxId: string; screen: MailSettingsScreen; onMailboxCreated?: () => void }) => {
   const { t } = useTranslation()
-  const [revision, setRevision] = useState(0)
+  const sender = useInboxResource<{ fromName: string }>(mailboxId ? mailboxPath(mailboxId, "/mailbox-settings") : null)
   const spam = useInboxResource<SpamThresholds>(screen === 'spam' ? mailboxPath(mailboxId, '/spam/config') : null)
-  const rules = useInboxResource<SenderRule[]>(screen === 'spam' ? mailboxPath(mailboxId, '/spam/rules') : null, revision)
+  const rules = useInboxResource<SenderRule[]>(screen === 'spam' ? mailboxPath(mailboxId, '/spam/rules') : null)
   const discord = useInboxResource<{ rule: DiscordRule; timezone: string }>(screen === 'notifications' ? mailboxPath(mailboxId, '/notifications/discord') : null)
   return <section className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-5">
-    <h2 className="text-xl font-semibold">{t(`workshop-frontend.Inbox.${screen === 'spam' ? 'spam_settings' : screen === 'notifications' ? 'notification_settings' : screen === 'domains' ? 'domain_settings' : 'smtp_settings'}`)}</h2>
-    {screen === 'domains' ? <MailDomains onMailboxCreated={onMailboxCreated} /> : screen === 'smtp' ? <MailSmtpSettings /> : screen === 'spam' ? <>
+    <h2 className="text-xl font-semibold">{t(`workshop-frontend.Inbox.${MAIL_SETTINGS_SCREENS[screen]}`)}</h2>
+    {mailboxId && <SettingsResource label={t('workshop-frontend.Inbox.from_name')} loaded={!!sender.data} error={sender.error} onRetry={sender.retry}>
+      {sender.data && <MailSenderSettings key={`${mailboxId}:${screen}`} mailboxId={mailboxId} initial={sender.data.fromName} onSaved={sender.retry} />}
+    </SettingsResource>}
+    {screen === 'filters' ? <MailFilters key={mailboxId} mailboxId={mailboxId} /> : screen === 'aliases' ? <MailAliases key={mailboxId} mailboxId={mailboxId} /> : screen === 'ai' ? <MailAiSettings key={mailboxId} mailboxId={mailboxId} /> : screen === 'activity' ? <MailSpamActivity key={mailboxId} mailboxId={mailboxId} /> : screen === 'domains' ? <MailDomains onMailboxCreated={onMailboxCreated} /> : screen === 'smtp' ? <MailSmtpSettings /> : screen === 'spam' ? <>
       <SettingsResource label={t('workshop-frontend.Inbox.threshold_hint')} loaded={!!spam.data} error={spam.error} onRetry={spam.retry}>
         {spam.data && <ThresholdForm mailboxId={mailboxId} initial={spam.data} />}
       </SettingsResource>
       <SettingsResource label={t('workshop-frontend.Inbox.sender_rules')} loaded={!!rules.data} error={rules.error} onRetry={rules.retry}>
-        {rules.data && <SenderRules mailboxId={mailboxId} rules={rules.data} onChanged={() => setRevision(current => current + 1)} />}
+        {rules.data && <SenderRules mailboxId={mailboxId} rules={rules.data} onChanged={rules.retry} />}
       </SettingsResource>
     </> : <SettingsResource label={t('workshop-frontend.Inbox.notification_settings')} loaded={!!discord.data} error={discord.error} onRetry={discord.retry}>
       {discord.data && <DiscordForm mailboxId={mailboxId} initial={discord.data.rule} timezone={discord.data.timezone} />}
     </SettingsResource>}
-  </section>
-}
-
-/** Keeps each resource's failure and retry next to its own form without hiding other settings. */
-const SettingsResource = ({ label, loaded, error, onRetry, children }: { label: string; loaded: boolean; error?: Error; onRetry: () => void; children: ReactNode }) => {
-  const { t } = useTranslation()
-  return <section aria-label={label} className="space-y-3">
-    {error && <div><p role="alert">{error.message}</p><Button onClick={onRetry}>{t('workshop-frontend.Inbox.retry')}</Button></div>}
-    {!loaded && !error && <p role="status">{t('workshop-frontend.Inbox.loading')}</p>}
-    {children}
   </section>
 }
 
@@ -55,7 +56,7 @@ const ThresholdForm = ({ mailboxId, initial }: { mailboxId: string; initial: Spa
     try {
       await inboxApi(mailboxPath(mailboxId, '/spam/config'), jsonRequest('PUT', { spam_threshold: policy.spam_threshold, reject_threshold: policy.reject_threshold }))
       setMessage(t('workshop-frontend.Inbox.saved'))
-    } catch (err) { console.error('[saveSpamThresholds] failed', { err }); setMessage(t('workshop-frontend.Inbox.save_failed')) }
+    } catch (err) { if (!isAbort(err)) { console.error('[saveSpamThresholds] failed', { err: describeError(err) }); setMessage(inboxErrorMessage(err)) } }
     finally { setBusy(false) }
   }
   return <form className="space-y-3" onSubmit={event => { event.preventDefault(); void save() }}>
@@ -76,7 +77,7 @@ const SenderRules = ({ mailboxId, rules, onChanged }: { mailboxId: string; rules
     if (busy) return
     setBusy(true)
     try { await inboxApi(mailboxPath(mailboxId, `/spam/rules/${encodeURIComponent(id)}`), { method: 'DELETE' }); onChanged() }
-    catch (err) { console.error('[deleteSenderRule] failed', { err }); setError(t('workshop-frontend.Inbox.save_failed')) }
+    catch (err) { if (!isAbort(err)) { console.error('[deleteSenderRule] failed', { err: describeError(err) }); setError(inboxErrorMessage(err)) } }
     finally { setBusy(false) }
   }
   return <section className="space-y-3 border-t border-kumo-line pt-5">
@@ -106,7 +107,7 @@ const SenderRuleForm = ({ mailboxId, initial, onSaved }: { mailboxId: string; in
     if (busy) return
     setBusy(true)
     try { await inboxApi(mailboxPath(mailboxId, `/spam/rules${initial ? `/${encodeURIComponent(initial.id)}` : ''}`), jsonRequest(initial ? 'PUT' : 'POST', { type, scope, pattern, note })); onSaved() }
-    catch (err) { console.error('[saveSenderRule] failed', { err }); setError(t('workshop-frontend.Inbox.rule_failed')) }
+    catch (err) { if (!isAbort(err)) { console.error('[saveSenderRule] failed', { err: describeError(err) }); setError(inboxErrorMessage(err)) } }
     finally { setBusy(false) }
   }
   return <form className="space-y-3" onSubmit={event => { event.preventDefault(); void save() }}>
@@ -135,10 +136,10 @@ const DiscordForm = ({ mailboxId, initial, timezone }: { mailboxId: string; init
       await inboxApi(mailboxPath(mailboxId, '/notifications/discord'), jsonRequest('PUT', rule))
       if (test) {
         const result = await inboxApi<{ delivered: boolean }>(mailboxPath(mailboxId, '/notifications/discord/test'), jsonRequest('POST'))
-        if (!result.delivered) throw new Error('Discord test was not delivered')
+        if (!result.delivered) throw new InboxRequestError(t('workshop-frontend.Inbox.notification_failed'))
       }
       setMessage(t(`workshop-frontend.Inbox.${test ? 'test_sent' : 'saved'}`))
-    } catch (err) { console.error('[saveDiscordNotifications] failed', { err }); setMessage(t('workshop-frontend.Inbox.notification_failed')) }
+    } catch (err) { if (!isAbort(err)) { console.error('[saveDiscordNotifications] failed', { err: describeError(err) }); setMessage(inboxErrorMessage(err)) } }
     finally { setBusy(false) }
   }
   return <form className="space-y-4" onSubmit={event => { event.preventDefault(); void save(false) }}>

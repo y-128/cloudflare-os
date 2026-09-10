@@ -1,3 +1,6 @@
+import { resolveMailboxFrom } from "./mailbox-settings";
+import { validateSender } from "./email-helpers";
+import { describeError } from "./describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { requireBinding } from "./bindings";
 const BASE64_CHUNK_BYTES = 0x8000; // String.fromCharCodeの引数上限を避ける分割サイズ
@@ -10,7 +13,7 @@ const BASE64_CHUNK_BYTES = 0x8000; // String.fromCharCodeの引数上限を避�
  * attachments. Adds an X-Agentic-Inbox-Forwarded header to break loops.
  */
 
-import { sendEmail } from "../email-sender";
+import { sendEmail, type SendEmailParams } from "../email-sender";
 import type { Env } from "../types";
 
 const LOOP_HEADER = "x-agentic-inbox-forwarded";
@@ -32,9 +35,9 @@ const MAX_FORWARD_HOPS = 5; // 自動転送のループを止める最大ホッ�
       0,
     );
   } catch (caught) {
-    console.error("[countForwardHops] 失敗", {
+    console.error("[countForwardHops] failed", {
       context: { operation: "countForwardHops" },
-      err: caught,
+      err: describeError(caught),
     });
 
     return 0;
@@ -42,7 +45,7 @@ const MAX_FORWARD_HOPS = 5; // 自動転送のループを止める最大ホッ�
 }
 
 export interface ForwardJob {
-  from: string;
+  from: SendEmailParams["from"];
   to: string;
   subject: string;
   bodyHtml?: string;
@@ -80,9 +83,10 @@ export interface ForwardJob {
       return await { ok: false, error: "Forward hop limit exceeded" };
     }
     try {
+      const { fromEmail } = validateSender(job.to, job.from, job.originalMailboxId);
       await sendEmail(requireBinding(env, "EMAIL"), {
         to: job.to,
-        from: job.from,
+        from: await resolveMailboxFrom(env, fromEmail),
         subject: job.subject,
         html: job.bodyHtml,
         text: job.bodyText,
@@ -99,14 +103,14 @@ export interface ForwardJob {
       });
       return await { ok: true };
     } catch (e) {
-      console.error("[forwardEmail] 失敗", { context: { operation: "forwardEmail" }, err: e });
+      console.error("[forwardEmail] failed", { context: { operation: "forwardEmail" }, err: describeError(e) });
 
       return await { ok: false, error: (e as Error).message };
     }
   } catch (err) {
-    console.error("[lib.forwardEmail] 失敗", {
+    console.error("[lib.forwardEmail] failed", {
       context: { operation: "forwardEmail", parameterCount: 2 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }

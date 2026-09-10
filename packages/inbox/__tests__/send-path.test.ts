@@ -15,6 +15,7 @@ const t = translate.bind(null, "ja");
 const TERM_BYTES = SQLITE_MAX_LIKE_PATTERN_BYTES - "%%".length;
 // A literal percent becomes a two-byte escaped LIKE sequence.
 const ESCAPED_SYMBOL_BYTES = 2;
+const FROM_NAME = '山田 "営業, Tokyo"';
 const PARENT = "parent@example.net";
 const FIRST = "first@example.net";
 const DELIVERED = "<cloudflare-generated@example.net>";
@@ -32,7 +33,7 @@ afterEach(() => vi.restoreAllMocks());
 /** Prepare an isolated mailbox with a real original message and SQLite storage. */
 async function fixture() {
   const mailboxId = `${crypto.randomUUID()}@example.com`;
-  await env.BUCKET.put(`mailboxes/${mailboxId}.json`, "{}");
+  await env.BUCKET.put(`mailboxes/${mailboxId}.json`, JSON.stringify({ fromName: FROM_NAME }));
   const stub = env.MAILBOX.getByName(mailboxId);
   const originalId = crypto.randomUUID();
   await stub.createEmail(Folders.INBOX, {
@@ -51,7 +52,7 @@ async function submit(f: Awaited<ReturnType<typeof fixture>>, mode: string) {
   return api.request(`https://inbox/api/inbox/v1/mailboxes/${f.mailboxId}/${suffix}`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: f.mailboxId, to: "recipient@example.net", cc: "cc@example.net", bcc: "bcc@example.net",
+      from: mode === "draft" ? f.mailboxId : { email: f.mailboxId, name: "Request name" }, to: "recipient@example.net", cc: "cc@example.net", bcc: "bcc@example.net",
       subject: "Outgoing", text: "Body", body: "Body",
       ...(mode === "threaded" ? { in_reply_to: PARENT, references: [FIRST] } : {}),
       attachments: [{ content: btoa("note"), filename: "note.txt", type: "text/plain", disposition: "attachment" }],
@@ -72,12 +73,13 @@ describe("outbound API headers and stored identity", () => {
     const response = await submit(f, mode);
     expect(response.status).toBe(202);
     const sent = f.send.mock.calls[0][0] as EmailMessageBuilder;
-    expect(sent).toMatchObject({ from: f.mailboxId, to: "recipient@example.net", cc: "cc@example.net", bcc: "bcc@example.net", subject: "Outgoing" });
+    expect(sent).toMatchObject({ from: { email: f.mailboxId, name: FROM_NAME }, to: "recipient@example.net", cc: "cc@example.net", bcc: "bcc@example.net", subject: "Outgoing" });
     for (const name of Object.keys(sent.headers ?? {})) {
       expect(FORBIDDEN.has(name.toLowerCase()) || name.toLowerCase().startsWith("arc-")).toBe(false);
     }
     if (mode === "reply" || mode === "threaded") {
-      expect(sent.headers).toEqual({ "In-Reply-To": `<${PARENT}>`, References: `<${FIRST}> <${PARENT}>` });
+      expect(sent.from).toEqual({ email: f.mailboxId, name: FROM_NAME });
+    expect(sent.headers).toEqual({ "In-Reply-To": `<${PARENT}>`, References: `<${FIRST}> <${PARENT}>` });
     } else {
       expect(sent.headers).toBeUndefined();
     }
@@ -86,6 +88,7 @@ describe("outbound API headers and stored identity", () => {
     expect(stored?.message_id).toBe(DELIVERED.slice(1, -1));
     expect(stored?.id).not.toBe(stored?.message_id);
     expect(JSON.parse(stored!.raw_headers!)).toContainEqual({ key: "message-id", value: DELIVERED });
+    expect(JSON.parse(stored!.raw_headers!)).toContainEqual({ key: "from", value: `${FROM_NAME} <${f.mailboxId}>` });
     const attachment = stored!.attachments[0];
     expect(await env.BUCKET.head(`attachments/${id}/${attachment.id}/${attachment.filename}`)).not.toBeNull();
   });
@@ -134,6 +137,7 @@ describe("scheduled and agent sending", () => {
     if (!("messageId" in result)) throw new Error("Expected stored agent message");
     expect((await f.stub.getEmail(result.messageId))?.message_id).toBe(DELIVERED.slice(1, -1));
     const sent = f.send.mock.calls[0][0] as EmailMessageBuilder;
+    expect(sent.from).toEqual({ email: f.mailboxId, name: FROM_NAME });
     expect(sent.headers).toEqual(mode === "reply"
       ? { "In-Reply-To": `<${PARENT}>`, References: `<${FIRST}> <${PARENT}>` }
       : undefined);
@@ -148,6 +152,8 @@ describe("scheduled and agent sending", () => {
     const originalKeys = draft!.attachments.map(att => `attachments/${id}/${att.id}/${att.filename}`);
     // Future scheduling prevents the test runner from invoking the alarm before fault injection.
     const scheduled = await f.stub.createScheduledSend(id, "2099-01-01T00:00:00.000Z");
+    const updatedName = "Updated after scheduling";
+    await env.BUCKET.put(`mailboxes/${f.mailboxId}.json`, JSON.stringify({ fromName: updatedName }));
     if (fail) await failInserts(f.stub);
     const put = vi.spyOn(env.BUCKET, "put");
     await runInDurableObject(f.stub, async (instance, state) => {
@@ -158,6 +164,7 @@ describe("scheduled and agent sending", () => {
       await instance.alarm();
     });
     const sent = f.send.mock.calls[0][0] as EmailMessageBuilder;
+    expect(sent.from).toEqual({ email: f.mailboxId, name: updatedName });
     expect(sent.headers).toEqual({ "In-Reply-To": `<${PARENT}>`, References: `<${FIRST}> <${PARENT}>` });
     const rows = await f.stub.getEmails({ folder: Folders.SENT });
     expect(rows).toHaveLength(fail ? 0 : 1);

@@ -410,14 +410,14 @@ describe("describeError", () => {
   });
 });
 
-// Cloudflare は国際化ドメインのゾーンを Unicode 名 (クレカ比較.com) で返すが、こちらは
-// punycode (xn--lckh7p474tz0vb.com) に正規化して持っている。素の文字列比較では永久に
+// Cloudflare は国際化ドメインのゾーンを Unicode 名 (サンプル.test) で返すが、こちらは
+// punycode (xn--vck8cuc4a.test) に正規化して持っている。素の文字列比較では永久に
 // 一致せず、IDN ではドメイン登録が必ず失敗する。実際にそれで詰まった。
 describe("国際化ドメインの照合", () => {
   it("Unicode 名と punycode を同じゾーンとみなす", async () => {
     const { domainToASCII } = await import("node:url");
-    const fromCloudflare = "クレカ比較.com";
-    const normalized = "xn--lckh7p474tz0vb.com";
+    const fromCloudflare = "サンプル.test";
+    const normalized = "xn--vck8cuc4a.test";
     expect(fromCloudflare === normalized).toBe(false);
     expect(domainToASCII(fromCloudflare)).toBe(normalized);
   });
@@ -427,7 +427,7 @@ describe("国際化ドメインの照合", () => {
     void readFile;
     // 実装が素の比較に戻っていないことを、正規化関数の性質で担保する。
     const { domainToASCII } = await import("node:url");
-    for (const [unicode, ascii] of [["クレカ比較.com", "xn--lckh7p474tz0vb.com"], ["国試.com", "xn--vcs690j.com"]]) {
+    for (const [unicode, ascii] of [["サンプル.test", "xn--vck8cuc4a.test"], ["例え.test", "xn--r8jz45g.test"]]) {
       expect(domainToASCII(unicode)).toBe(ascii);
       expect(domainToASCII(ascii)).toBe(ascii);
     }

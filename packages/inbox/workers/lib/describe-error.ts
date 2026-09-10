@@ -14,10 +14,19 @@ const MAX_STACK_LENGTH = 800;
 
 /** Formats a thrown value as `Name: message`, appending a bounded stack when one exists. */
 export function describeError(err: unknown): string {
-  if (!(err instanceof Error)) return typeof err === "string" ? err : JSON.stringify(err) ?? String(err);
-  const head = `${err.name}: ${err.message}`;
-  // `cause` carries the real reason when a wrapper error is rethrown.
-  const cause = err.cause === undefined ? "" : ` (cause: ${describeError(err.cause)})`;
-  const stack = err.stack ? `\n${err.stack.slice(0, MAX_STACK_LENGTH)}` : "";
-  return `${head}${cause}${stack}`;
+  try {
+    if (!(err instanceof Error)) return typeof err === "string" ? err : JSON.stringify(err) ?? String(err);
+    const head = `${err.name}: ${err.message}`;
+    // `cause` carries the real reason when a wrapper error is rethrown.
+    const cause = err.cause === undefined ? "" : ` (cause: ${describeError(err.cause)})`;
+    const stack = err.stack ? `\n${err.stack.slice(0, MAX_STACK_LENGTH)}` : "";
+    return `${head}${cause}${stack}`;
+  } catch {
+    try {
+      return String(err);
+    } catch {
+      // Custom coercion and Error property getters can throw too; logging must still succeed.
+      return "[Unformattable error]";
+    }
+  }
 }

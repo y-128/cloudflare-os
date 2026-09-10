@@ -1,3 +1,4 @@
+import { resolveMailboxFrom } from "../lib/mailbox-settings";
 import { describeError } from "../lib/describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { HTTP } from "../lib/http-status";
@@ -55,6 +56,7 @@ type AppContext = Context<MailboxContext>;
       throw e;
     }
 
+    const sender = await resolveMailboxFrom(c.env, fromEmail);
     const messageId = crypto.randomUUID();
 
     const rateLimitError = await stub.checkSendRateLimit();
@@ -76,7 +78,7 @@ type AppContext = Context<MailboxContext>;
           to,
           cc,
           bcc,
-          from,
+          from: sender,
           subject,
           html,
           text,
@@ -99,7 +101,7 @@ type AppContext = Context<MailboxContext>;
             thread_id: thread_id,
             message_id: outgoingMessageId,
             raw_headers: JSON.stringify([
-              { key: "from", value: typeof from === "string" ? from : `${from.name} <${from.email}>` },
+              { key: "from", value: sender.name ? `${sender.name} <${sender.email}>` : sender.email },
               { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
               ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
               ...(bcc ? [{ key: "bcc", value: Array.isArray(bcc) ? bcc.join(", ") : bcc }] : []),
@@ -171,6 +173,7 @@ type AppContext = Context<MailboxContext>;
       throw e;
     }
 
+    const sender = await resolveMailboxFrom(c.env, fromEmail);
     const messageId = crypto.randomUUID();
 
     const rateLimitError = await stub.checkSendRateLimit();
@@ -192,7 +195,7 @@ type AppContext = Context<MailboxContext>;
           to,
           cc,
           bcc,
-          from,
+          from: sender,
           subject,
           html,
           text,
@@ -214,7 +217,7 @@ type AppContext = Context<MailboxContext>;
             thread_id: messageId,
             message_id: outgoingMessageId,
             raw_headers: JSON.stringify([
-              { key: "from", value: typeof from === "string" ? from : `${from.name} <${from.email}>` },
+              { key: "from", value: sender.name ? `${sender.name} <${sender.email}>` : sender.email },
               { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
               ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
               ...(bcc ? [{ key: "bcc", value: Array.isArray(bcc) ? bcc.join(", ") : bcc }] : []),

@@ -35,7 +35,6 @@ TEAM_DOMAIN=[ここにAccessチームのURLを入力]
 
 # EMAIL / BUCKET / AI / MAILBOX / CONFIG / EMAIL_AGENT / EMAIL_MCPはWranglerのバインディングです。
 # APIキーの代わりにCloudflareが注入するため、.dev.varsに値を記入しません。
-# 任意のVECTORIZEもwrangler.jsoncのvectorizeに追加するバインディングです。
 # VAPID秘密鍵はConfigDOが生成して内部保存します。環境変数には設定しません。
 # INBOX_LOCAL_DEVは環境変数ではなくビルド定数です。pnpm devのローカルビルドだけでtrueになります。
 

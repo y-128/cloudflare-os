@@ -110,8 +110,11 @@ describe("Discord payload and configuration", () => {
     expect(messageLink(configuredEnv, "a+tag@example.com", "x/y")).toBe(
       "https://cfos.example.com/inbox?mailboxId=a%2Btag%40example.com&emailId=x%2Fy",
     );
-    expect(messageLink(configuredEnv, "User@クレカ比較.COM", "x/y")).toBe(
-      "https://cfos.example.com/inbox?mailboxId=User%40xn--lckh7p474tz0vb.com&emailId=x%2Fy",
+    expect(messageLink(configuredEnv, "User@サンプル.TEST", "x/y")).toBe(
+      "https://cfos.example.com/inbox?mailboxId=User%40xn--vck8cuc4a.test&emailId=x%2Fy",
+    );
+    expect(messageLink(configuredEnv, "User@ExAmPlE.NET", "x/y")).toBe(
+      "https://cfos.example.com/inbox?mailboxId=User%40example.net&emailId=x%2Fy",
     );
     expect(() => messageLink(env, "a@example.com", "x")).toThrow(/CFOS_PUBLIC_URL/);
   });

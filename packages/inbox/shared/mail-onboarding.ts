@@ -1,3 +1,6 @@
+/** Stable wire codes for onboarding failures that offer a recovery action. */
+export const MAIL_ONBOARDING_ERROR_CODES = { DNS_CONFLICT: 'dns_conflict' } as const;
+
 /** Persisted deployment-wide mail domain configuration. */
 export interface MailDomain {
   id: string; domain: string; zone_id: string; sending_enabled: number; routing_enabled: number;

@@ -8,8 +8,6 @@ const THREAD_MESSAGE_CHARS = 1500; // 要約に渡す一通の最大文字数
 const TRANSLATION_CHARS = 8000; // 翻訳する本文の最大文字数
 const MAX_INSTRUCTION_CHARS = 2000; // 草稿指示の最大文字数
 const DRAFT_INPUT_CHARS = 6000; // 草稿作成に渡す本文の最大文字数
-const SEARCH_RESULTS = 25; // 意味検索の取得件数
-const REINDEX_BATCH_SIZE = 100; // 再索引で取得する件数
 
 //     https://opensource.org/licenses/Apache-2.0
 
@@ -18,9 +16,10 @@ import { z } from "zod";
 import type { Env } from "../types";
 import { requireMailbox, type MailboxContext } from "../lib/mailbox";
 import { getConfigStub } from "../lib/config";
-import { semanticSearch } from "../lib/embeddings";
+import { describeError } from "../lib/describe-error";
 import { stripHtmlToText } from "../lib/email-helpers";
 
+/** AI assistance routes; semantic search is omitted because this Worker has no Vectorize binding. */
 export const aiApp = new Hono<MailboxContext>();
 
 aiApp.use("/api/inbox/v1/mailboxes/:mailboxId/*", requireMailbox);
@@ -31,15 +30,15 @@ aiApp.use("/api/inbox/v1/mailboxes/:mailboxId/*", requireMailbox);
       const m = await getConfigStub(env).getSetting("ai_model");
       if (m && m.trim()) return await m;
     } catch (caught) {
-      console.error("[getModel] 失敗", { context: { operation: "getModel" }, err: caught });
+      console.error("[getModel] failed", { context: { operation: "getModel" }, err: describeError(caught) });
 
       /* ignore */
     }
     return "@cf/moonshotai/kimi-k2.5";
   } catch (err) {
-    console.error("[routes.getModel] 失敗", {
+    console.error("[routes.getModel] failed", {
       context: { operation: "getModel", parameterCount: 1 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -61,14 +60,14 @@ aiApp.use("/api/inbox/v1/mailboxes/:mailboxId/*", requireMailbox);
       })) as { response?: string; result?: { response?: string } };
       return await (result.response || result.result?.response || "");
     } catch (e) {
-      console.error("[runChat] 失敗", { context: { operation: "runChat" }, err: e });
+      console.error("[runChat] failed", { context: { operation: "runChat" }, err: describeError(e) });
 
       throw e;
     }
   } catch (err) {
-    console.error("[routes.runChat] 失敗", {
+    console.error("[routes.runChat] failed", {
       context: { operation: "runChat", parameterCount: 3 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -111,13 +110,13 @@ aiApp.post(
       return await c.json({ summary, model, generated_at: new Date().toISOString() });
     } catch (err) {
       console.error(
-        "[routes.aiApp.post /api/inbox/v1/mailboxes/:mailboxId/threads/:threadId/summarize] 失敗",
+        "[routes.aiApp.post /api/inbox/v1/mailboxes/:mailboxId/threads/:threadId/summarize] failed",
         {
           context: {
             operation: "aiApp.post /api/inbox/v1/mailboxes/:mailboxId/threads/:threadId/summarize",
             parameterCount: 1,
           },
-          err,
+          err: describeError(err),
         },
       );
       throw err;
@@ -138,12 +137,12 @@ aiApp.post(
       const out = await runChat(c.env, system, text.slice(0, TRANSLATION_CHARS));
       return await c.json({ translation: out, target });
     } catch (err) {
-      console.error("[routes.aiApp.post /api/inbox/v1/mailboxes/:mailboxId/translate] 失敗", {
+      console.error("[routes.aiApp.post /api/inbox/v1/mailboxes/:mailboxId/translate] failed", {
         context: {
           operation: "aiApp.post /api/inbox/v1/mailboxes/:mailboxId/translate",
           parameterCount: 1,
         },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -173,9 +172,9 @@ const ComposeAssistBody = z.object({
       };
     }
   } catch (caught) {
-    console.error("[parseComposeAssistOutput] 失敗", {
+    console.error("[parseComposeAssistOutput] failed", {
       context: { operation: "parseComposeAssistOutput" },
-      err: caught,
+      err: describeError(caught),
     });
 
     /* fall through to raw text */
@@ -210,95 +209,13 @@ aiApp.post(
       const out = await runChat(c.env, system, user);
       return await c.json(parseComposeAssistOutput(out));
     } catch (err) {
-      console.error("[routes.aiApp.post /api/inbox/v1/mailboxes/:mailboxId/compose-assist] 失敗", {
+      console.error("[routes.aiApp.post /api/inbox/v1/mailboxes/:mailboxId/compose-assist] failed", {
         context: {
           operation: "aiApp.post /api/inbox/v1/mailboxes/:mailboxId/compose-assist",
           parameterCount: 1,
         },
-        err,
+        err: describeError(err),
       });
-      throw err;
-    }
-  },
-);
-
-aiApp.get(
-  "/api/inbox/v1/mailboxes/:mailboxId/semantic-search",
-  /** aiApp.get /api/inbox/v1/mailboxes/:mailboxId/semantic-search のコールバックを実行します。 */ async (
-    c,
-  ) => {
-    try {
-      const query = c.req.query("q") || "";
-      const mailboxId = c.req.param("mailboxId")!;
-      if (!query.trim()) return await c.json({ matches: [] });
-      const matches = await semanticSearch(c.env, mailboxId, query, SEARCH_RESULTS);
-      if (matches.length === 0) return await c.json({ matches: [] });
-      const stub = c.var.mailboxStub;
-      const enriched = await Promise.all(
-        matches.map(
-          /** matches.map callback のコールバックを実行します。 */ async (m) => {
-            try {
-              const email = await stub.getEmail(m.id);
-              return await (email ? { ...email, score: m.score } : null);
-            } catch (err) {
-              console.error("[routes.matches.map callback] 失敗", {
-                context: { operation: "matches.map callback", parameterCount: 1 },
-                err,
-              });
-              throw err;
-            }
-          },
-        ),
-      );
-      return await c.json({ matches: enriched.filter(Boolean) });
-    } catch (err) {
-      console.error("[routes.aiApp.get /api/inbox/v1/mailboxes/:mailboxId/semantic-search] 失敗", {
-        context: {
-          operation: "aiApp.get /api/inbox/v1/mailboxes/:mailboxId/semantic-search",
-          parameterCount: 1,
-        },
-        err,
-      });
-      throw err;
-    }
-  },
-);
-
-aiApp.post(
-  "/api/inbox/v1/mailboxes/:mailboxId/semantic-search/rebuild",
-  /** aiApp.post /api/inbox/v1/mailboxes/:mailboxId/semantic-search/rebuild のコールバックを実行します。 */ async (
-    c,
-  ) => {
-    try {
-      const mailboxId = c.req.param("mailboxId")!;
-      const stub = c.var.mailboxStub;
-      const emails = await stub.getEmails({ limit: REINDEX_BATCH_SIZE, page: 1 });
-      const { upsertEmail } = await import("../lib/embeddings");
-      let ok = 0;
-      for (const e of emails) {
-        const full = await stub.getEmail(e.id);
-        if (!full) continue;
-        const success = await upsertEmail(c.env, mailboxId, {
-          id: e.id,
-          subject: full.subject || "",
-          sender: full.sender || "",
-          date: full.date || "",
-          body_text: stripHtmlToText(full.body || ""),
-        });
-        if (success) ok++;
-      }
-      return await c.json({ rebuilt: ok, total: emails.length });
-    } catch (err) {
-      console.error(
-        "[routes.aiApp.post /api/inbox/v1/mailboxes/:mailboxId/semantic-search/rebuild] 失敗",
-        {
-          context: {
-            operation: "aiApp.post /api/inbox/v1/mailboxes/:mailboxId/semantic-search/rebuild",
-            parameterCount: 1,
-          },
-          err,
-        },
-      );
       throw err;
     }
   },

@@ -22,7 +22,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     // Email Routingを有効にしたドメインを設定してください（例: example.com）。
-    "DOMAINS": ["xn--vcs690j.com", "xn--lckh7p474tz0vb.com"],
+    "DOMAINS": [],
     // 受信を許可するアドレス。空配列にすると DOMAINS 内の作成済みメールボックスだけを
     // 許可する。ここに書いた値はデプロイのたびにダッシュボード側の設定を上書きするので、
     // ダッシュボードではなくこのファイルを正とすること。

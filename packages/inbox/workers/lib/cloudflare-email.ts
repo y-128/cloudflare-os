@@ -128,7 +128,7 @@ export class CloudflareEmailClient {
     try {
     const zoneSchema = z.object({ id: z.string(), name: z.string(), type: z.string(), account: z.object({ id: z.string() }) });
     const zones = await this.list(`/zones?name=${encodeURIComponent(domain)}&account.id=${this.accountId}`, zoneSchema);
-    // Cloudflare returns an internationalized zone under its Unicode name ("クレカ比較.com"),
+    // Cloudflare returns an internationalized zone under its Unicode name ("サンプル.test"),
     // while `domain` has already been normalized to punycode. Comparing the two literally never
     // matches for an IDN, so both sides go through domainToASCII first.
     const zone = zones.find(value => domainToASCII(value.name) === domain && value.account.id === this.accountId);

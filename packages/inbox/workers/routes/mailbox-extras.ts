@@ -1,5 +1,6 @@
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { HTTP } from "../lib/http-status";
+import { describeError } from "../lib/describe-error";
 // Copyright (c) 2026 y-128
 // Licensed under the Apache 2.0 license found in the LICENSE file or at:
 
@@ -547,7 +548,13 @@ extrasApp.get(
   },
 );
 
-const ScheduleBody = z.object({ draft_email_id: z.string().min(1), send_at: z.string().min(1) });
+const ScheduleBody = z.object({
+  draft_email_id: z.string().min(1),
+  send_at: z.string().datetime({ offset: true })
+    .refine(value => Number.isFinite(Date.parse(value)) && Date.parse(value) > Date.now(), "Scheduled time must be in the future")
+    // SQL compares timestamps lexically, so persist one timezone and precision.
+    .transform(value => new Date(value).toISOString()),
+});
 
 extrasApp.post(
   "/api/inbox/v1/mailboxes/:mailboxId/scheduled-sends",
@@ -562,15 +569,16 @@ extrasApp.post(
       );
     } catch (err) {
       console.error(
-        "[routes.extrasApp.post /api/inbox/v1/mailboxes/:mailboxId/scheduled-sends] 失敗",
+        "[createScheduledSendRoute] failed",
         {
           context: {
             operation: "extrasApp.post /api/inbox/v1/mailboxes/:mailboxId/scheduled-sends",
             parameterCount: 1,
           },
-          err,
+          err: describeError(err),
         },
       );
+      if (err instanceof z.ZodError) return c.json({ error: "send_at must be a future ISO 8601 timestamp and draft_email_id is required" }, HTTP.BAD_REQUEST);
       throw err;
     }
   },

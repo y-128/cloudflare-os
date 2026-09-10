@@ -1,3 +1,4 @@
+import { resolveMailboxFrom } from "./mailbox-settings";
 import { describeError } from "./describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { requireBinding } from "./bindings";
@@ -523,7 +524,7 @@ export async function toolSendReply(
     try {
       ({ messageId: outgoingMessageId } = await sendEmail(requireBinding(env, "EMAIL"), {
         to: params.to,
-        from: mailboxId,
+        from: await resolveMailboxFrom(env, mailboxId),
         subject: params.subject,
         html: fullBodyHtml,
         headers: buildThreadingHeaders(originalMsgId, references),
@@ -596,7 +597,7 @@ export async function toolSendEmail(
     try {
       ({ messageId: outgoingMessageId } = await sendEmail(requireBinding(env, "EMAIL"), {
         to: params.to,
-        from: mailboxId,
+        from: await resolveMailboxFrom(env, mailboxId),
         subject: params.subject,
         html: sanitizedBody,
       }));

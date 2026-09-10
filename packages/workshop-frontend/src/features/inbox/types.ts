@@ -4,6 +4,8 @@ export interface Mailbox { id: string; email: string; name: string }
 export interface Folder { id: string; name: string; unreadCount: number }
 /** Stored attachment metadata; content is fetched through the authenticated API. */
 export interface Attachment { id: string; filename: string; mimetype: string; size: number; content_id?: string | null }
+/** Mailbox label metadata; legacy colors may be arbitrary strings or absent. */
+export interface MailLabel { id: string; name: string; color: string | null }
 /** Email detail and optional thread aggregates returned by the worker. */
 export interface Email {
   id: string; subject: string; sender: string; recipient: string; date: string;
@@ -11,6 +13,8 @@ export interface Email {
   body?: string | null; snippet?: string | null; folder_id?: string | null;
   thread_id?: string | null; in_reply_to?: string | null; message_id?: string | null;
   email_references?: string | null; attachments?: Attachment[];
+  /** Assigned labels are included in detail/thread responses, but omitted from list responses. */
+  labels?: MailLabel[];
   raw_headers?: string | null;
   thread_count?: number; thread_unread_count?: number;
 }

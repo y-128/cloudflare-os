@@ -80,7 +80,7 @@ export function validateSender(
   to: string | string[],
   from: string | { email: string; name: string },
   mailboxId: string,
-): { toStr: string; fromEmail: string; fromDomain: string } {
+): { toStr: string; fromEmail: string; fromDomain: string; fromName: string } {
   const toStr = Array.isArray(to) ? to.map(normalizeAddress).join(", ") : normalizeAddressList(to);
   const fromEmail = normalizeAddress(typeof from === "string" ? from : from.email);
 
@@ -93,7 +93,7 @@ export function validateSender(
     throw new SenderValidationError("Invalid sender email address");
   }
 
-  return { toStr, fromEmail, fromDomain };
+  return { toStr, fromEmail, fromDomain, fromName: typeof from === "string" ? "" : from.name };
 }
 
 export class SenderValidationError extends Error {
@@ -281,7 +281,7 @@ export async function getFullEmail(stub: DurableObjectStub<MailboxDO>, emailId: 
 
 /**
  * Fetch all emails in a thread with full bodies in a single DO call.
- * Uses `getThreadEmails` which runs 2 SQL queries (emails + attachments)
+ * Uses `getThreadEmails` which runs 3 SQL queries (emails + attachments + labels)
  * instead of the previous N+1 pattern (1 list query + N getEmail calls).
  */
 export async function getFullThread(stub: DurableObjectStub<MailboxDO>, threadId: string) {

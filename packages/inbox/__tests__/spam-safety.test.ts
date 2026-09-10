@@ -274,7 +274,7 @@ describe("sliding window and legacy scoring", () => {
   it("does not query or score DNSBL service errors", async () => {
     const { id, stub } = await mailbox();
     const fetch = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({ Answer: [{ type: 1, data: "127.255.255.254" }] }));
-    await receive(id, { from: "contact@クレカ比較.com", mimeFrom: "contact@xn--lckh7p474tz0vb.com" });
+    await receive(id, { from: "contact@サンプル.test", mimeFrom: "contact@xn--vck8cuc4a.test" });
     const [entry] = await stub.listClassifications();
     expect(entry.score).toBe(0);
     expect(entry.stages.find((stage) => stage.stage === "dnsbl")).toBeUndefined();

@@ -1076,10 +1076,7 @@
         }
       },
       "vars": {
-        "DOMAINS": [
-          "xn--vcs690j.com",
-          "xn--lckh7p474tz0vb.com"
-        ],
+        "DOMAINS": [],
         "EMAIL_ADDRESSES": []
       }
     },
@@ -1180,6 +1177,10 @@
           "bucket_name": "$R2_BLUEPRINT_CONTENT_NAME",
           "name": "BLUEPRINT_CONTENT",
           "type": "r2_bucket"
+        },
+        {
+          "name": "AI",
+          "type": "ai"
         },
         {
           "name": "BROWSER",

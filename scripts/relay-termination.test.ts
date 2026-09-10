@@ -116,19 +116,21 @@ async function spawnWrapper(
   const child = join(dir, "child.mjs");
   writeFileSync(child, `
     import { spawn } from "node:child_process";
+    import { writeSync } from "node:fs";
     const grandchild = spawn(process.execPath, ["-e", ${JSON.stringify(grandchildProgram)}],
         { stdio: "ignore" });
-    process.stdout.write("grandchild " + grandchild.pid + "\\n");
+    writeSync(1, "grandchild " + grandchild.pid + "\\n");
     ${childBody}
   `);
 
   const wrapper = join(dir, "wrapper.mjs");
   writeFileSync(wrapper, `
     import { spawn } from "node:child_process";
+    import { writeSync } from "node:fs";
     import { relayTermination } from ${JSON.stringify(RELAY.href)};
     const child = spawn(process.execPath, [${JSON.stringify(child)}],
         { stdio: ["ignore", "inherit", "ignore"] });
-    process.stdout.write("child " + child.pid + "\\n");
+    writeSync(1, "child " + child.pid + "\\n");
     relayTermination(child${graceMs === undefined ? "" : `, { graceMs: ${graceMs} }`});
   `);
 
@@ -157,7 +159,12 @@ async function spawnWrapper(
   // whatever the child printed on being signalled unread.
   let text = "";
   let ended = false;
-  proc.stdout.on("data", (chunk: Buffer) => { text += chunk.toString(); });
+  proc.stdout.on("data", (chunk: Buffer) => {
+    text += chunk.toString();
+    // Learn each pid immediately so a partial handshake can still clean up its known children.
+    childPid = Number(/^child (\d+)$/m.exec(text)?.[1] ?? childPid);
+    grandchildPid = Number(/^grandchild (\d+)$/m.exec(text)?.[1] ?? grandchildPid);
+  });
   proc.stdout.on("close", () => { ended = true; });
 
   const output = () => text;
@@ -171,9 +178,9 @@ async function spawnWrapper(
   };
 
   try {
-    assert.ok(await waitForOutput(/^grandchild \d+$/m), "the wrapper never reported both pids");
-    childPid = Number(/^child (\d+)$/m.exec(text)?.[1] ?? 0);
-    grandchildPid = Number(/^grandchild (\d+)$/m.exec(text)?.[1] ?? 0);
+    // The two processes share stdout, but either pid can arrive first under concurrent load.
+    assert.ok(await waitForOutput(/^child \d+$/m), "the wrapper never reported its child pid");
+    assert.ok(await waitForOutput(/^grandchild \d+$/m), "the child never reported its grandchild pid");
     assert.ok(childPid && grandchildPid, "the wrapper never reported both pids");
 
     assert.ok(await waitForFile(readyFile), "the grandchild never finished starting up");

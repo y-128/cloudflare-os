@@ -42,6 +42,18 @@ describe("AiGatewayConfig transport selection", () => {
     expect(config.bindingFor("anthropic")).toBeUndefined();
   });
 
+  it("does not change gateway transport when the separate AI binding is available", () => {
+    const config = new AiGatewayConfig(env({
+      CF_AI_GATEWAY_ACCOUNT_ID: "account-id",
+      CF_AI_GATEWAY_API_TOKEN: "gateway-token",
+      WORKERS_AI: undefined,
+      AI: binding,
+    }));
+    expect(config.bindingFor("cloudflare")).toBeUndefined();
+    expect(config.apiToken).toBe("gateway-token");
+    expect(new AiGatewayConfig({ ...bindingOnly, AI: binding }).binding).toBe(binding);
+  });
+
   it("ignores the binding when CF_AI_GATEWAY_USE_BINDING=false opts out", () => {
     // The cross-account shape (e.g. the internal production Workshop): WORKERS_AI is injected
     // for webFetch, but the gateway lives in a different account, so the deployment opts out

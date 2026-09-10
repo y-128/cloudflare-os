@@ -217,8 +217,14 @@ it('does not overwrite conflicting sending DNS records', async () => {
   const normal = fetch.getMockImplementation()!;
   fetch.mockImplementation(async (input, init) => String(input).includes('/dns_records') ? result([{ ...sendingDns, content: 'another-provider.example.net' }], 1) : normal(input, init));
   const response = await onboardingApp.fetch(new Request(`https://cfos.test/api/inbox/v1/admin/mail-domains/${domain.id}/enable`, { method: 'POST' }), env);
-  expect(response.status).toBe(400);
-  expect(await response.json()).toMatchObject({ error: expect.stringContaining('競合') });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ code: 'dns_conflict', error: expect.stringContaining('競合') });
+  expect(fetch.mock.calls.some(([url, init]) => String(url).includes('/dns_records') && init?.method === 'POST')).toBe(false);
+  const resumed = await onboardingApp.fetch(new Request(`https://cfos.test/api/inbox/v1/admin/mail-domains/${domain.id}/enable`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ keep_conflicting_records: true }),
+  }), env);
+  expect(resumed.status).toBe(200);
+  expect(await resumed.json()).toMatchObject({ ok: true, kept: [expect.any(String)] });
   expect(fetch.mock.calls.some(([url, init]) => String(url).includes('/dns_records') && init?.method === 'POST')).toBe(false);
 });
 
@@ -252,16 +258,16 @@ describe('DNSレコードの同一判定', () => {
 describe('IDNレコード名のDNS照会', () => {
 
   it('Unicode名をpunycodeへ変換する', () => {
-    expect(domainToASCII('cf-bounce._domainkey.クレカ比較.com'))
-      .toBe('cf-bounce._domainkey.xn--lckh7p474tz0vb.com')
+    expect(domainToASCII('cf-bounce._domainkey.サンプル.test'))
+      .toBe('cf-bounce._domainkey.xn--vck8cuc4a.test')
   })
 
   it('アンダースコア付きラベルを壊さない', () => {
-    expect(domainToASCII('_dmarc.クレカ比較.com')).toBe('_dmarc.xn--lckh7p474tz0vb.com')
+    expect(domainToASCII('_dmarc.サンプル.test')).toBe('_dmarc.xn--vck8cuc4a.test')
   })
 
   it('すでにpunycodeなら変えない', () => {
-    const ascii = 'cf-bounce._domainkey.xn--lckh7p474tz0vb.com'
+    const ascii = 'cf-bounce._domainkey.xn--vck8cuc4a.test'
     expect(domainToASCII(ascii)).toBe(ascii)
   })
 

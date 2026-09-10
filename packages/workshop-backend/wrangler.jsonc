@@ -38,7 +38,11 @@
 	"browser": {
 		"binding": "BROWSER"
 	},
-	// Gatekeeper service bindings and the Workers AI binding are dynamically
+	// Direct Workers AI access; the Gateway transport keeps its existing binding name.
+	"ai": {
+		"binding": "AI"
+	},
+	// Gatekeeper service bindings and the WORKERS_AI gateway binding are dynamically
 	// added by run-dev-server.ts (for dev) and generate-wrangler-prod.js (for
 	// production).
 	"migrations": [

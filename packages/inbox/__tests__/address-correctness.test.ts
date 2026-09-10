@@ -12,17 +12,15 @@ import { requireMailbox, type MailboxContext } from "../workers/lib/mailbox";
 import { SenderRuleSchema, matchSenderRule, type SenderRule } from "../workers/lib/spam-policy";
 import { scoreAuthentication, ENVELOPE_MISMATCH_SCORE } from "../workers/lib/authentication";
 import { dnsRecordsMatch, normalizedDns, verifyDnsRecord } from "../workers/lib/cloudflare-email";
-import { semanticSearch } from "../workers/lib/embeddings";
 import ja from "../../i18n/src/locales/ja";
 import en from "../../i18n/src/locales/en";
 import { supplementalTranslations } from "../../../scripts/i18n/supplemental";
 
 const DOMAINS = [
-  ["クレカ比較.com", "xn--lckh7p474tz0vb.com"],
-  ["国試.com", "xn--vcs690j.com"],
+  ["サンプル.test", "xn--vck8cuc4a.test"],
+  ["例え.test", "xn--r8jz45g.test"],
 ] as const;
 const env = bindings as Env;
-const TEXT_LIMIT_BYTES = 4 * 1024;
 const DNS_CNAME = 5;
 const DNS_MX = 15;
 
@@ -45,15 +43,16 @@ describe("case-sensitive mailbox identity", () => {
 
   it("folds only mixed-case ASCII domains and preserves outbound recipients", () => {
     expect(canonicalize(" User@ExAmPlE.NET ")).toBe("User@example.net");
-    expect(validateSender(["Recipient@国試.com", "Other@ExAmPlE.NET"], "User+Tag@クレカ比較.com", "User@xn--lckh7p474tz0vb.com")).toEqual({
-      toStr: "Recipient@xn--vcs690j.com, Other@example.net",
-      fromEmail: "User+Tag@xn--lckh7p474tz0vb.com",
-      fromDomain: "xn--lckh7p474tz0vb.com",
+    expect(validateSender(["Recipient@例え.test", "Other@ExAmPlE.NET"], "User+Tag@サンプル.test", "User@xn--vck8cuc4a.test")).toEqual({
+      toStr: "Recipient@xn--r8jz45g.test, Other@example.net",
+      fromEmail: "User+Tag@xn--vck8cuc4a.test",
+      fromDomain: "xn--vck8cuc4a.test",
+      fromName: "",
     });
-    expect(validateSender('"Last,First"@国試.com, Other@ExAmPlE.NET', "User@国試.com", "User@xn--vcs690j.com").toStr).toBe('"Last,First"@xn--vcs690j.com, Other@example.net');
-    expect(() => validateSender("Recipient@example.net", "user@国試.com", "User@xn--vcs690j.com")).toThrow();
+    expect(validateSender('"Last,First"@例え.test, Other@ExAmPlE.NET', "User@例え.test", "User@xn--r8jz45g.test").toStr).toBe('"Last,First"@xn--r8jz45g.test, Other@example.net');
+    expect(() => validateSender("Recipient@example.net", "user@例え.test", "User@xn--r8jz45g.test")).toThrow();
     expect(parseAddress("User@example.com/path")).toBeNull();
-    expect(getEmailAddresses({ ...env, EMAIL_ADDRESSES: '["User@国試.com"]' })).toEqual(["User@xn--vcs690j.com"]);
+    expect(getEmailAddresses({ ...env, EMAIL_ADDRESSES: '["User@例え.test"]' })).toEqual(["User@xn--r8jz45g.test"]);
   });
 
   it.each(DOMAINS)("resolves and creates one R2 key and one DO for %s", async (unicode, ascii) => {
@@ -84,8 +83,8 @@ describe("case-sensitive mailbox identity", () => {
 
   it("removes only the final metadata extension and normalizes listing IDs", async () => {
     const local = `user.json-${crypto.randomUUID()}`;
-    const id = `${local}@xn--vcs690j.com`;
-    await env.BUCKET.put(`mailboxes/${local}@国試.com.json`, "{}");
+    const id = `${local}@xn--r8jz45g.test`;
+    await env.BUCKET.put(`mailboxes/${local}@例え.test.json`, "{}");
     await env.BUCKET.put(`mailboxes/${id}.json`, "{}");
     expect((await listMailboxes(env.BUCKET)).filter(mailbox => mailbox.id.startsWith(local))).toEqual([{ id, email: id }]);
   });
@@ -125,7 +124,7 @@ describe("IDN spam and authentication comparisons", () => {
 
 describe("DNS content identity", () => {
   it("distinguishes DKIM keys differing only in case and preserves literal TXT dots and spaces", () => {
-    const record = { type: "TXT", name: "dkim._domainkey.国試.com", content: "v=DKIM1; p=AbCd" };
+    const record = { type: "TXT", name: "dkim._domainkey.例え.test", content: "v=DKIM1; p=AbCd" };
     expect(dnsRecordsMatch(record, { ...record, content: "v=DKIM1; p=abcd" })).toBe(false);
     expect(dnsRecordsMatch(record, { ...record, content: '"v=DKIM1; p=Ab" "Cd"' })).toBe(true);
     expect(normalizedDns("value.", "TXT")).not.toBe(normalizedDns("value", "TXT"));
@@ -142,25 +141,6 @@ describe("DNS content identity", () => {
       expect(dnsRecordsMatch(record, { ...record, content: answer })).toBe(true);
       if (type === "MX") expect(dnsRecordsMatch(record, { ...record, priority: 20 })).toBe(false);
     }
-  });
-});
-
-describe("UTF-8 embedding input", () => {
-  it.each(["国", "😀"])("truncates before a partial %s code point", async character => {
-    const text = "a".repeat(TEXT_LIMIT_BYTES - 1) + character;
-    const run = vi.fn().mockResolvedValue({ data: [[1]] });
-    const query = vi.fn().mockResolvedValue({ matches: [] });
-    // Only the AI and Vectorize methods exercised by semanticSearch are mocked.
-    const configured = { ...env, AI: { run }, VECTORIZE: { query } } as unknown as Env;
-    await semanticSearch(configured, "User@国試.com", text);
-    const sent = run.mock.calls[0][1].text[0] as string;
-    expect(sent).toBe("a".repeat(TEXT_LIMIT_BYTES - 1));
-    expect(new TextEncoder().encode(sent).length).toBeLessThanOrEqual(TEXT_LIMIT_BYTES);
-    expect(sent).not.toContain("\uFFFD");
-    expect(query).toHaveBeenCalledWith([1], expect.objectContaining({ namespace: "User@xn--vcs690j.com" }));
-    const exact = "a".repeat(TEXT_LIMIT_BYTES - new TextEncoder().encode(character).length) + character;
-    await semanticSearch(configured, "User@国試.com", exact);
-    expect(run.mock.calls[1][1].text[0]).toBe(exact);
   });
 });
 

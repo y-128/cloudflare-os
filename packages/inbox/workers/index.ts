@@ -1,3 +1,5 @@
+import { FromNameSchema, MailboxSettingsSchema, resolveMailboxFrom, writeMailboxFromName, writeMailboxSettings } from "./lib/mailbox-settings";
+import { HTTPException } from "hono/http-exception";
 import { searchPattern, SearchValidationError } from "./lib/search-pattern";
 import { describeError } from "./lib/describe-error";
 import { createMailbox } from "./lib/create-mailbox";
@@ -52,7 +54,6 @@ import {
   findMatchingRules,
 } from "./lib/rules";
 import { countForwardHops, forwardEmail } from "./lib/forwarding";
-import { deleteEmailVector, upsertEmail } from "./lib/embeddings";
 import { stripHtmlToText } from "./lib/email-helpers";
 
 type AppContext = Context<MailboxContext>;
@@ -61,8 +62,8 @@ type AppContext = Context<MailboxContext>;
 
 const CreateMailboxBody = z.object({
   email: z.string().email(),
-  name: z.string().min(1),
-  settings: z.record(z.unknown()).optional(), // unvalidated — agentSystemPrompt goes straight to AI
+  name: FromNameSchema.pipe(z.string().min(1)),
+  settings: MailboxSettingsSchema.optional(),
 });
 
 const DraftBody = z.object({
@@ -222,10 +223,11 @@ app.post(
       if (!mailbox) return c.json({ error: "Mailbox already exists" }, HTTP.CONFLICT);
       return c.json(mailbox, HTTP.CREATED);
     } catch (err) {
-      console.error("[workers.app.post /api/inbox/v1/mailboxes] 失敗", {
+      console.error("[createMailboxRoute] failed", {
         context: { operation: "app.post /api/inbox/v1/mailboxes", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
+      if (err instanceof z.ZodError) return c.json({ error: "Invalid mailbox settings" }, HTTP.BAD_REQUEST);
       throw err;
     }
   },
@@ -240,14 +242,16 @@ app.get(
   ) => {
     try {
       const stub = c.var.mailboxStub;
-      return await c.json(await stub.listMailboxSettings());
+      const settings = await stub.listMailboxSettings();
+      const from = await resolveMailboxFrom(c.env, c.req.param("mailboxId")!);
+      return await c.json({ ...settings, fromName: from.name });
     } catch (err) {
-      console.error("[workers.app.get /api/inbox/v1/mailboxes/:mailboxId/mailbox-settings] 失敗", {
+      console.error("[workers.app.get /api/inbox/v1/mailboxes/:mailboxId/mailbox-settings] failed", {
         context: {
           operation: "app.get /api/inbox/v1/mailboxes/:mailboxId/mailbox-settings",
           parameterCount: 1,
         },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -263,19 +267,26 @@ app.put(
       const key = c.req.param("key")!;
       const { value } = (await c.req.json()) as { value: string };
       const stub = c.var.mailboxStub;
+      if (key === "fromName") {
+        const parsed = FromNameSchema.safeParse(value);
+        if (!parsed.success) return c.json({ error: "Invalid sender display name" }, HTTP.BAD_REQUEST);
+        const fromName = await writeMailboxFromName(c.env, c.req.param("mailboxId")!, parsed.data);
+        return c.json({ key, value: fromName });
+      }
       await stub.setMailboxSetting(key, String(value));
       return await c.json({ key, value });
     } catch (err) {
       console.error(
-        "[workers.app.put /api/inbox/v1/mailboxes/:mailboxId/mailbox-settings/:key] 失敗",
+        "[workers.app.put /api/inbox/v1/mailboxes/:mailboxId/mailbox-settings/:key] failed",
         {
           context: {
             operation: "app.put /api/inbox/v1/mailboxes/:mailboxId/mailbox-settings/:key",
             parameterCount: 1,
           },
-          err,
+          err: describeError(err),
         },
       );
+      if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);
       throw err;
     }
   },
@@ -363,17 +374,16 @@ app.put(
   /** app.put /api/inbox/v1/mailboxes/:mailboxId のコールバックを実行します。 */ async (c) => {
     try {
       const mailboxId = c.req.param("mailboxId")!;
-      const { settings } = (await c.req.json()) as { settings: Record<string, unknown> };
-      const key = `mailboxes/${mailboxId}.json`;
-      if (!(await requireBinding(c.env, "BUCKET").head(key)))
-        return await c.json({ error: "Not found" }, HTTP.NOT_FOUND);
-      await requireBinding(c.env, "BUCKET").put(key, JSON.stringify(settings));
+      const input = z.object({ settings: MailboxSettingsSchema }).parse(await c.req.json());
+      const settings = await writeMailboxSettings(c.env, mailboxId, input.settings);
       return await c.json({ id: mailboxId, name: mailboxId, email: mailboxId, settings });
     } catch (err) {
-      console.error("[workers.app.put /api/inbox/v1/mailboxes/:mailboxId] 失敗", {
+      console.error("[writeMailboxSettingsRoute] failed", {
         context: { operation: "app.put /api/inbox/v1/mailboxes/:mailboxId", parameterCount: 1 },
-        err,
+        err: describeError(err),
       });
+      if (err instanceof z.ZodError) return c.json({ error: "Invalid mailbox settings" }, HTTP.BAD_REQUEST);
+      if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);
       throw err;
     }
   },
@@ -489,6 +499,7 @@ app.post(
         throw e;
       }
 
+      const sender = await resolveMailboxFrom(c.env, fromEmail);
       const messageId = crypto.randomUUID();
       const stub = c.var.mailboxStub;
       const rateLimitError = await stub.checkSendRateLimit();
@@ -507,7 +518,7 @@ app.post(
             to,
             cc,
             bcc,
-            from,
+            from: sender,
             subject,
             html,
             text,
@@ -532,7 +543,7 @@ app.post(
               raw_headers: JSON.stringify([
                 {
                   key: "from",
-                  value: typeof from === "string" ? from : `${from.name} <${from.email}>`,
+                  value: sender.name ? `${sender.name} <${sender.email}>` : sender.email,
                 },
                 { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
                 ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
@@ -700,7 +711,6 @@ app.delete(
     c: AppContext,
   ) => {
     try {
-      const mailboxId = c.req.param("mailboxId")!;
       const id = c.req.param("id")!;
       const attachments = await c.var.mailboxStub.deleteEmail(id);
       if (attachments === null) return await c.json({ error: "Not found" }, HTTP.NOT_FOUND);
@@ -711,20 +721,14 @@ app.delete(
               `attachments/${id}/${att.id}/${att.filename}`,
           ),
         );
-      c.executionCtx.waitUntil(
-        deleteEmailVector(c.env, mailboxId, id).catch(
-          /** deleteEmailVectorc.envmailboxIdid.catch callback のコールバックを実行します。 */ () =>
-            undefined,
-        ),
-      );
       return await c.body(null, HTTP.NO_CONTENT);
     } catch (err) {
-      console.error("[workers.app.delete /api/inbox/v1/mailboxes/:mailboxId/emails/:id] 失敗", {
+      console.error("[workers.app.delete /api/inbox/v1/mailboxes/:mailboxId/emails/:id] failed", {
         context: {
           operation: "app.delete /api/inbox/v1/mailboxes/:mailboxId/emails/:id",
           parameterCount: 1,
         },
-        err,
+        err: describeError(err),
       });
       throw err;
     }
@@ -1254,20 +1258,6 @@ async function receiveEmail(event: BufferedEmail, env: Env, ctx: ExecutionContex
         }
       }
     }
-
-    // ── Vectorize index (best-effort) ──
-    ctx.waitUntil(
-      upsertEmail(env, mailboxId, {
-        id: messageId,
-        subject: parsedEmail.subject || "",
-        sender: senderAddr,
-        date: new Date().toISOString(),
-        body_text: bodyText,
-      }).catch(
-        /** AddrdatenewDate.toISOStringbody_textbodyText.catch callback のコールバックを実行します。 */ () =>
-          undefined,
-      ),
-    );
 
     // Notifications only begin after durable mail storage and run independently of acceptance.
     ctx.waitUntil(notifyNewMail(env, mailboxId, {

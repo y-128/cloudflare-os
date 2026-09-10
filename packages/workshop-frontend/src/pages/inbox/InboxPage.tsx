@@ -8,6 +8,9 @@ import { useInboxResource } from '../../features/inbox/useInboxResource'
 import { MessageView } from '../../features/inbox/MessageView'
 import { ComposeDialog } from '../../features/inbox/ComposeDialog'
 import { MailSettings } from '../../features/inbox/MailSettings'
+import { canConnectInboxAgent } from '../../features/inbox/inboxAgent'
+import { EmailAgentPanel } from '../../features/inbox/EmailAgentPanel'
+import { MAIL_SETTINGS_SCREENS, mailSettingsScreens, type MailSettingsScreen } from '../../features/inbox/mailSettingsScreens'
 import type { ComposeSession, Email, Folder, Mailbox } from '../../features/inbox/types'
 
 const PAGE_SIZE = 30 // Keep list responses bounded while the worker groups entire conversations.
@@ -34,13 +37,15 @@ export const InboxPage = ({ mailboxId, emailId, onNavigate }: { mailboxId?: stri
 const MailboxView = ({ mailboxId, emailId, mailboxes, onNavigate, onMailboxCreated }: { onMailboxCreated: () => void; mailboxId: string; emailId?: string; mailboxes: Mailbox[]; onNavigate: (mailboxId?: string, emailId?: string) => void }) => {
   const { t } = useTranslation()
   const [folder, setFolder] = useState('inbox')
-  const [requestedScreen, setScreen] = useState<'mail' | 'spam' | 'notifications' | 'domains' | 'smtp'>('mail')
+  const [requestedScreen, setScreen] = useState<'mail' | MailSettingsScreen>('mail')
   const screen = emailId ? 'mail' : requestedScreen
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [revision, setRevision] = useState(0)
   const [compose, setCompose] = useState<ComposeSession | null>(null)
+  const [messageRevision, setMessageRevision] = useState(0)
+  const [agentOpen, setAgentOpen] = useState(false)
   const [folderName, setFolderName] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -73,6 +78,7 @@ const MailboxView = ({ mailboxId, emailId, mailboxes, onNavigate, onMailboxCreat
     finally { setBusy(false) }
   }
   return <div className="@container flex min-h-0 flex-1 flex-col">
+    <div className="flex shrink-0 justify-end border-b border-kumo-line px-3 py-2">{!canConnectInboxAgent() && <p className="mr-3 text-sm text-kumo-subtle">{t('workshop-frontend.Inbox.agent_access_required')}</p>}<Button size="sm" variant="secondary" disabled={!canConnectInboxAgent()} onClick={() => setAgentOpen(true)}>{t('workshop-frontend.Inbox.agent_title')}</Button></div>
     <div className="flex min-h-0 flex-1 flex-col @4xl:flex-row">
       <aside className={`shrink-0 space-y-3 border-b border-kumo-line p-3 @4xl:w-52 @4xl:overflow-y-auto @4xl:border-r @4xl:border-b-0 ${emailId ? 'hidden @4xl:block' : ''}`}>
         <Select label={t('workshop-frontend.Inbox.mailbox')} value={mailboxId} onValueChange={value => { if (value) onNavigate(value) }}>
@@ -85,7 +91,7 @@ const MailboxView = ({ mailboxId, emailId, mailboxes, onNavigate, onMailboxCreat
           </Button>)}
         </nav>
         <details><summary className="cursor-pointer text-sm">{t('workshop-frontend.Inbox.add_folder')}</summary><form className="mt-2 space-y-2" onSubmit={event => { event.preventDefault(); void createFolder() }}><Input label={t('workshop-frontend.Inbox.folder_name')} value={folderName} onChange={event => setFolderName(event.target.value)} required /><Button type="submit" size="sm" disabled={busy}>{t('workshop-frontend.Inbox.create')}</Button></form></details>
-        <div className="flex flex-wrap gap-1 @4xl:flex-col">{(['spam', 'notifications', 'domains', 'smtp'] as const).map(item => <Button key={item} size="sm" variant={screen === item ? 'secondary' : 'ghost'} onClick={() => { setScreen(item); onNavigate(mailboxId) }}>{t(`workshop-frontend.Inbox.${item === 'spam' ? 'spam_settings' : item === 'notifications' ? 'notification_settings' : item === 'domains' ? 'domain_settings' : 'smtp_settings'}`)}</Button>)}</div>
+        <div className="flex flex-wrap gap-1 @4xl:flex-col">{mailSettingsScreens.map(item => <Button key={item} size="sm" variant={screen === item ? 'secondary' : 'ghost'} onClick={() => { setScreen(item); onNavigate(mailboxId) }}>{t(`workshop-frontend.Inbox.${MAIL_SETTINGS_SCREENS[item]}`)}</Button>)}</div>
         {(error || folders.error) && <p role="alert" className="text-sm text-kumo-danger">{error || folders.error?.message}</p>}
       </aside>
       {screen !== 'mail' ? <MailSettings key={`${mailboxId}-${screen}`} mailboxId={mailboxId} screen={screen} onMailboxCreated={onMailboxCreated} /> : <>
@@ -103,9 +109,12 @@ const MailboxView = ({ mailboxId, emailId, mailboxes, onNavigate, onMailboxCreat
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-kumo-line p-3"><Button size="sm" variant="ghost" onClick={refresh}>{t('workshop-frontend.Inbox.refresh')}</Button><Button size="sm" variant="secondary" disabled={page <= 1} onClick={() => setPage(current => current - 1)}>{t('workshop-frontend.Inbox.previous')}</Button><span className="text-xs">{t('workshop-frontend.Inbox.pagination', { page, total: totalPages })}</span><Button size="sm" variant="secondary" disabled={page >= totalPages} onClick={() => setPage(current => current + 1)}>{t('workshop-frontend.Inbox.next')}</Button></div>
         </section>
-        {emailId && <div className="min-h-0 min-w-0 flex-1"><MessageView key={`${mailboxId}-${emailId}`} mailboxId={mailboxId} emailId={emailId} folders={folders.data ?? []} onBack={back} onChanged={refresh} onCompose={(mode, original) => setCompose({ key: crypto.randomUUID(), mode, original })} /></div>}
+        {emailId && <div className="min-h-0 min-w-0 flex-1"><MessageView key={`${mailboxId}-${emailId}`} mailboxId={mailboxId} emailId={emailId} refreshRevision={messageRevision} folders={folders.data ?? []} onBack={back} onChanged={refresh} onCompose={(mode, original) => setCompose({ key: crypto.randomUUID(), mode, original })} /></div>}
       </>}
     </div>
     {compose && <ComposeDialog key={compose.key} mailboxId={mailboxId} session={compose} onSaved={refresh} onClose={() => setCompose(null)} />}
+    {agentOpen && canConnectInboxAgent() && <EmailAgentPanel key={mailboxId} mailboxId={mailboxId} onClose={() => setAgentOpen(false)} onChanged={() => { emails.retry(); folders.retry(); setMessageRevision(current => current + 1) }} onOpenDrafts={() => {
+      setAgentOpen(false); setScreen('mail'); setFolder('draft'); setSearch(''); setQuery(''); setPage(1); refresh(); onNavigate(mailboxId)
+    }} />}
   </div>
 }
