@@ -844,6 +844,9 @@ importers:
       '@gadgets/backend-utils':
         specifier: workspace:*
         version: link:../backend-utils
+      '@gadgets/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@modelcontextprotocol/sdk':
         specifier: 1.26.0
         version: 1.26.0(@cfworker/json-schema@4.1.1)(supports-color@10.2.2)(zod@3.25.76)

@@ -9,6 +9,7 @@ const BASE64_CHUNK_BYTES = 0x8000; // String.fromCharCodeの引数上限を避�
  * Shared attachment storage logic.
  * Eliminates the triplicated atob → Uint8Array → R2.put pattern.
  */
+import { describeError } from "./describe-error";
 import type { Env } from "../types";
 import type { AttachmentPayload } from "./schemas";
 
@@ -68,25 +69,25 @@ export interface ResolvedAttachment {
     }
     return await resolved;
   } catch (err) {
-    console.error("[lib.resolveOutboundAttachments] 失敗", {
+    console.error("[lib.resolveOutboundAttachments] failed", {
       context: { operation: "resolveOutboundAttachments", parameterCount: 2 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
 }
 
 /**
- * Store base64-encoded attachments to R2 and return metadata for the DO.
+ * Keep new R2 objects only when the callback successfully stores their email row.
  */
-export async function storeAttachments(
+export async function withStoredAttachments<T>(
   bucket: Env["BUCKET"],
   emailId: string,
-  attachments?: ResolvedAttachment[],
-): Promise<StoredAttachment[]> {
+  attachments: ResolvedAttachment[],
+  persist: (attachments: StoredAttachment[]) => Promise<T>,
+): Promise<T> {
+  const keys: string[] = [];
   try {
-    if (!attachments?.length) return [];
-
     const results: StoredAttachment[] = [];
     for (const att of attachments) {
       const attachmentId = crypto.randomUUID();
@@ -99,6 +100,8 @@ export async function storeAttachments(
         binaryStr,
         /** Uint8Array.from callback のコールバックを実行します。 */ (c) => c.charCodeAt(0),
       );
+      // Track before the write so an ambiguous put failure is also cleaned up.
+      keys.push(key);
       await bucket.put(key, bytes);
       results.push({
         id: attachmentId,
@@ -110,12 +113,16 @@ export async function storeAttachments(
         disposition: att.disposition,
       });
     }
-    return await results;
+    return await persist(results);
   } catch (err) {
-    console.error("[lib.storeAttachments] 失敗", {
-      context: { operation: "storeAttachments", parameterCount: 3 },
-      err,
-    });
+    console.error("[lib.withStoredAttachments] failed", { emailId, err: describeError(err) });
+    if (keys.length) {
+      try {
+        await bucket.delete(keys);
+      } catch (cleanupError) {
+        console.error("[lib.cleanupAttachments] failed", { emailId, keys, err: describeError(cleanupError) });
+      }
+    }
     throw err;
   }
 }

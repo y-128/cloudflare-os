@@ -1,3 +1,4 @@
+import { describeError } from "../lib/describe-error";
 import { DiscordRuleSchema, type DiscordRule } from "../lib/discord";
 import {
   DEFAULT_LOG_PAGE,
@@ -28,7 +29,7 @@ export class MailSafetyStore {
     try {
       return this.storage.sql.exec<T>(query, ...bindings).toArray();
     } catch (err) {
-      console.error(`[${process}] failed`, { parameterCount: bindings.length, err });
+      console.error(`[${process}] failed`, { parameterCount: bindings.length, err: describeError(err) });
       throw err;
     }
   }
@@ -102,11 +103,11 @@ export class MailSafetyStore {
       );
       if (parsed.success) return parsed.data;
       console.error("[getSpamPolicy] failed", {
-        err: new Error("旧spam_thresholdが不正です。既定値を使用します。"),
+        err: describeError(new Error("旧spam_thresholdが不正です。既定値を使用します。")),
       });
       return SpamPolicySchema.parse({});
     } catch (err) {
-      console.error("[getSpamPolicy] failed", { err });
+      console.error("[getSpamPolicy] failed", { err: describeError(err) });
       throw err;
     }
   }
@@ -170,7 +171,7 @@ export class MailSafetyStore {
         },
       );
     } catch (err) {
-      console.error("[recordInboundRate] failed", { err });
+      console.error("[recordInboundRate] failed", { err: describeError(err) });
       throw err;
     }
   }
@@ -233,7 +234,7 @@ export class MailSafetyStore {
         }),
       );
     } catch (err) {
-      console.error("[listClassifications] failed", { err });
+      console.error("[listClassifications] failed", { err: describeError(err) });
       throw err;
     }
   }
@@ -266,7 +267,7 @@ export class MailSafetyStore {
         },
       );
     } catch (err) {
-      console.error("[markNotSpam] failed", { err });
+      console.error("[markNotSpam] failed", { err: describeError(err) });
       throw err;
     }
   }

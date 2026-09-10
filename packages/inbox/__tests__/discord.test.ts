@@ -1,6 +1,5 @@
-import * as spamModule from "../workers/lib/spam";
 import { env as bindings, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Env } from "../workers/types";
 import { app, receiveEmail } from "../workers/index";
 import { notifyNewMail } from "../workers/lib/notifications";
@@ -15,8 +14,6 @@ import {
   type MailNotification,
 } from "../workers/lib/discord";
 
-/** Isolate the pre-existing DNSBL lookup from external DNS in these tests. */
-beforeEach(() => vi.spyOn(spamModule, "checkDNSBL").mockResolvedValue(false));
 
 const env = bindings as Env;
 // A synthetic test token; outbound requests are always intercepted by test doubles.
@@ -112,6 +109,12 @@ describe("Discord payload and configuration", () => {
   it("validates the configured public origin and encodes mailbox/message link parameters", () => {
     expect(messageLink(configuredEnv, "a+tag@example.com", "x/y")).toBe(
       "https://cfos.example.com/inbox?mailboxId=a%2Btag%40example.com&emailId=x%2Fy",
+    );
+    expect(messageLink(configuredEnv, "User@例え.テスト", "x/y")).toBe(
+      "https://cfos.example.com/inbox?mailboxId=User%40xn--r8jz45g.xn--zckzah&emailId=x%2Fy",
+    );
+    expect(messageLink(configuredEnv, "User@ExAmPlE.NET", "x/y")).toBe(
+      "https://cfos.example.com/inbox?mailboxId=User%40example.net&emailId=x%2Fy",
     );
     expect(() => messageLink(env, "a@example.com", "x")).toThrow(/CFOS_PUBLIC_URL/);
   });
@@ -285,4 +288,18 @@ describe("notification layer and REST", () => {
     expect(await test.json()).toEqual({ delivered: true });
     expect(outbound).toHaveBeenCalledOnce();
   });
+});
+
+// Discord が今も配布する旧ドメイン。拒否すると、コピーしてきた URL が理由不明で弾かれる。
+it("accepts the legacy discordapp.com webhook host", () => {
+  const env = { DISCORD_WEBHOOK_URL: "https://discordapp.com/api/webhooks/123456789012345678/abcDEF-_123" } as never;
+  expect(() => readDiscordWebhook(env)).not.toThrow();
+});
+
+// 許可リストは完全一致のみ。サブドメインを名乗る別ホストを通してはいけない。
+it("rejects hosts that merely end with a permitted one", () => {
+  for (const host of ["discord.com.evil.example", "notdiscord.com", "ptb.discord.com"]) {
+    const env = { DISCORD_WEBHOOK_URL: `https://${host}/api/webhooks/123456789012345678/abc` } as never;
+    expect(() => readDiscordWebhook(env)).toThrow();
+  }
 });

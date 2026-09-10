@@ -1,7 +1,8 @@
+import { domainToASCII } from 'node:url';
 import { env as bindings, runInDurableObject } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { CloudflareEmailClient, normalizeMailDomain, verifyDnsRecord } from '../workers/lib/cloudflare-email';
+import { CloudflareEmailClient, normalizeMailDomain, normalizedDns, verifyDnsRecord } from '../workers/lib/cloudflare-email';
 import { applyMigrations, configMigrations } from '../workers/durableObject/migrations';
 import { getConfigStub, getConfiguredDomains, resolveMailbox } from '../workers/lib/config';
 import { getDomainStatus, onboardingApp } from '../workers/routes/mail-onboarding';
@@ -31,7 +32,10 @@ function mockCloudflare(domain = 'example.com', dnsState: 'pending' | 'verified'
     if (url.pathname.endsWith(`/zones/${ZONE_ID}`)) return result({ id: ZONE_ID, name: domain, type: 'full' });
     if (url.pathname.endsWith('/email/sending/subdomains')) return result(init?.method === 'POST' ? { tag: 'sender', name: domain, enabled: true } : [{ tag: 'sender', name: domain, enabled: true }], 1);
     if (url.pathname.endsWith('/subdomains/sender/dns')) return result([sendingDns]);
-    if (url.pathname.endsWith('/email/routing/dns')) return result(init?.method === 'POST' ? { enabled: true } : [routingDns]);
+    // 有効化は /email/routing/enable。/email/routing/dns は必要なレコードの取得専用で、
+    // POST しても Routing は有効にならない。
+    if (url.pathname.endsWith('/email/routing/enable')) return result({ enabled: true });
+    if (url.pathname.endsWith('/email/routing/dns')) return result([routingDns]);
     if (url.pathname.endsWith('/email/routing')) return result({ enabled: true });
     if (url.pathname.endsWith('/rules/catch_all')) return result({ enabled: true, actions: [{ type: 'worker', value: ['cfos-router'] }] });
     throw new Error(`Unexpected mock endpoint ${url.pathname}`);
@@ -201,7 +205,9 @@ it('enables routing and adds only missing sending DNS records', async () => {
   const response = await onboardingApp.fetch(new Request(`https://cfos.test/api/inbox/v1/admin/mail-domains/${domain.id}/enable`, { method: 'POST' }), env);
   expect(response.status).toBe(200);
   const calls = fetch.mock.calls;
-  expect(calls.some(([url, init]) => String(url).endsWith('/email/routing/dns') && init?.method === 'POST')).toBe(true);
+  expect(calls.some(([url, init]) => String(url).endsWith('/email/routing/enable') && init?.method === 'POST')).toBe(true);
+  // 取得専用のエンドポイントに POST しないこと。
+  expect(calls.some(([url, init]) => String(url).endsWith('/email/routing/dns') && init?.method === 'POST')).toBe(false);
   expect(calls.some(([url, init]) => String(url).endsWith('/dns_records') && init?.method === 'POST')).toBe(true);
 });
 
@@ -215,3 +221,51 @@ it('does not overwrite conflicting sending DNS records', async () => {
   expect(await response.json()).toMatchObject({ error: expect.stringContaining('競合') });
   expect(fetch.mock.calls.some(([url, init]) => String(url).includes('/dns_records') && init?.method === 'POST')).toBe(false);
 });
+
+// Cloudflare は同じ TXT を、Email Sending 側では引用符付き (長い DKIM は複数チャンクに分割)、
+// DNS レコード側では引用符なしで返す。素の文字列比較だと「自分自身と競合している」と
+// 報告され、ウィザードが進めなくなる。MX の末尾ドットも同様。
+describe('DNSレコードの同一判定', () => {
+  /** Test production normalization rather than a copy of its implementation. */
+  const normalize = (content: string) => normalizedDns(content, 'TXT')
+
+  it('引用符の有無を無視する', () => {
+    expect(normalize('"v=DKIM1; h=sha256; k=rsa"')).toBe(normalize('v=DKIM1; h=sha256; k=rsa'))
+  })
+
+  it('分割された長いTXTを連結して比較する', () => {
+    expect(normalize('"v=DKIM1; p=AAAA" "BBBB"')).toBe(normalize('v=DKIM1; p=AAAABBBB'))
+  })
+
+  it('末尾の root ドットを無視する', () => {
+    expect(normalizedDns('route1.mx.cloudflare.net.', 'MX')).toBe(normalizedDns('route1.mx.cloudflare.net', 'MX'))
+  })
+
+  it('本当に違う値は区別する', () => {
+    expect(normalize('"v=DKIM1; p=AAAA"')).not.toBe(normalize('"v=DKIM1; p=BBBB"'))
+  })
+})
+
+// DoH は punycode でしか名前を解決しない。Unicode を渡すとエラーではなく「該当なし」に
+// なるため、IDN のレコードが永遠に「伝播待ち」と表示される。Cloudflare は IDN ゾーンの
+// レコード名を Unicode で返すので、まさにここで踏む。
+describe('IDNレコード名のDNS照会', () => {
+
+  it('Unicode名をpunycodeへ変換する', () => {
+    expect(domainToASCII('cf-bounce._domainkey.例え.テスト'))
+      .toBe('cf-bounce._domainkey.xn--r8jz45g.xn--zckzah')
+  })
+
+  it('アンダースコア付きラベルを壊さない', () => {
+    expect(domainToASCII('_dmarc.例え.テスト')).toBe('_dmarc.xn--r8jz45g.xn--zckzah')
+  })
+
+  it('すでにpunycodeなら変えない', () => {
+    const ascii = 'cf-bounce._domainkey.xn--r8jz45g.xn--zckzah'
+    expect(domainToASCII(ascii)).toBe(ascii)
+  })
+
+  it('ASCIIドメインに影響しない', () => {
+    expect(domainToASCII('_dmarc.example.com')).toBe('_dmarc.example.com')
+  })
+})

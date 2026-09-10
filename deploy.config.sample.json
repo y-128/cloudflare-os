@@ -1,0 +1,42 @@
+{
+  "_readme": [
+    "cfos のデプロイ設定。scripts/deploy.sh が読みます。",
+    "",
+    "使い方:",
+    "  cp deploy.config.sample.json deploy.config.json",
+    "  deploy.config.json を編集して値を入れる",
+    "  ./scripts/deploy.sh",
+    "",
+    "deploy.config.json は .gitignore 済みです。このサンプルには実値を書きません。",
+    "空文字にした項目は設定されません。自動検出できるものは空のままで構いません。",
+    "各項目の取得方法は .env.sample を参照してください。"
+  ],
+
+  "_note_required": "ここから下は必須です。",
+
+  "CLOUDFLARE_API_TOKEN": "",
+  "CLOUDFLARE_ACCOUNT_ID": "",
+  "_note_domains": [
+    "受信ドメインは packages/inbox/wrangler.jsonc の vars.DOMAINS に書きます。",
+    "secret ではありません。同名の secret を作ろうとすると Cloudflare が binding 名の",
+    "衝突として拒否します (code 10053)。EMAIL_ADDRESSES も同じく vars です。"
+  ],
+
+  "DISCORD_WEBHOOK_URL": "",
+
+  "_note_admins": "Access 有効時はメールアドレス、無効時は cfos のユーザー名。JSON 配列の文字列で書きます。",
+  "ADMINS": "[\"you@example.com\"]",
+
+  "_note_autodetect": [
+    "ここから下は空のままで構いません。deploy.sh が実行時に検出します。",
+    "CFOS_PUBLIC_URL   … router のデプロイ結果から取得します",
+    "MAIL_ROUTING_WORKER … router の worker 名を使います",
+    "Access の2値      … 公開URLへのリダイレクト先から検出します",
+    "検出に失敗した場合や、明示したい場合だけ値を書いてください。"
+  ],
+
+  "CFOS_PUBLIC_URL": "",
+  "MAIL_ROUTING_WORKER": "",
+  "ACCESS_TEAM_URL": "",
+  "ACCESS_AUD": ""
+}

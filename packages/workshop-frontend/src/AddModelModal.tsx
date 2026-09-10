@@ -96,7 +96,9 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
 
   const [loading, setLoading] = useState(false)
   const [selection, setSelection] = useState<SelectionType | null>(null)
-  const [selectValue, setSelectValue] = useState<string | undefined>(undefined)
+  // `null`, not `undefined`: Base UI treats an undefined value as an uncontrolled Select, so
+  // picking a model would switch the component from uncontrolled to controlled and warn.
+  const [selectValue, setSelectValue] = useState<string | null>(null)
 
   // Form fields (used for custom models)
   const [modelId, setModelId] = useState('')
@@ -120,7 +122,7 @@ export default function AddModelModal({ visible, onCancel, onSuccess, authentica
   useEffect(() => {
     if (!visible) {
       setSelection(null)
-      setSelectValue(undefined)
+      setSelectValue(null)
       setModelId('')
       setDisplayName('')
       setApiToken('')

@@ -1,3 +1,4 @@
+import { describeError } from "../lib/describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 // Copyright (c) 2026 Cloudflare, Inc.
 // Modifications Copyright (c) 2026 y-128
@@ -45,9 +46,9 @@ export function applyMigrations(
           sql.exec(migrationSql);
           sql.exec(`INSERT INTO d1_migrations (name) VALUES ('${escapedName}')`);
         } catch (err) {
-          console.error("[durableObject.run] 失敗", {
+          console.error("[durableObject.run] failed", {
             context: { operation: "run", parameterCount: 0 },
-            err,
+            err: describeError(err),
           });
           throw err;
         }
@@ -62,9 +63,9 @@ export function applyMigrations(
       }
     }
   } catch (err) {
-    console.error("[durableObject.applyMigrations] 失敗", {
+    console.error("[durableObject.applyMigrations] failed", {
       context: { operation: "applyMigrations", parameterCount: 3 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -324,6 +325,23 @@ export const mailboxMigrations: Migration[] = [
         quiet_hours_start TEXT,
         quiet_hours_end TEXT,
         mention TEXT NOT NULL DEFAULT ''
+      );
+    `),
+  },
+  {
+    name: "14_large_email_bodies",
+    sql: txn(`
+      CREATE TABLE email_body_objects (
+        object_key TEXT PRIMARY KEY,
+        email_id TEXT UNIQUE REFERENCES emails(id) ON DELETE SET NULL,
+        cleanup_at INTEGER
+      );
+      CREATE INDEX email_body_cleanup ON email_body_objects(cleanup_at);
+      CREATE TABLE email_body_chunks (
+        email_id TEXT NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
+        ordinal INTEGER NOT NULL,
+        body TEXT NOT NULL,
+        PRIMARY KEY (email_id, ordinal)
       );
     `),
   },

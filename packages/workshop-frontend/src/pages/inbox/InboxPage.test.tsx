@@ -1,10 +1,11 @@
+/// <reference lib="es2024.promise" />
 // @vitest-environment jsdom
 /* eslint-disable react/react-in-jsx-scope */
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { createMemoryHistory, createRootRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { setLocale } from '@gadgets/i18n'
+import { setLocale, t } from '@gadgets/i18n'
 import { Route as InboxRoute } from '../../routes/inbox'
 import type { Email } from '../../features/inbox/types'
 import './InboxPage'
@@ -74,21 +75,75 @@ it('selects the notifier mailbox/message, expands it, loads the thread and isola
 
 it('renders stage scores and explanation, then invokes the exact not-spam endpoint', async () => {
   await renderRoute()
-  expect(container.textContent).toContain('Delivery verdict: Spam / Score: 78')
-  expect(container.textContent).toContain('DNS blocklist +40: Listed by provider')
-  const action = [...container.querySelectorAll('button')].find(button => button.textContent === 'Not spam')!
+  expect(container.textContent).toContain(t('workshop-frontend.Inbox.verdict_score', { verdict: t('workshop-frontend.Inbox.verdict_spam'), score: 78 }))
+  expect(container.textContent).toContain(t('workshop-frontend.Inbox.stage_dnsbl') + ' +40: Listed by provider')
+  const action = [...container.querySelectorAll('button')].find(button => button.textContent === t('workshop-frontend.Inbox.not_spam'))!
   await act(async () => action.click())
   expect(requests.find(request => request.url.endsWith('/not-spam'))?.method).toBe('POST')
-  expect(container.textContent).toContain('Corrected to not spam')
-  expect([...container.querySelectorAll('button')].some(button => button.textContent === 'Not spam')).toBe(false)
+  expect(container.textContent).toContain(t('workshop-frontend.Inbox.corrected'))
+  expect([...container.querySelectorAll('button')].some(button => button.textContent === t('workshop-frontend.Inbox.not_spam'))).toBe(false)
 })
 
 it('keeps the message and action available when not-spam fails', async () => {
   rejectCorrection = true
   await renderRoute()
-  const action = [...container.querySelectorAll('button')].find(button => button.textContent === 'Not spam')!
+  const action = [...container.querySelectorAll('button')].find(button => button.textContent === t('workshop-frontend.Inbox.not_spam'))!
   await act(async () => action.click())
-  expect(container.querySelector('[role="alert"]')?.textContent).toContain('could not be updated')
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain(t('workshop-frontend.Inbox.action_failed'))
   expect(container.querySelector('h2')?.textContent).toBe('Deep-linked message')
   expect(corrected).toBe(false)
+})
+
+/** Clicks a current-locale inbox control. */
+const click = async (key: string) => {
+  const button = [...container.querySelectorAll('button')].find(item => item.textContent === t(key))!
+  await act(async () => button.click())
+}
+
+it('ignores a late delete of A after navigating to B', async () => {
+  const pending = Promise.withResolvers<Response>()
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>(async (url, options) => {
+    if (String(url).endsWith('/move')) return pending.promise
+    if (String(url).endsWith('/emails/new-message')) return Response.json({ ...selected, id: 'new-message', subject: 'Message B' })
+    return fetchMock(url, options)
+  }))
+  const router = await renderRoute()
+  await click('workshop-frontend.Inbox.delete')
+  await act(async () => { await router.navigate({ to: '/inbox', search: { mailboxId: 'second@example.com', emailId: 'new-message' } }) })
+  expect(container.querySelector('h2')?.textContent).toBe('Message B')
+  await act(async () => pending.resolve(Response.json({ folder_id: 'trash' })))
+  expect(router.state.location.search).toMatchObject({ emailId: 'new-message' })
+  expect(container.querySelector('h2')?.textContent).toBe('Message B')
+})
+
+it('shows the message restored by Browser Back from SMTP settings', async () => {
+  const router = await renderRoute()
+  await click('workshop-frontend.Inbox.smtp_settings')
+  expect(container.querySelector('h2')?.textContent).toBe(t('workshop-frontend.Inbox.smtp_settings'))
+  await act(async () => { router.history.back(); await new Promise(resolve => setTimeout(resolve, 0)) })
+  expect(router.state.location.search).toMatchObject({ emailId: selected.id })
+  expect(container.querySelector('h2')?.textContent).toBe(selected.subject)
+})
+
+it('focuses search only after the narrow list is visible following navigation', async () => {
+  await renderRoute()
+  const search = container.querySelector<HTMLInputElement>('input[type="search"]')!
+  const visibleAtFocus: boolean[] = []
+  const nativeFocus = search.focus.bind(search)
+  vi.spyOn(search, 'focus').mockImplementation(() => {
+    const visible = !search.closest('section')!.classList.contains('hidden')
+    visibleAtFocus.push(visible)
+    if (visible) nativeFocus()
+  })
+  await click('workshop-frontend.Inbox.back')
+  expect(visibleAtFocus).toEqual([true])
+  expect(document.activeElement).toBe(search)
+})
+
+it('translates transport failures instead of rendering raw exceptions', async () => {
+  setLocale('ja')
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockRejectedValue(new TypeError('Failed to fetch')))
+  await renderRoute()
+  expect(container.querySelector('[role="alert"]')?.textContent).toBe(t('workshop-frontend.Inbox.network_failed'))
+  expect(container.textContent).not.toContain('Failed to fetch')
 })

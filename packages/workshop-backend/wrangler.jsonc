@@ -6,6 +6,10 @@
     "command": "pnpm run build:worker",
     "watch_dir": "src"
   },
+  // router 以外は公開 URL を持たない。呼び出しは router からのサービスバインディング
+  // 経由だけで、*.workers.dev を開けておくと Access を迂回する裏口になる。
+  "workers_dev": false,
+  "preview_urls": false,
   "compatibility_date": "2026-09-04",
 
   // `global_fetch_strictly_public` makes the global fetch() function strictly fetch from

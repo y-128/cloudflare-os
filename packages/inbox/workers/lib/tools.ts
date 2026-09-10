@@ -1,3 +1,4 @@
+import { describeError } from "./describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { requireBinding } from "./bindings";
 // Copyright (c) 2026 Cloudflare, Inc.
@@ -24,7 +25,6 @@ import {
   buildQuotedReplyBlock,
   textToHtml,
   listMailboxes,
-  generateMessageId,
   buildReferencesChain,
   buildThreadingHeaders,
 } from "./email-helpers";
@@ -503,7 +503,7 @@ export async function toolSendReply(
     const { originalMsgId, references, threadId } = buildReferencesChain(originalEmail);
     const fromDomain = mailboxId.split("@")[1];
     if (!fromDomain) throw new Error("Invalid mailbox email address");
-    const { messageId, outgoingMessageId } = generateMessageId(fromDomain);
+    const messageId = crypto.randomUUID();
 
     // Verify and append quoted original message
     const sanitizedBody = await verifyDraft(requireBinding(env, "AI"), params.bodyHtml);
@@ -519,21 +519,18 @@ export async function toolSendReply(
     });
     const fullBodyHtml = sanitizedBody + quotedBlock;
 
+    let outgoingMessageId: string;
     try {
-      await sendEmail(requireBinding(env, "EMAIL"), {
+      ({ messageId: outgoingMessageId } = await sendEmail(requireBinding(env, "EMAIL"), {
         to: params.to,
         from: mailboxId,
         subject: params.subject,
         html: fullBodyHtml,
         headers: buildThreadingHeaders(originalMsgId, references),
-      });
+      }));
     } catch (e) {
-      console.error("[toolSendReply] 失敗", { context: { operation: "toolSendReply" }, err: e });
+      console.error("[toolSendReply] failed", { context: { operation: "toolSendReply" }, err: describeError(e) });
 
-      console.error("[toolSendReply] Email send failed:", {
-        context: { operation: "toolSendReply" },
-        err: e,
-      });
       return await { error: `Failed to send reply: ${(e as Error).message}` };
     }
 
@@ -556,9 +553,9 @@ export async function toolSendReply(
 
     return await { status: "sent", messageId, message: `Reply sent to ${params.to}` };
   } catch (err) {
-    console.error("[lib.toolSendReply] 失敗", {
+    console.error("[lib.toolSendReply] failed", {
       context: { operation: "toolSendReply", parameterCount: 3 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -586,7 +583,7 @@ export async function toolSendEmail(
 
     const fromDomain = mailboxId.split("@")[1];
     if (!fromDomain) throw new Error("Invalid mailbox email address");
-    const { messageId, outgoingMessageId } = generateMessageId(fromDomain);
+    const messageId = crypto.randomUUID();
 
     const sanitizedBody = await verifyDraft(requireBinding(env, "AI"), params.bodyHtml);
     if (!sanitizedBody) {
@@ -595,20 +592,17 @@ export async function toolSendEmail(
       };
     }
 
+    let outgoingMessageId: string;
     try {
-      await sendEmail(requireBinding(env, "EMAIL"), {
+      ({ messageId: outgoingMessageId } = await sendEmail(requireBinding(env, "EMAIL"), {
         to: params.to,
         from: mailboxId,
         subject: params.subject,
         html: sanitizedBody,
-      });
+      }));
     } catch (e) {
-      console.error("[toolSendEmail] 失敗", { context: { operation: "toolSendEmail" }, err: e });
+      console.error("[toolSendEmail] failed", { context: { operation: "toolSendEmail" }, err: describeError(e) });
 
-      console.error("[toolSendEmail] Email send failed:", {
-        context: { operation: "toolSendEmail" },
-        err: e,
-      });
       return await { error: `Failed to send email: ${(e as Error).message}` };
     }
 
@@ -631,9 +625,9 @@ export async function toolSendEmail(
 
     return await { status: "sent", messageId, message: `Email sent to ${params.to}` };
   } catch (err) {
-    console.error("[lib.toolSendEmail] 失敗", {
+    console.error("[lib.toolSendEmail] failed", {
       context: { operation: "toolSendEmail", parameterCount: 3 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }

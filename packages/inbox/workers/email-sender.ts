@@ -8,9 +8,10 @@
  *
  * Uses the `send_email` Worker binding (`env.EMAIL.send()`) to send emails.
  *
- * See: https://developers.cloudflare.com/email-service/api/inbox/send-emails/workers-api/
+ * See: https://developers.cloudflare.com/email-service/api/send-emails/workers-api/
  */
 
+import { describeError } from "./lib/describe-error";
 import { stripHtmlToText, textToHtml } from "./lib/email-helpers";
 
 export interface SendEmailParams {
@@ -43,7 +44,7 @@ export interface SendEmailParams {
 export async function sendEmail(
   binding: SendEmail,
   params: SendEmailParams,
-): Promise<{ messageId: string }> {
+): Promise<EmailSendResult> {
   try {
     if (!binding)
       throw new Error(
@@ -59,6 +60,7 @@ export async function sendEmail(
       cc: params.cc,
       bcc: params.bcc,
       replyTo: params.replyTo,
+      // Only caller-supplied threading/custom headers belong here; addressing stays in API fields.
       headers: params.headers,
       attachments: params.attachments?.map((att): EmailAttachment => {
         if (att.disposition === "inline") {
@@ -75,11 +77,12 @@ export async function sendEmail(
     };
 
     const result = await binding.send(message);
-    return await { messageId: result.messageId };
+    // Incoming IDs are stored without RFC angle brackets; keep both paths comparable.
+    return { messageId: result.messageId.trim().replace(/^<|>$/g, "") };
   } catch (err) {
-    console.error("[workers.sendEmail] 失敗", {
+    console.error("[workers.sendEmail] failed", {
       context: { operation: "sendEmail", parameterCount: 2 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }

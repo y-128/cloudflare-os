@@ -28,7 +28,7 @@ export default class FrontendErrorBoundary extends Component<Props, State> {
         <h1 className="text-xl font-semibold">{t("gatekeeper-context.ErrorBoundary.something_went_wrong")}</h1>
         <p className="text-sm text-kumo-subtle">{t("workshop-frontend.FrontendErrorBoundary.reload_the_workshop_to_start_again")}</p>
         <button className="rounded-md bg-kumo-brand px-4 py-2 text-sm" onClick={() => location.reload()}>
-          {t("workshop-frontend.LinksPage.retry")}</button>
+          {t("workshop-frontend.FrontendErrorBoundary.reload")}</button>
       </main>
     )
   }

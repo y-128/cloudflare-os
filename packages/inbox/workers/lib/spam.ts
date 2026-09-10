@@ -148,43 +148,6 @@ const SHORT_URL_HOSTS = [
   return n;
 }
 
-/**
- * Look up a hostname against a DNS blocklist using Cloudflare's DoH endpoint.
- * Returns true if listed.
- */
-export async function checkDNSBL(
-  host: string,
-  list: string = "zen.spamhaus.org",
-): Promise<boolean> {
-  try {
-    if (!host) return false;
-    const reversed = host.split(".").toReversed().join(".");
-    const query = `${reversed}.${list}`;
-    try {
-      const res = await fetch(
-        `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(query)}&type=A`,
-        { headers: { Accept: "application/dns-json" } },
-      );
-      if (!res.ok) return false;
-      const json = (await res.json()) as { Answer?: { data?: string }[] };
-      return !!json.Answer?.some(
-        /** json.Answer.some callback のコールバックを実行します。 */ (a) =>
-          typeof a.data === "string",
-      );
-    } catch (caught) {
-      console.error("[checkDNSBL] 失敗", { context: { operation: "checkDNSBL" }, err: caught });
-
-      return false;
-    }
-  } catch (err) {
-    console.error("[lib.checkDNSBL] 失敗", {
-      context: { operation: "checkDNSBL", parameterCount: 2 },
-      err,
-    });
-    throw err;
-  }
-}
-
 /** totalScore の処理を実行します。 */ export function totalScore(signals: SpamSignal[]): number {
   return Math.min(
     MAX_SPAM_SCORE,

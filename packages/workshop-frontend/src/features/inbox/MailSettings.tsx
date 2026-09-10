@@ -1,6 +1,6 @@
 import { MailDomains } from "./MailDomains"
 import { MailSmtpSettings } from "./MailSmtpSettings"
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Button, Checkbox, Input, Select } from '@cloudflare/kumo'
 import { useTranslation } from '@gadgets/i18n'
 import { inboxApi, jsonRequest, mailboxPath } from './api'
@@ -16,13 +16,28 @@ export const MailSettings = ({ mailboxId, screen, onMailboxCreated }: { mailboxI
   const spam = useInboxResource<SpamThresholds>(screen === 'spam' ? mailboxPath(mailboxId, '/spam/config') : null)
   const rules = useInboxResource<SenderRule[]>(screen === 'spam' ? mailboxPath(mailboxId, '/spam/rules') : null, revision)
   const discord = useInboxResource<{ rule: DiscordRule; timezone: string }>(screen === 'notifications' ? mailboxPath(mailboxId, '/notifications/discord') : null)
-  const error = spam.error || rules.error || discord.error
   return <section className="mx-auto w-full max-w-2xl space-y-6 overflow-y-auto p-5">
     <h2 className="text-xl font-semibold">{t(`workshop-frontend.Inbox.${screen === 'spam' ? 'spam_settings' : screen === 'notifications' ? 'notification_settings' : screen === 'domains' ? 'domain_settings' : 'smtp_settings'}`)}</h2>
-    {screen === 'domains' ? <MailDomains onMailboxCreated={onMailboxCreated} /> : screen === 'smtp' ? <MailSmtpSettings /> : error ? <p role="alert">{error.message}</p> : screen === 'spam' && spam.data && rules.data ? <>
-      <ThresholdForm mailboxId={mailboxId} initial={spam.data} />
-      <SenderRules mailboxId={mailboxId} rules={rules.data} onChanged={() => setRevision(current => current + 1)} />
-    </> : screen === 'notifications' && discord.data ? <DiscordForm mailboxId={mailboxId} initial={discord.data.rule} timezone={discord.data.timezone} /> : <p role="status">{t('workshop-frontend.Inbox.loading')}</p>}
+    {screen === 'domains' ? <MailDomains onMailboxCreated={onMailboxCreated} /> : screen === 'smtp' ? <MailSmtpSettings /> : screen === 'spam' ? <>
+      <SettingsResource label={t('workshop-frontend.Inbox.threshold_hint')} loaded={!!spam.data} error={spam.error} onRetry={spam.retry}>
+        {spam.data && <ThresholdForm mailboxId={mailboxId} initial={spam.data} />}
+      </SettingsResource>
+      <SettingsResource label={t('workshop-frontend.Inbox.sender_rules')} loaded={!!rules.data} error={rules.error} onRetry={rules.retry}>
+        {rules.data && <SenderRules mailboxId={mailboxId} rules={rules.data} onChanged={() => setRevision(current => current + 1)} />}
+      </SettingsResource>
+    </> : <SettingsResource label={t('workshop-frontend.Inbox.notification_settings')} loaded={!!discord.data} error={discord.error} onRetry={discord.retry}>
+      {discord.data && <DiscordForm mailboxId={mailboxId} initial={discord.data.rule} timezone={discord.data.timezone} />}
+    </SettingsResource>}
+  </section>
+}
+
+/** Keeps each resource's failure and retry next to its own form without hiding other settings. */
+const SettingsResource = ({ label, loaded, error, onRetry, children }: { label: string; loaded: boolean; error?: Error; onRetry: () => void; children: ReactNode }) => {
+  const { t } = useTranslation()
+  return <section aria-label={label} className="space-y-3">
+    {error && <div><p role="alert">{error.message}</p><Button onClick={onRetry}>{t('workshop-frontend.Inbox.retry')}</Button></div>}
+    {!loaded && !error && <p role="status">{t('workshop-frontend.Inbox.loading')}</p>}
+    {children}
   </section>
 }
 
@@ -53,8 +68,7 @@ const ThresholdForm = ({ mailboxId, initial }: { mailboxId: string; initial: Spa
 /** Adds, edits and removes Phase 4 exact allow/block rules. */
 const SenderRules = ({ mailboxId, rules, onChanged }: { mailboxId: string; rules: SenderRule[]; onChanged: () => void }) => {
   const { t } = useTranslation()
-  const [editing, setEditing] = useState<SenderRule | null>(null)
-  const [formKey, setFormKey] = useState(0)
+  const [edit, setEdit] = useState<{ rule: SenderRule | null; key: number }>({ rule: null, key: 0 })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   /** Deletes the chosen rule and refreshes the authoritative rule list. */
@@ -71,10 +85,10 @@ const SenderRules = ({ mailboxId, rules, onChanged }: { mailboxId: string; rules
     {error && <p role="alert">{error}</p>}
     <ul className="space-y-2">{rules.map(rule => <li key={rule.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-kumo-line p-3 text-sm">
       <div className="min-w-0 flex-1 break-all"><strong>{rule.pattern}</strong><p>{t(`workshop-frontend.Inbox.${rule.type}`)} · {t(`workshop-frontend.Inbox.${rule.scope}`)}</p><p>{rule.note}</p></div>
-      <Button size="sm" variant="secondary" disabled={busy} onClick={() => { setEditing(rule); setFormKey(current => current + 1) }}>{t('workshop-frontend.Inbox.edit')}</Button>
+      <Button size="sm" variant="secondary" disabled={busy} onClick={() => setEdit(current => ({ rule, key: current.key + 1 }))}>{t('workshop-frontend.Inbox.edit')}</Button>
       <Button size="sm" variant="ghost" disabled={busy} onClick={() => void remove(rule.id)}>{t('workshop-frontend.Inbox.delete')}</Button>
     </li>)}</ul>
-    <SenderRuleForm key={formKey} mailboxId={mailboxId} initial={editing} onSaved={() => { setEditing(null); setFormKey(current => current + 1); onChanged() }} />
+    <SenderRuleForm key={edit.key} mailboxId={mailboxId} initial={edit.rule} onSaved={() => { setEdit(current => current.key === edit.key ? { rule: null, key: current.key + 1 } : current); onChanged() }} />
   </section>
 }
 

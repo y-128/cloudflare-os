@@ -1,3 +1,4 @@
+import { describeError } from "../lib/describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { HTTP } from "../lib/http-status";
 import { requireBinding } from "../lib/bindings";
@@ -8,12 +9,11 @@ import { requireBinding } from "../lib/bindings";
 
 import type { Context } from "hono";
 import { sendEmail } from "../email-sender";
-import { resolveOutboundAttachments, storeAttachments } from "../lib/attachments";
+import { resolveOutboundAttachments, withStoredAttachments } from "../lib/attachments";
 import type { EmailFull } from "../lib/schemas";
 import {
   validateSender,
   SenderValidationError,
-  generateMessageId,
   buildReferencesChain,
   buildThreadingHeaders,
   resolveOriginalEmail,
@@ -41,13 +41,13 @@ type AppContext = Context<MailboxContext>;
     const originalEmail = await resolveOriginalEmail(stub, rawOriginal);
     const { originalMsgId, references, threadId: thread_id } = buildReferencesChain(originalEmail);
 
-    let toStr: string, fromEmail: string, fromDomain: string;
+    let toStr: string, fromEmail: string;
     try {
-      ({ toStr, fromEmail, fromDomain } = validateSender(to, from, mailboxId));
+      ({ toStr, fromEmail } = validateSender(to, from, mailboxId));
     } catch (e) {
-      console.error("[handleReplyEmail] 失敗", {
+      console.error("[handleReplyEmail] failed", {
         context: { operation: "handleReplyEmail" },
-        err: e,
+        err: describeError(e),
       });
 
       if (e instanceof SenderValidationError)
@@ -55,7 +55,7 @@ type AppContext = Context<MailboxContext>;
       throw e;
     }
 
-    const { messageId, outgoingMessageId } = generateMessageId(fromDomain);
+    const messageId = crypto.randomUUID();
 
     const rateLimitError = await stub.checkSendRateLimit();
     if (rateLimitError) {
@@ -66,72 +66,74 @@ type AppContext = Context<MailboxContext>;
       requireBinding(c.env, "BUCKET"),
       attachments,
     );
-    const attachmentData = await storeAttachments(
+    await withStoredAttachments(
       requireBinding(c.env, "BUCKET"),
       messageId,
       resolvedAttachments,
-    );
-
-    await sendEmail(requireBinding(c.env, "EMAIL"), {
-      to,
-      cc,
-      bcc,
-      from,
-      subject,
-      html,
-      text,
-      attachments: resolvedAttachments,
-      headers: buildThreadingHeaders(originalMsgId, references),
-    });
-    await stub.createEmail(
-      Folders.SENT,
-      {
-        id: messageId,
-        subject,
-        sender: fromEmail,
-        recipient: toStr,
-        cc: cc ? (Array.isArray(cc) ? cc.join(", ") : cc).toLowerCase() : null,
-        bcc: bcc ? (Array.isArray(bcc) ? bcc.join(", ") : bcc).toLowerCase() : null,
-        date: new Date().toISOString(),
-        body: html || text || "",
-        in_reply_to: originalMsgId,
-        email_references: JSON.stringify(references),
-        thread_id: thread_id,
-        message_id: outgoingMessageId,
-        raw_headers: JSON.stringify([
-          { key: "from", value: typeof from === "string" ? from : `${from.name} <${from.email}>` },
-          { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
-          ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
-          ...(bcc ? [{ key: "bcc", value: Array.isArray(bcc) ? bcc.join(", ") : bcc }] : []),
-          { key: "subject", value: subject },
-          { key: "date", value: new Date().toISOString() },
-          { key: "message-id", value: `<${outgoingMessageId}>` },
-          ...(originalMsgId ? [{ key: "in-reply-to", value: `<${originalMsgId}>` }] : []),
-          ...(references.length > 0
-            ? [
-                {
-                  key: "references",
-                  value: references
-                    .map(
-                      /** references.map callback のコールバックを実行します。 */ (r: string) =>
-                        `<${r}>`,
-                    )
-                    .join(" "),
-                },
-              ]
-            : []),
-        ]),
+      /** Store metadata before committing ownership of the new objects. */
+      async (attachmentData) => {
+        const { messageId: outgoingMessageId } = await sendEmail(requireBinding(c.env, "EMAIL"), {
+          to,
+          cc,
+          bcc,
+          from,
+          subject,
+          html,
+          text,
+          attachments: resolvedAttachments,
+          headers: buildThreadingHeaders(originalMsgId, references),
+        });
+        await stub.createEmail(
+          Folders.SENT,
+          {
+            id: messageId,
+            subject,
+            sender: fromEmail,
+            recipient: toStr,
+            cc: cc ? (Array.isArray(cc) ? cc.join(", ") : cc).toLowerCase() : null,
+            bcc: bcc ? (Array.isArray(bcc) ? bcc.join(", ") : bcc).toLowerCase() : null,
+            date: new Date().toISOString(),
+            body: html || text || "",
+            in_reply_to: originalMsgId,
+            email_references: JSON.stringify(references),
+            thread_id: thread_id,
+            message_id: outgoingMessageId,
+            raw_headers: JSON.stringify([
+              { key: "from", value: typeof from === "string" ? from : `${from.name} <${from.email}>` },
+              { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
+              ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
+              ...(bcc ? [{ key: "bcc", value: Array.isArray(bcc) ? bcc.join(", ") : bcc }] : []),
+              { key: "subject", value: subject },
+              { key: "date", value: new Date().toISOString() },
+              { key: "message-id", value: `<${outgoingMessageId}>` },
+              ...(originalMsgId ? [{ key: "in-reply-to", value: `<${originalMsgId}>` }] : []),
+              ...(references.length > 0
+                ? [
+                    {
+                      key: "references",
+                      value: references
+                        .map(
+                          /** references.map callback のコールバックを実行します。 */ (r: string) =>
+                            `<${r}>`,
+                        )
+                        .join(" "),
+                    },
+                  ]
+                : []),
+            ]),
+          },
+          attachmentData,
+        );
       },
-      attachmentData,
     );
 
     await stub.markThreadRead(thread_id);
 
     return await c.json({ id: messageId, status: "sent" }, HTTP.ACCEPTED);
   } catch (err) {
-    console.error("[routes.handleReplyEmail] 失敗", {
+    console.error("[routes.handleReplyEmail] failed", {
       context: { operation: "handleReplyEmail", parameterCount: 1 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -155,13 +157,13 @@ type AppContext = Context<MailboxContext>;
 
     await resolveOriginalEmail(stub, rawOriginal);
 
-    let toStr: string, fromEmail: string, fromDomain: string;
+    let toStr: string, fromEmail: string;
     try {
-      ({ toStr, fromEmail, fromDomain } = validateSender(to, from, mailboxId));
+      ({ toStr, fromEmail } = validateSender(to, from, mailboxId));
     } catch (e) {
-      console.error("[handleForwardEmail] 失敗", {
+      console.error("[handleForwardEmail] failed", {
         context: { operation: "handleForwardEmail" },
-        err: e,
+        err: describeError(e),
       });
 
       if (e instanceof SenderValidationError)
@@ -169,7 +171,7 @@ type AppContext = Context<MailboxContext>;
       throw e;
     }
 
-    const { messageId, outgoingMessageId } = generateMessageId(fromDomain);
+    const messageId = crypto.randomUUID();
 
     const rateLimitError = await stub.checkSendRateLimit();
     if (rateLimitError) {
@@ -180,55 +182,57 @@ type AppContext = Context<MailboxContext>;
       requireBinding(c.env, "BUCKET"),
       attachments,
     );
-    const attachmentData = await storeAttachments(
+    await withStoredAttachments(
       requireBinding(c.env, "BUCKET"),
       messageId,
       resolvedAttachments,
-    );
-
-    await sendEmail(requireBinding(c.env, "EMAIL"), {
-      to,
-      cc,
-      bcc,
-      from,
-      subject,
-      html,
-      text,
-      attachments: resolvedAttachments,
-    });
-    await stub.createEmail(
-      Folders.SENT,
-      {
-        id: messageId,
-        subject,
-        sender: fromEmail,
-        recipient: toStr,
-        cc: cc ? (Array.isArray(cc) ? cc.join(", ") : cc).toLowerCase() : null,
-        bcc: bcc ? (Array.isArray(bcc) ? bcc.join(", ") : bcc).toLowerCase() : null,
-        date: new Date().toISOString(),
-        body: html || text || "",
-        in_reply_to: null,
-        email_references: null,
-        thread_id: messageId,
-        message_id: outgoingMessageId,
-        raw_headers: JSON.stringify([
-          { key: "from", value: typeof from === "string" ? from : `${from.name} <${from.email}>` },
-          { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
-          ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
-          ...(bcc ? [{ key: "bcc", value: Array.isArray(bcc) ? bcc.join(", ") : bcc }] : []),
-          { key: "subject", value: subject },
-          { key: "date", value: new Date().toISOString() },
-          { key: "message-id", value: `<${outgoingMessageId}>` },
-        ]),
+      /** Store metadata before committing ownership of the new objects. */
+      async (attachmentData) => {
+        const { messageId: outgoingMessageId } = await sendEmail(requireBinding(c.env, "EMAIL"), {
+          to,
+          cc,
+          bcc,
+          from,
+          subject,
+          html,
+          text,
+          attachments: resolvedAttachments,
+        });
+        await stub.createEmail(
+          Folders.SENT,
+          {
+            id: messageId,
+            subject,
+            sender: fromEmail,
+            recipient: toStr,
+            cc: cc ? (Array.isArray(cc) ? cc.join(", ") : cc).toLowerCase() : null,
+            bcc: bcc ? (Array.isArray(bcc) ? bcc.join(", ") : bcc).toLowerCase() : null,
+            date: new Date().toISOString(),
+            body: html || text || "",
+            in_reply_to: null,
+            email_references: null,
+            thread_id: messageId,
+            message_id: outgoingMessageId,
+            raw_headers: JSON.stringify([
+              { key: "from", value: typeof from === "string" ? from : `${from.name} <${from.email}>` },
+              { key: "to", value: Array.isArray(to) ? to.join(", ") : to },
+              ...(cc ? [{ key: "cc", value: Array.isArray(cc) ? cc.join(", ") : cc }] : []),
+              ...(bcc ? [{ key: "bcc", value: Array.isArray(bcc) ? bcc.join(", ") : bcc }] : []),
+              { key: "subject", value: subject },
+              { key: "date", value: new Date().toISOString() },
+              { key: "message-id", value: `<${outgoingMessageId}>` },
+            ]),
+          },
+          attachmentData,
+        );
       },
-      attachmentData,
     );
 
     return await c.json({ id: messageId, status: "sent" }, HTTP.ACCEPTED);
   } catch (err) {
-    console.error("[routes.handleForwardEmail] 失敗", {
+    console.error("[routes.handleForwardEmail] failed", {
       context: { operation: "handleForwardEmail", parameterCount: 1 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }

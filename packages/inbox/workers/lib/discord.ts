@@ -1,3 +1,4 @@
+import { normalizeAddress } from "../../shared/email-address";
 import { z } from "zod";
 import type { Env } from "../types";
 import { HTTP } from "./http-status";
@@ -89,6 +90,22 @@ function clockMinutes(value: string): number {
   return hour * MINUTES_PER_HOUR + minute;
 }
 
+// Discord が Webhook URL に使うホスト。discordapp.com は旧ドメインだが今も配布され、
+// 既存の設定に残っていることもあるため受け付ける。増やすときは完全一致のみ。
+const DISCORD_WEBHOOK_HOSTS = new Set(["discord.com", "discordapp.com"]);
+
+/**
+ * Renders a thrown value for logs with every trace of the webhook URL removed.
+ *
+ * The token lives in the URL path, so both the full URL and the path alone are replaced. What
+ * survives — the error name and message — is what distinguishes a timeout from a rejected fetch
+ * option, and carries none of the secret.
+ */
+function redactWebhook(caught: unknown, url: URL): string {
+  const rendered = caught instanceof Error ? `${caught.name}: ${caught.message}` : String(caught);
+  return rendered.split(url.toString()).join("[webhook]").split(url.pathname).join("[webhook]");
+}
+
 /** Validate the secret without including its value in errors or logs. */
 export function readDiscordWebhook(env: Env): URL {
   try {
@@ -97,7 +114,7 @@ export function readDiscordWebhook(env: Env): URL {
     const url = new URL(raw);
     if (
       url.protocol !== "https:" ||
-      url.hostname !== "discord.com" ||
+      !DISCORD_WEBHOOK_HOSTS.has(url.hostname) ||
       url.port ||
       url.username ||
       url.password ||
@@ -130,7 +147,7 @@ export function messageLink(env: Env, mailboxId: string, messageId: string): str
       origin.hash
     )
       throw new Error("invalid");
-    return `${origin.origin}/inbox?mailboxId=${encodeURIComponent(mailboxId)}&emailId=${encodeURIComponent(messageId)}`;
+    return `${origin.origin}/inbox?mailboxId=${encodeURIComponent(normalizeAddress(mailboxId))}&emailId=${encodeURIComponent(messageId)}`;
   } catch {
     const err = new Error(
       "CFOS_PUBLIC_URLが未設定または不正です。packages/inbox/.dev.varsまたはwrangler.jsoncのvarsにcfos公開元のhttps URLを設定してください。",
@@ -236,7 +253,9 @@ export async function sendDiscord(
   mailboxId: string,
   mail: MailNotification,
   rule: DiscordRule,
-  dependencies = { fetch: globalThis.fetch, sleep: waitForDiscordRetry, now: Date.now },
+  // fetch はラップして渡す。globalThis.fetch を裸で渡すとレシーバを失い、Workers では
+  // 呼び出し時に例外になる (Node では動くため、ローカルのテストだけでは気付けない)。
+  dependencies = { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, init), sleep: waitForDiscordRetry, now: Date.now },
 ): Promise<boolean> {
   try {
     const url = readDiscordWebhook(env);
@@ -255,7 +274,9 @@ export async function sendDiscord(
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
-          redirect: "error",
+          // Workers は redirect: "error" を実装せず TypeError を投げるため "manual" を使う。
+          // 意図はリダイレクトを追わないことなので、下の response.ok 判定でそのまま失敗扱いになる。
+          redirect: "manual",
           signal: AbortSignal.timeout(Math.min(REQUEST_TIMEOUT_MS, remaining)),
         });
         if (response.ok) {
@@ -273,11 +294,14 @@ export async function sendDiscord(
           await response.body?.cancel();
           if (response.status < HTTP.INTERNAL_SERVER_ERROR) break;
         }
-      } catch {
-        // Fetch errors may embed the secret URL; emit only a fixed diagnostic.
+      } catch (caught) {
+        // Fetch errors can embed the webhook URL, whose path carries the secret token, so the
+        // reason used to be replaced with a fixed sentence. That made a failing webhook
+        // undiagnosable: four identical lines with no cause. Report the error name and message
+        // with the URL redacted instead — enough to tell a timeout from a rejected option.
         console.error("[sendDiscord] failed", {
           attempt,
-          err: new Error("Discordへの接続に失敗またはタイムアウトしました。"),
+          err: redactWebhook(caught, url),
         });
       }
       if (attempt === DISCORD_MAX_RETRIES || dependencies.now() + delay >= deadline) break;

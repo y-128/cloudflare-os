@@ -47,3 +47,6 @@ wrangler.dev.jsonc
 
 # Reviewable inbox configuration template (never contains live credentials).
 !packages/inbox/.dev.vars.sample
+
+# デプロイ設定。実値を含むためコミットしない (雛形は deploy.config.sample.json)
+deploy.config.json

@@ -11,6 +11,7 @@ export interface Email {
   body?: string | null; snippet?: string | null; folder_id?: string | null;
   thread_id?: string | null; in_reply_to?: string | null; message_id?: string | null;
   email_references?: string | null; attachments?: Attachment[];
+  raw_headers?: string | null;
   thread_count?: number; thread_unread_count?: number;
 }
 /** Attachment payload accepted by draft, reply, forward and send endpoints. */

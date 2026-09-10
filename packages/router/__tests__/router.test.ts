@@ -255,12 +255,16 @@ describe('wrangler.jsonc contract', () => {
     const first: string[] = config.assets.run_worker_first;
     expect(first).toContain('/api');
     expect(first).toContain('/api/*');
-    for (const path of ['/api/inbox', '/api/inbox/*']) {
-      expect(first).toContain(path);
-    }
     expect(first).toContain('/blueprint-screenshot');
     expect(first).toContain('/blueprint-screenshot/*');
     expect(first).toContain('/gatekeeper/*');
+    // `/api/*` already covers the mailbox API, and Wrangler rejects a redundant rule outright,
+    // so a deploy fails rather than ignoring it.
+    for (const redundant of ['/api/inbox', '/api/inbox/*']) {
+      expect(first).not.toContain(redundant);
+    }
+    // Frontend routes must reach the assets binding, or a browser navigation to the mailbox
+    // page would be handed to the mailbox API instead of the single-page app.
     expect(first).not.toContain('/inbox');
     expect(first).not.toContain('/inbox/*');
   });

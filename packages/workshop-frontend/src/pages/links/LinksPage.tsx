@@ -10,6 +10,7 @@ import { LinkEditorDialog } from '../../features/links/LinkEditorDialog'
 import { CategoryEditorDialog } from '../../features/links/CategoryEditorDialog'
 import { DirectoryDeleteDialog } from '../../features/links/DirectoryDeleteDialog'
 import { DirectoryItemActions } from '../../features/links/DirectoryItemActions'
+import { safeHttpUrl } from '../../utils/safeHttpUrl'
 
 type Selection = { kind: 'link'; link: DirectoryLink } | { kind: 'category'; category: LinkCategory }
 type Editor = { kind: 'link'; categoryId: string; link?: DirectoryLink } | { kind: 'category'; category?: LinkCategory }
@@ -137,7 +138,7 @@ export const LinksPage = () => {
                 <article key={link.id} data-link-id={link.id} onDragOver={event => dragOver(event, link.id, true)}
                   onDrop={event => { if (dragged.current?.kind === 'link') drop(event, category.id, link.id) }}
                   className={`flex min-w-0 flex-col gap-3 rounded-lg border p-4 ${dropTarget === link.id ? 'border-kumo-ring bg-kumo-tint' : 'border-kumo-line'}`}>
-                  <a href={link.url} target="_blank" rel="noopener noreferrer" draggable={false}
+                  <a href={safeHttpUrl(link.url)} target="_blank" rel="noopener noreferrer" draggable={false}
                     className="flex min-w-0 items-start gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-kumo-ring">
                     <LinkFavicon link={link} />
                     <span className="min-w-0 flex-1">
@@ -145,7 +146,7 @@ export const LinksPage = () => {
                       <span className="mt-1 block truncate text-xs text-kumo-subtle">{link.url}</span>
                     </span>
                     <ArrowSquareOut size={16} className="shrink-0 text-kumo-subtle" aria-hidden="true" />
-                    <span className="sr-only">{t('workshop-frontend.LinksPage.opens_new_tab')}</span>
+                    <span className="sr-only">{t(`workshop-frontend.LinksPage.${safeHttpUrl(link.url) ? 'opens_new_tab' : 'invalid_url'}`)}</span>
                   </a>
                   {link.note && <p className="whitespace-pre-wrap break-words text-sm text-kumo-subtle">{link.note}</p>}
                   {link.tags.length > 0 && <div className="flex flex-wrap gap-1">

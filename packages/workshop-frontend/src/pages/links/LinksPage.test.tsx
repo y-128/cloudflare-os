@@ -5,7 +5,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { createMemoryHistory, createRootRoute, createRouter, Outlet, RouterProvider } from '@tanstack/react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setLocale } from '@gadgets/i18n'
+import { setLocale, t } from '@gadgets/i18n'
 import type { DirectoryLinkInput, LinkDirectory, LinkDirectoryApi } from '@gadgets/workshop-shared/api'
 import { Route as LinksRoute } from '../../routes/links'
 // Load the split page's dependencies during module setup, outside the first interaction timeout.
@@ -92,12 +92,13 @@ const drag = async (element: Element, type: string) => {
   await act(async () => element.dispatchEvent(event))
 }
 
-describe('links route with active i18n', () => {
+describe.each(['ja', 'en'] as const)('links route with %s i18n', locale => {
+  beforeEach(() => { setLocale(locale) })
   it('renders Japanese by default, switches live to English, and supplies safe destinations and favicon fallbacks', async () => {
     const router = await renderRoute()
     expect(router.state.location.pathname).toBe('/links')
-    expect(container.querySelector('h1')?.textContent).toBe('リンク集')
-    expect(document.title).toBe('リンク集 - cfos')
+    expect(container.querySelector('h1')?.textContent).toBe(t('workshop-frontend.LinksPage.title'))
+    expect(document.title).toBe(t('workshop-frontend.LinksPage.title') + ' - cfos')
     const anchor = container.querySelector('a')!
     expect(anchor.getAttribute('href')).toBe(initial.links[0].url)
     expect(anchor.getAttribute('rel')).toBe('noopener noreferrer')
@@ -109,9 +110,9 @@ describe('links route with active i18n', () => {
     expect(anchor.querySelector('img')).toBeNull()
     expect(anchor.textContent).toContain('C')
     await act(async () => setLocale('en'))
-    expect(container.querySelector('h1')?.textContent).toBe('Links')
-    expect(button('Add category')).toBeDefined()
-    expect(document.title).toBe('Links - cfos')
+    expect(container.querySelector('h1')?.textContent).toBe(t('workshop-frontend.LinksPage.title'))
+    expect(button(t('workshop-frontend.LinksPage.add_category'))).toBeDefined()
+    expect(document.title).toBe(t('workshop-frontend.LinksPage.title') + ' - cfos')
     expect(api[Symbol.dispose]).toHaveBeenCalledOnce()
   })
 
@@ -122,7 +123,7 @@ describe('links route with active i18n', () => {
     expect(container.querySelector('article')?.textContent).toContain('Cloud Console')
     await typeText(container.querySelector('input[type="search"]')!, 'no match')
     expect(container.querySelectorAll('article')).toHaveLength(0)
-    expect(container.textContent).toContain('一致するリンクがありません。')
+    expect(container.textContent).toContain(t('workshop-frontend.LinksPage.no_results'))
     expect(api.list).toHaveBeenCalledTimes(1)
   })
 
@@ -131,14 +132,14 @@ describe('links route with active i18n', () => {
     api.list.mockResolvedValueOnce({ ...initial, links: [
       { ...initial.links[1], order: 0 }, { ...initial.links[0], order: 1 },
     ] })
-    const move = button('「Workers」を前へ移動')
+    const move = button(t('workshop-frontend.LinksPage.move_up', { name: 'Workers' }))
     move.focus()
     expect(document.activeElement).toBe(move)
     await act(async () => move.click())
     expect(api.moveLink).toHaveBeenCalledWith('y', 'a', 'x')
     expect([...container.querySelectorAll('article')].map(card => card.getAttribute('data-link-id'))).toEqual(['y', 'x'])
-    expect(container.textContent).toContain('保存しました。')
-    await act(async () => button('「Community」を前へ移動').click())
+    expect(container.textContent).toContain(t('workshop-frontend.LinksPage.saved'))
+    await act(async () => button(t('workshop-frontend.LinksPage.move_up', { name: 'Community' })).click())
     expect(api.moveCategory).toHaveBeenCalledWith('b', 'a')
   })
 
@@ -159,13 +160,13 @@ describe('links route with active i18n', () => {
   it('retains category input after errors and closes only after a successful save', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     await renderRoute()
-    await act(async () => button('カテゴリを追加').click())
+    await act(async () => button(t('workshop-frontend.LinksPage.add_category')).click())
     const dialog = document.querySelector('[role="dialog"]')!
     await typeText(dialog.querySelector('input')!, 'New category')
     api.createCategory.mockRejectedValueOnce(new Error('network unavailable'))
     await act(async () => dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(document.querySelector('[role="dialog"]')).not.toBeNull()
-    expect(dialog.textContent).toContain('処理に失敗しました。')
+    expect(dialog.textContent).toContain(t('workshop-frontend.LinksPage.request_failed'))
     expect(dialog.querySelector('input')?.value).toBe('New category')
     await act(async () => dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(api.createCategory).toHaveBeenLastCalledWith('New category')
@@ -175,27 +176,27 @@ describe('links route with active i18n', () => {
   it('closes a committed form when its refresh fails, preventing duplicate creation on retry', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     await renderRoute()
-    await act(async () => button('カテゴリを追加').click())
+    await act(async () => button(t('workshop-frontend.LinksPage.add_category')).click())
     const dialog = document.querySelector('[role="dialog"]')!
     await typeText(dialog.querySelector('input')!, 'New category')
     api.list.mockRejectedValueOnce(new Error('refresh failed'))
     await act(async () => dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(document.querySelector('[role="dialog"]')).toBeNull()
-    expect(container.textContent).toContain('変更は保存されましたが、一覧の更新に失敗しました。')
-    await act(async () => button('再読み込み').click())
+    expect(container.textContent).toContain(t('workshop-frontend.LinksPage.saved_refresh_failed'))
+    await act(async () => button(t('workshop-frontend.LinksPage.retry')).click())
     expect(api.createCategory).toHaveBeenCalledTimes(1)
     expect(container.querySelector('article')).not.toBeNull()
   })
 
   it('validates link URLs before saving and edits metadata through the real dialog', async () => {
     await renderRoute()
-    await act(async () => button('「Cloud Console」を編集').click())
+    await act(async () => button(t('workshop-frontend.LinksPage.edit_named', { name: 'Cloud Console' })).click())
     const dialog = document.querySelector('[role="dialog"]')!
     const url = dialog.querySelector<HTMLInputElement>('input[type="url"]')!
     await typeText(url, 'javascript:alert(1)')
     await act(async () => dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(api.updateLink).not.toHaveBeenCalled()
-    expect(dialog.textContent).toContain('http または https の有効な URL')
+    expect(dialog.textContent).toContain(t('workshop-frontend.LinksPage.invalid_url'))
     await typeText(url, 'https://new.example.com/admin')
     await act(async () => dialog.querySelector<HTMLButtonElement>('[role="combobox"]')!.click())
     const option = [...document.querySelectorAll<HTMLElement>('[role="option"]')].find(item => item.textContent === 'Community')!
@@ -213,19 +214,19 @@ describe('links route with active i18n', () => {
 
   it('creates links and confirms deletion instead of deleting on the first click', async () => {
     await renderRoute()
-    await act(async () => button('リンクを追加').click())
+    await act(async () => button(t('workshop-frontend.LinksPage.add_link')).click())
     const dialog = document.querySelector('[role="dialog"]')!
     const fields = dialog.querySelectorAll<HTMLInputElement>('input')
     await typeText(fields[0], 'New service')
     await typeText(dialog.querySelector('input[type="url"]')!, 'https://new.example.com/')
     await act(async () => dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })))
     expect(api.createLink).toHaveBeenCalledWith({ categoryId: 'a', title: 'New service', url: 'https://new.example.com/', tags: [], note: '' })
-    await act(async () => button('「Cloud Console」を削除').click())
+    await act(async () => button(t('workshop-frontend.LinksPage.delete_named', { name: 'Cloud Console' })).click())
     expect(api.deleteLink).not.toHaveBeenCalled()
-    await act(async () => button('キャンセル').click())
+    await act(async () => button(t('workshop-frontend.LinksPage.cancel')).click())
     expect(api.deleteLink).not.toHaveBeenCalled()
-    await act(async () => button('「Cloud Console」を削除').click())
-    await act(async () => button('削除').click())
+    await act(async () => button(t('workshop-frontend.LinksPage.delete_named', { name: 'Cloud Console' })).click())
+    await act(async () => button(t('workshop-frontend.LinksPage.delete')).click())
     expect(api.deleteLink).toHaveBeenCalledWith('x')
   })
 
@@ -233,7 +234,7 @@ describe('links route with active i18n', () => {
     const pending = Promise.withResolvers<LinkDirectory>()
     api.list.mockReturnValueOnce(pending.promise)
     await renderRoute()
-    expect(container.textContent).toContain('リンク集を読み込み中')
+    expect(container.textContent).toContain(t('workshop-frontend.LinksPage.loading'))
     expect(api[Symbol.dispose]).not.toHaveBeenCalled()
     await act(async () => root.unmount())
     expect(api[Symbol.dispose]).toHaveBeenCalledOnce()
@@ -246,26 +247,33 @@ describe('links route with active i18n', () => {
     await renderRoute()
     const pending = Promise.withResolvers<void>()
     api.moveCategory.mockReturnValueOnce(pending.promise)
-    await act(async () => button('「Community」を前へ移動').click())
-    expect(button('カテゴリを追加').disabled).toBe(true)
+    await act(async () => button(t('workshop-frontend.LinksPage.move_up', { name: 'Community' })).click())
+    expect(button(t('workshop-frontend.LinksPage.add_category')).disabled).toBe(true)
     await act(async () => {
       activeAuthenticatedApi = { ...authenticatedApi }
-      setLocale('en')
+      setLocale(locale === 'en' ? 'ja' : 'en')
     })
-    expect(button('Add category').disabled).toBe(false)
+    expect(button(t('workshop-frontend.LinksPage.add_category')).disabled).toBe(false)
     await act(async () => pending.resolve())
-    expect(button('Add category').disabled).toBe(false)
+    expect(button(t('workshop-frontend.LinksPage.add_category')).disabled).toBe(false)
   })
 
   it('loads an empty directory and retries an initial transport failure', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     api.list.mockRejectedValueOnce(new Error('offline'))
     await renderRoute()
-    expect(container.textContent).toContain('処理に失敗しました。')
+    expect(container.textContent).toContain(t('workshop-frontend.LinksPage.request_failed'))
     api.list.mockResolvedValueOnce({ categories: [], links: [] })
-    await act(async () => button('再読み込み').click())
-    expect(container.textContent).toContain('リンク集を作りましょう')
-    expect(button('リンクを追加').disabled).toBe(true)
-    expect(button('カテゴリを追加').disabled).toBe(false)
+    await act(async () => button(t('workshop-frontend.LinksPage.retry')).click())
+    expect(container.textContent).toContain(t('workshop-frontend.LinksPage.empty'))
+    expect(button(t('workshop-frontend.LinksPage.add_link')).disabled).toBe(true)
+    expect(button(t('workshop-frontend.LinksPage.add_category')).disabled).toBe(false)
   })
+})
+
+it.each(['javascript:alert(1)', 'data:text/html,attack', 'file:///tmp/private', '//untrusted.example', 'https://user:password@example.com'])('does not render unsafe stored destination %s as a link', async url => {
+  api.list.mockResolvedValueOnce({ ...initial, links: [{ ...initial.links[0], url }] })
+  await renderRoute()
+  expect(container.querySelector('article a')?.hasAttribute('href') ?? false).toBe(false)
+  expect(container.querySelector('article')?.textContent).toContain(initial.links[0].title)
 })

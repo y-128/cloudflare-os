@@ -1,10 +1,11 @@
+import { describeError } from "./describe-error";
 // Adapted for @gadgets/inbox: standalone Worker conventions and explicit error handling.
 import { requireBinding } from "./bindings";
 // Copyright (c) 2026 y-128
 // Licensed under the Apache 2.0 license found in the LICENSE file.
 import type { ConfigDO } from "../durableObject";
 import type { Env } from "../types";
-import { canonicalize, domainOf } from "../../shared/email-address";
+import { canonicalize, domainOf, normalizeAddressDomain, subaddressOf } from "../../shared/email-address";
 
 /** 利用者に設定ファイルの修正を案内するエラーです。 */
 export class ConfigurationError extends Error {}
@@ -28,7 +29,7 @@ function readList(value: unknown, name: string, allowEmpty: boolean): string[] {
       try {
         parsed = JSON.parse(raw);
       } catch (caught) {
-        console.error("[readList] 失敗", { context: { operation: "readList" }, err: caught });
+        console.error("[readList] 失敗", { context: { operation: "readList" }, err: describeError(caught) });
         throw new ConfigurationError(
           `${name}のJSONが不正です。packages/inbox/wrangler.jsoncまたはpackages/inbox/.dev.varsを修正してください。`,
         );
@@ -48,7 +49,7 @@ function readList(value: unknown, name: string, allowEmpty: boolean): string[] {
     );
   }
   return parsed.map(
-    /** parsed.map callback のコールバックを実行します。 */ (v) => v.trim().toLowerCase(),
+    /** parsed.map callback のコールバックを実行します。 */ (v) => v.trim(),
   );
 }
 
@@ -63,7 +64,7 @@ export function getConfigStub(env: Env): DurableObjectStub<ConfigDO> {
   } catch (err) {
     console.error("[lib.getConfigStub] 失敗", {
       context: { operation: "getConfigStub", parameterCount: 1 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
@@ -71,7 +72,7 @@ export function getConfigStub(env: Env): DurableObjectStub<ConfigDO> {
 
 /** 必須の受信ドメイン許可リストを取得します。 */
 export function getDomains(env: Env): string[] {
-  const domains = readList(env.DOMAINS, "DOMAINS", false);
+  const domains = readList(env.DOMAINS, "DOMAINS", false).map(normalizeAddressDomain);
   if (
     domains.some(
       /** domains.some callback のコールバックを実行します。 */ (d) =>
@@ -89,11 +90,11 @@ export function getDomains(env: Env): string[] {
 export async function getConfiguredDomains(env: Env): Promise<string[]> {
   try {
     const registered = await getConfigStub(env).listMailDomains();
-    const dynamic = registered.filter(domain => domain.routing_enabled).map(domain => domain.domain);
+    const dynamic = registered.filter(domain => domain.routing_enabled).map(domain => normalizeAddressDomain(domain.domain));
     // A fresh install has an empty DOMAINS var; persisted onboarding is then authoritative.
     const legacy = typeof env.DOMAINS === 'string' && !env.DOMAINS.trim() && dynamic.length ? [] : getDomains(env);
     return [...new Set([...legacy, ...dynamic])];
-  } catch (err) { console.error('[getConfiguredDomains] failed', { err }); throw err; }
+  } catch (err) { console.error('[getConfiguredDomains] failed', { err: describeError(err) }); throw err; }
 }
 
 /** 旧形式の宛先許可リストを読み、明示的な空配列によるドメイン内許可を保持します。 */
@@ -128,7 +129,7 @@ export async function resolveMailbox(
             .filter(/** configured.filter callback のコールバックを実行します。 */ (a) => a.enabled)
             .map(
               /** configured.filteraa.enabled.map callback のコールバックを実行します。 */ (a) =>
-                a.email,
+                canonicalize(a.email),
             )
         : legacy,
     );
@@ -137,19 +138,18 @@ export async function resolveMailbox(
       const domain = domainOf(canonical);
       if (!domain || !domains.includes(domain)) continue;
       if ((configured.length > 0 || legacy.length > 0) && !allowed.has(canonical)) {
-        const registeredDomain = (await getConfigStub(env).listMailDomains()).find(item => item.domain === domain && item.routing_enabled);
+        const registeredDomain = (await getConfigStub(env).listMailDomains()).find(item => normalizeAddressDomain(item.domain) === domain && item.routing_enabled);
         const catchAll = registeredDomain && (await getConfigStub(env).listMailAddresses(registeredDomain.id)).find(item => item.catch_all && item.mailbox_initialized);
-        if (catchAll && allowed.has(catchAll.id)) return { mailboxId: catchAll.id, subaddress: null };
+        if (catchAll && allowed.has(canonicalize(catchAll.id))) return { mailboxId: canonicalize(catchAll.id), subaddress: null };
         continue;
       }
-      const match = raw.toLowerCase().match(/^[^@+]+\+([^@]+)@/);
-      return await { mailboxId: canonical, subaddress: match?.[1] ?? null };
+      return { mailboxId: canonical, subaddress: subaddressOf(raw) };
     }
     return null;
   } catch (err) {
     console.error("[lib.resolveMailbox] 失敗", {
       context: { operation: "resolveMailbox", parameterCount: 2 },
-      err,
+      err: describeError(err),
     });
     throw err;
   }
