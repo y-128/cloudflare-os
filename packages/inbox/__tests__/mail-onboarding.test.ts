@@ -111,6 +111,59 @@ describe('domain validation', () => {
 });
 
 describe('DNS and persistence', () => {
+  it.each(['none', 'quarantine', 'reject'])('verifies and preserves the published DMARC policy p=%s', async policy => {
+    const content = `v=DMARC1; p=${policy}; rua=mailto:postmaster@xn--r8jz45g.test`;
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ Status: 0, Answer: [
+      { type: 16, data: `"v=DMARC1; " "p=${policy}; rua=mailto:postmaster@xn--r8jz45g.test"` },
+    ] }));
+    expect(await verifyDnsRecord({ type: 'TXT', name: '_dmarc.例え.test', content: '"v=DMARC1; p=reject;"' }))
+      .toMatchObject({ state: 'verified', content });
+    expect(errorLog).not.toHaveBeenCalled();
+  });
+  it.each([
+    [],
+    ['v=DMARC1;'],
+    ['v=DMARC1; p=invalid;'],
+    ['v=DMARC1; p=none; p=reject;'],
+    ['v=DMARC1; p=none;', 'v=DMARC1; p=reject;'],
+    ['v=DMARC1; p=none;', 'v=DMARC1; p=invalid;'],
+    ['v=DMARC2; p=reject;'],
+    ['p=none; v=DMARC1;'],
+  ].map(answers => ({ answers })))('does not verify absent, malformed or multiple DMARC policies: $answers', async ({ answers }) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ Status: 0, Answer: answers.map(data => ({ type: 16, data })) }));
+    expect((await verifyDnsRecord({ type: 'TXT', name: '_dmarc.例え.test', content: 'v=DMARC1; p=reject;' })).state).toBe('pending');
+  });
+  it.each([
+    { type: 'TXT', name: 'cf-bounce._domainkey.例え.test', content: 'v=DKIM1; p=AbCd', answer: 'v=DKIM1; p=abcd' },
+    { type: 'TXT', name: '例え.test', content: 'v=spf1 include:_spf.mx.cloudflare.net ~all', answer: 'v=spf1 -all' },
+  ])('still requires the expected TXT content for $name', async ({ answer, ...record }) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(Response.json({ Status: 0, Answer: [{ type: 16, data: answer }] }));
+    expect((await verifyDnsRecord(record)).state).toBe('pending');
+  });
+  it('clears the onboarding block with existing p=none and leaves the DNS policy untouched', async () => {
+    const domain = await getConfigStub(env).registerMailDomain(normalizeMailDomain('例え.test'), ZONE_ID);
+    const fetch = mockCloudflare(domain.domain);
+    const normal = fetch.getMockImplementation()!;
+    const dmarc = { type: 'TXT', name: `_dmarc.${domain.domain}`, content: 'v=DMARC1; p=reject;' };
+    const published = 'v=DMARC1; p=none;';
+    fetch.mockImplementation(async (input, init) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith('/subdomains/sender/dns')) return result([sendingDns, dmarc]);
+      if (url.pathname.endsWith('/dns_records')) return result([url.searchParams.get('name') === dmarc.name ? { ...dmarc, content: published } : sendingDns], 1);
+      if (url.hostname === 'cloudflare-dns.com' && url.searchParams.get('name') === domainToASCII(dmarc.name)) {
+        return Response.json({ Status: 0, Answer: [{ type: 16, data: `"${published}"` }] });
+      }
+      return normal(input, init);
+    });
+    const enable = await onboardingApp.fetch(new Request(`https://cfos.test/api/inbox/v1/admin/mail-domains/${domain.id}/enable`, { method: 'POST' }), env);
+    expect(enable.status).toBe(200);
+    expect(await enable.json()).toEqual({ ok: true, kept: [] });
+    const status = await getDomainStatus(env, domain);
+    expect(status).toMatchObject({ state: 'verified', domain: { dmarc_present: 1, dns_verified_at: expect.any(String) } });
+    expect(status.records).toContainEqual({ ...dmarc, content: published, state: 'verified' });
+    expect(fetch.mock.calls.some(([url, init]) => String(url).includes('/dns_records') && init?.method && init.method !== 'GET')).toBe(false);
+    expect(errorLog).not.toHaveBeenCalled();
+  });
   it('transitions pending → verified → failed → verified from public DNS observations', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(Response.json({ Status: 3 })).mockResolvedValueOnce(Response.json({ Status: 0, Answer: [{ type: 15, data: '10 route.mx.cloudflare.net.' }] })).mockResolvedValueOnce(Response.json({ Status: 2 })).mockResolvedValueOnce(Response.json({ Status: 0, Answer: [{ type: 15, data: '10 route.mx.cloudflare.net.' }] }));
     expect((await verifyDnsRecord(routingDns)).state).toBe('pending');

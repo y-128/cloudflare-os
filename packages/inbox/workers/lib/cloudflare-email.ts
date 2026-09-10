@@ -228,6 +228,33 @@ export function dnsRecordsMatch(
     (required.type !== 'MX' || existing.priority === required.priority);
 }
 
+/** Identifies policy records without relaxing SPF, DKIM or unrelated TXT comparisons. */
+export function isDmarcRecord(record: Pick<MailDnsRecord, 'type' | 'name'>): boolean {
+  return record.type === 'TXT' && normalizedDns(record.name, 'CNAME').startsWith('_dmarc.');
+}
+
+/** Returns one published DMARC policy with valid required tags; optional extensions are preserved. */
+export function dmarcRecordContent(answers: string[]): string | undefined {
+  const candidates = answers.map(answer => normalizedDns(answer, 'TXT'))
+    .filter(answer => /^v[ \t]*=[ \t]*DMARC1(?:[ \t]*;|[ \t]*$)/.test(answer));
+  // Multiple policy records are ambiguous, even if one agrees with Cloudflare's suggested value.
+  if (candidates.length !== 1) return undefined;
+  const content = candidates[0];
+  const parts = content.split(';').map(part => part.trim());
+  if (parts.at(-1) === '') parts.pop();
+  const tags = new Map<string, string>();
+  for (const part of parts) {
+    const match = /^([a-z][a-z0-9_]*)[ \t]*=[ \t]*([\x20-\x7e\t]*)$/i.exec(part);
+    if (!match) return undefined;
+    const name = match[1].toLowerCase();
+    if (tags.has(name)) return undefined;
+    tags.set(name, match[2].trim());
+  }
+  // RFC 7489 requires the version first, followed by the requested receiver policy.
+  if ([...tags.keys()][1] !== 'p' || !/^(none|quarantine|reject)$/i.test(tags.get('p') ?? '')) return undefined;
+  return content;
+}
+
 /** Distinguishes propagation waits from resolver errors for every required record. */
 export async function verifyDnsRecord(record: MailDnsRecord): Promise<MailDnsRecord> {
   try {
@@ -235,10 +262,13 @@ export async function verifyDnsRecord(record: MailDnsRecord): Promise<MailDnsRec
     if (record.type === 'MX' && record.priority === undefined) throw new Error('CloudflareのMXレコード応答に優先度がありません。');
     const answers = await resolvePublicDns(record.name, record.type);
     const expected = record.type === 'MX' ? `${record.priority} ${record.content}` : record.content;
-    const verified = answers.some(answer => normalizedDns(answer, record.type) === normalizedDns(expected, record.type));
+    const dmarc = isDmarcRecord(record);
+    const policy = dmarc ? dmarcRecordContent(answers) : undefined;
+    // Cloudflare suggests p=reject, but the owner may choose none/quarantine and reporting tags.
+    const verified = dmarc ? policy !== undefined : answers.some(answer => normalizedDns(answer, record.type) === normalizedDns(expected, record.type));
     // 伝播待ちなのか、別の値が入っているのかはログを見ないと区別できない。
     if (!verified) console.error('[verifyDnsRecord] not matched', { type: record.type, name: record.name, expected, answers });
-    return { ...record, state: verified ? 'verified' : 'pending' };
+    return { ...record, content: policy ?? record.content, state: verified ? 'verified' : 'pending' };
   } catch (err) {
     // 名前と期待値まで出す。どのレコードが落ちたか分からないと、混在時に切り分けられない。
     console.error('[verifyDnsRecord] failed', { type: record.type, name: record.name, expected: record.content, err: describeError(err) });

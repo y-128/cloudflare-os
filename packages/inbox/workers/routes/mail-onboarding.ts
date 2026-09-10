@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { Env } from '../types';
 import type { DomainStatus, MailDomain, MailDnsRecord } from '../../shared/mail-onboarding';
 import { MAIL_ONBOARDING_ERROR_CODES } from '../../shared/mail-onboarding';
-import { CloudflareEmailClient, CloudflareEmailError, catchAllSchema, dnsRecordsMatch, destinationSchema, dnsRecordSchema, normalizeMailDomain, resolvePublicDns, routingSchema, sendingSchema, verifyDnsRecord } from '../lib/cloudflare-email';
+import { CloudflareEmailClient, CloudflareEmailError, catchAllSchema, dmarcRecordContent, dnsRecordsMatch, destinationSchema, dnsRecordSchema, isDmarcRecord, normalizeMailDomain, resolvePublicDns, routingSchema, sendingSchema, verifyDnsRecord } from '../lib/cloudflare-email';
 import { ConfigurationError, getConfigStub, requireString } from '../lib/config';
 import { describeError } from '../lib/describe-error';
 import { createMailbox } from '../lib/create-mailbox';
@@ -63,7 +63,7 @@ export async function getDomainStatus(env: Env, domain: MailDomain): Promise<Dom
     // Sequential lookups keep per-request resolver load predictable across concurrent operators.
     for (const record of required) records.push(await verifyDnsRecord(record));
     const dmarcRecord = { type: 'TXT', name: `_dmarc.${domain.domain}`, content: `v=DMARC1; p=quarantine; rua=mailto:postmaster@${domain.domain}` };
-    const dmarc = (await resolvePublicDns(dmarcRecord.name, 'TXT')).some(value => value.replace(/^"/, '').startsWith('v=DMARC1;'));
+    const dmarc = dmarcRecordContent(await resolvePublicDns(dmarcRecord.name, 'TXT')) !== undefined;
     const catchAll = await client.call(`${base}/email/routing/rules/catch_all`, catchAllSchema);
     const worker = requireString(env.MAIL_ROUTING_WORKER, 'MAIL_ROUTING_WORKER');
     const catchAllWorker = catchAll.enabled && catchAll.actions.length === 1 && catchAll.actions[0].type === 'worker' && catchAll.actions[0].value?.length === 1 ? catchAll.actions[0].value[0] : null;
@@ -168,7 +168,10 @@ onboardingApp.post('/api/inbox/v1/admin/mail-domains/:id/enable', async c => {
       const records = await client.call(`${base}/email/sending/subdomains/${encodeURIComponent(sending.tag)}/dns`, z.array(dnsRecordSchema));
       for (const record of records) {
         const existing = await client.list(`${base}/dns_records?type=${encodeURIComponent(record.type)}&name=${encodeURIComponent(record.name)}`, dnsRecordSchema);
-        if (existing.some(value => sameDnsRecord(value, record))) continue;
+        // Preserve the owner's DMARC policy instead of forcing Cloudflare's suggested p=reject.
+        if (isDmarcRecord(record)
+          ? dmarcRecordContent(existing.map(value => value.content)) !== undefined
+          : existing.some(value => sameDnsRecord(value, record))) continue;
         if (existing.length > 0) {
           // Adding a second record here would either be rejected by Cloudflare or silently
           // break delivery (two SPF records fail SPF outright), so it is never done implicitly.
