@@ -865,27 +865,30 @@ export interface PublicationManifestV1 {
 
 ### NAS Agent とのやりとり（`shared/agent-protocol.ts`）
 
+実装の正本は `shared/agent-protocol.ts` で、要点は次のとおり。
+
 ```ts
-/** Agent → NasAgentDO over the control WebSocket. */
+/** Agent → worker. Every message but hello and ack carries an eventId for deduplication. */
 export type AgentMessage =
-  | { type: "hello"; version: string; signature: string; timestamp: number; nonce: string }
-  | { type: "file-discovered"; eventId: string; path: string; size: number; mtime: number; sha256: string; exif: NormalizedExif | null }
-  | { type: "scan-result"; eventId: string; jobId: JobId; files: { path: string; size: number; sha256: string }[]; done: boolean }
-  | { type: "derivatives-uploaded"; eventId: string; photoId: PhotoId; preview: DerivedFile; thumbnail: DerivedFile }
-  | { type: "replica-uploaded"; eventId: string; assetId: AssetId; targetKey: string; sha256: string }
-  | { type: "deleted"; eventId: string; jobId: JobId; path: string }
-  | { type: "file-missing"; eventId: string; path: string }
-  | { type: "ack"; commandSeq: number };
+  | { type: "hello"; version: number; agentVersion: string; timestamp: number; nonce: string; signature: string }
+  | { type: "ack"; seq: number }
+  | { type: "scan-result"; eventId: string; jobId: JobId; files: AgentFile[]; done: boolean }
+  | { type: "file-discovered"; eventId: string; file: AgentFile }
+  | { type: "derived"; eventId: string; jobId: JobId; photoId: PhotoId; path: string; preview: DerivedFile | null; thumbnail: DerivedFile | null }
+  | { type: "replicated"; eventId: string; jobId: JobId; assetId: AssetId }
+  | { type: "deleted"; eventId: string; jobId: JobId; assetId: AssetId }
+  | { type: "failed"; eventId: string; jobId: JobId; seq: number; error: string };
 
-export interface DerivedFile { key: string; size: number; sha256: string; width: number; height: number }
-
-/** NasAgentDO → Agent. Each carries a seq; the agent acks it after acting. */
+/** Worker → agent. Each carries a seq the agent acks once it has acted. */
 export type AgentCommand =
   | { seq: number; type: "scan"; jobId: JobId; folder: string }
-  | { seq: number; type: "derive"; jobId: JobId; photoId: PhotoId; path: string; upload: { preview: UploadTarget; thumbnail: UploadTarget } }
-  | { seq: number; type: "replicate"; jobId: JobId; assetId: AssetId; path: string; upload: UploadTarget }
-  | { seq: number; type: "delete-after-verify"; jobId: JobId; path: string; expectedSha256: string };
+  | { seq: number; type: "derive"; jobId: JobId; photoId: PhotoId; path: string; preview: UploadTargetView; thumbnail: UploadTargetView }
+  | { seq: number; type: "replicate"; jobId: JobId; assetId: AssetId; path: string; upload: UploadTargetView }
+  | { seq: number; type: "delete-after-verify"; jobId: JobId; assetId: AssetId; path: string; expectedSha256: string };
 ```
+
+`derived` が `path` を持つのは、RAW+JPEG の両方が同じ Photo について派生画像を作っている最中でも、どのファイルの結果かを区別するためである。
+`PhotoJobsDO` はコマンドを送る処理と、その項目の状態の記録を `blockConcurrencyWhile` の中で行う。Agent の応答が送信の完了より先に届いても、項目がすでに待ち状態になっているようにするためである。
 
 原本の読み出しは WebSocket に流さず、Worker が Tunnel 越しに Agent の `GET /files/<path>` を呼ぶ（「NAS」の節）。
 WebSocket に大きなファイルを流すと、DO がそのデータを一度メモリに受けることになるからである。
@@ -910,11 +913,11 @@ Agent 側でも削除直前に原本のハッシュを再計算し、`expectedSh
 | PATCH | `/photos/:id` | `PhotoPatch` |
 | DELETE | `/photos/:id` | 論理削除。`?purge=1` で Asset の削除ジョブを作る |
 | POST | `/photos/:id/restore` | ゴミ箱から戻す |
-| GET | `/photos/:id/exif/raw` | EXIF 原文 |
+| GET | `/photos/:id/exif/raw` | EXIF 原文（未実装。`raw_exif_key` に原文を保存する処理がまだない） |
 | POST | `/photos/bulk` | `BulkPhotoEdit` |
 | POST | `/photos/:id/merge` | 別の Photo の原本 Asset を取り込み、RAW+JPEG の組にする |
 | POST | `/photos/:id/split` | 組になった原本を別の Photo に分ける |
-| GET | `/photos/:id/related` | 同一 `sha256` の重複と、Phase 7 以降は知覚ハッシュの近い候補 |
+| GET | `/photos/:id/related` | `{ duplicates, pairCandidates }`。同一 `sha256` の重複と RAW+JPEG の組の候補。Phase 7 以降は知覚ハッシュの近い候補も加える |
 
 ### タグ、アルバム、撮影者
 
@@ -956,34 +959,38 @@ Agent 側でも削除直前に原本のハッシュを再計算し、`expectedSh
 
 | メソッド | パス | 内容 |
 | --- | --- | --- |
-| POST | `/imports/preview` | `{ connectionId, folder }` から件数、登録済み、新規を数える。NAS の場合は Agent に `scan` を送るジョブになり、結果は `/imports/:jobId` で取得する |
-| POST | `/imports` | Import 画面の設定一式でジョブを作る |
-| GET | `/imports` | ジョブ一覧 |
+| POST | `/imports/scan` | `{ connectionId, folder }`。Agent に `scan` を送り、`scanning` のジョブを返す。走査結果が届くと `scanned` になり、新規、登録済み（重複）の件数が見える |
+| GET | `/imports` | ジョブ一覧（監視フォルダの自動取り込みは日ごとに一つの `automatic` ジョブ） |
 | GET | `/imports/:jobId` | 進捗と失敗一覧 |
+| POST | `/imports/:jobId/start` | `{ options: ImportOptions }` で新規分を取り込む。`scanned` 以外は 409 `job_not_ready` |
 | POST | `/imports/:jobId/cancel` | 中止 |
 | POST | `/imports/:jobId/retry` | 失敗分のみ再実行 |
-| POST | `/uploads` | ブラウザから。`{ files: [{ clientId, filename, size, sha256, mimeType, exif }], importOptions }` を受け取り、重複を除いたものに `UploadTarget` を返す |
-| POST | `/uploads/:sessionId/complete` | 書き込み後の確認。Worker が `stat` でサイズを照合し、Photo を `available` にする |
-| POST | `/uploads/:sessionId/derivatives` | ブラウザで生成したプレビューとサムネイルの `UploadTarget` を得る |
+| POST | `/uploads` | ブラウザから。`{ files: UploadFile[], options: UploadOptions }` を受け取り、重複を除いたものに書き込み先（`UploadSlot`）を返す。プレビューとサムネイルの書き込み先も同時に返す |
+| PUT | `/upload/:grant` | 同一アカウント R2 への中継書き込み。署名付きの grant が認可のすべてで、管理者認証の外に置く（NAS Agent も使う） |
+| POST | `/uploads/:sessionId/complete` | 書き込み後の確認。Worker が `stat` でサイズを照合し、Photo を登録する（RAW+JPEG の組になる場合は既存の Photo に加える） |
 
 Import の設定は次の型で受け取る。
 
 ```ts
 export interface ImportOptions {
-  mode: "reference" | "copy" | "move";       // 既定 reference。move は確認ダイアログを必須にする
+  mode: "reference" | "copy" | "move";       // move は確認ダイアログを必須にする
   derivativeConnectionId: StorageConnectionId;
   replicaConnectionId?: StorageConnectionId; // copy と move のとき必須
-  readExif: boolean;
-  detectPhotographer: boolean;
-  detectDuplicates: boolean;
-  generatePreviews: boolean;
-  generateThumbnails: boolean;
-  defaultVisibility: Visibility;
-  defaultTagIds: TagId[];
-  defaultAlbumId?: AlbumId;
-  pairRawJpeg: boolean;                      // 同じフォルダの同名 RAW と JPEG を一つの Photo にする
+  visibility?: Visibility;
+  tagIds?: TagId[];
+  albumId?: AlbumId;
+  pairRawJpeg?: boolean;                     // 既定 true。同名の RAW と JPEG を一つの Photo にする
 }
 ```
+
+構想にあった `readExif`、`detectPhotographer`、`detectDuplicates`、`generatePreviews`、`generateThumbnails` は、常に有効な動作として実装した（切り替える理由が見つからなかったため）。
+ブラウザのアップロードの `UploadOptions` も同じ `pairRawJpeg` を持つ。
+
+RAW+JPEG の組にする条件は、誤って組にするほうが組にし損ねるより害が大きいので厳しくしてある（`workers/db/pairing.ts`）。
+ファイル名の拡張子を除いた部分が一致し（大文字小文字は区別しない）、撮影時刻の差が 2 秒以内で、片方だけが RAW で、NAS の場合は同じフォルダにあり、該当する Photo がちょうど一つのときに限る。
+ブラウザのアップロードでは EXIF の撮影時刻があるときだけ組にする。
+NAS の取り込みは JPEG を先に登録するので、RAW 側は派生画像を作らずに JPEG の Photo に加わる。
+組にし損ねたものは Inspector の「RAW+JPEG の組の候補」から手動で組にでき、誤った組は「分ける」で戻せる。
 
 ### ダウンロード
 
@@ -1227,6 +1234,7 @@ Photos の項目は、Inbox と同じく管理者にだけ表示する。
 ## フェーズと PR の分け方
 
 構想のフェーズをそのまま使い、各フェーズを次の PR に分ける。
+各フェーズの進み具合、動かし方、既知の課題は `plans/photos-handoff.md` にまとめる。
 既存ファイルへの変更（前述の十か所）は、どのフェーズでも独立したコミットにする。
 
 | フェーズ | PR | 主な内容 | 既存ファイルへの変更 |
