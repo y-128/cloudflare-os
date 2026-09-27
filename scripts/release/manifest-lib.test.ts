@@ -13,7 +13,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectAssets, collectModules, stableStringify } from "./hash-lib.ts";
 import {
-  generateManifest, readDeployablePackages, readDeployInputs, releaseShortName,
+  buildWorkerEntry, generateManifest, readDeployablePackages, readDeployInputs, releaseShortName,
+  MANIFEST_VERSION, D1_MANIFEST_VERSION, type WorkerBuild,
 } from "./manifest-lib.ts";
 
 const RELEASE = dirname(fileURLToPath(import.meta.url));
@@ -23,7 +24,7 @@ const GOLDEN_PATH = join(TESTDATA, "golden-manifest.json");
 
 // Placeholder syntax the deploy-side renderer understands. Closed list — see manifest-lib.ts.
 const PLACEHOLDER_RE =
-    /^\$(ACCOUNT_ID|PUBLIC_BASE_URL|KV_[A-Z0-9_]+_ID|R2_[A-Z0-9_]+_NAME|WORKER_NAME\([a-z0-9-]+\)|SECRET\([A-Z0-9_]+\))/;
+    /^\$(ACCOUNT_ID|PUBLIC_BASE_URL|KV_[A-Z0-9_]+_ID|R2_[A-Z0-9_]+_NAME|D1_[A-Z0-9_]+_ID|WORKER_NAME\([a-z0-9-]+\)|SECRET\([A-Z0-9_]+\))/;
 
 function readTestWorkerBuilds() {
   return readDeployablePackages(join(ROOT, "packages")).map((pkg) => {
@@ -42,7 +43,7 @@ function readTestWorkerBuilds() {
   });
 }
 
-function buildTestManifest(workers = readTestWorkerBuilds()) {
+function buildTestManifest(workers: WorkerBuild[] = readTestWorkerBuilds()) {
   return generateManifest({
     releaseId: "r000000-fixture",
     commit: "0000000000000000000000000000000000000000",
@@ -352,4 +353,41 @@ test("inbox ships with its storage, mail, AI, and shared Workshop authentication
   assert.deepEqual(manifest.workers.router.bindings.find(binding => binding.name === "MAIL_INBOX"), {
     type: "service", name: "MAIL_INBOX", service: "$WORKER_NAME(inbox)",
   });
+});
+
+// Photos is the first worker with a D1 database. Neither ships yet; these pin the contract the
+// deploy service must implement before MANIFEST_VERSION can reach D1_MANIFEST_VERSION.
+const photosBuild: WorkerBuild = {
+  pkgName: "photos",
+  config: {
+    name: "photos",
+    d1_databases: [{ binding: "PHOTOS_DB" }],
+    services: [{ binding: "WORKSHOP_AUTH", service: "workshop-backend" }],
+  },
+  mainModule: "index.js",
+  modules: [{ name: "index.js", type: "esm", sha256: "0".repeat(64), size: 1, bytes: Buffer.alloc(1) }],
+  deployInputs: [{ name: "PHOTOS_CREDENTIAL_KEY", kind: "secret", label: "Credential key" }],
+};
+
+test("D1 databases become deploy-time placeholders and photos is a core service", () => {
+  const photos = buildWorkerEntry(photosBuild);
+  assert.equal(photos.kind, "photos");
+  assert.equal(photos.shortName, undefined);
+  assert.equal(photos.vars.BASE_URL, undefined);
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_DB"), {
+    type: "d1", name: "PHOTOS_DB", id: "$D1_PHOTOS_DB_ID",
+  });
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_CREDENTIAL_KEY"), {
+    type: "secret_text", name: "PHOTOS_CREDENTIAL_KEY", text: "$SECRET(PHOTOS_CREDENTIAL_KEY)",
+  });
+  assert.ok(!photos.bindings.some(binding => binding.name === "CLIENT_SECRET"));
+});
+
+test("a release needing D1 fails until the manifest version says deployers can provision it", () => {
+  const withPhotos = () => buildTestManifest([...readTestWorkerBuilds(), photosBuild]);
+  if (MANIFEST_VERSION < D1_MANIFEST_VERSION) {
+    assert.throws(withPhotos, /Raise MANIFEST_VERSION/);
+  } else {
+    assert.equal(withPhotos().workers.photos.kind, "photos");
+  }
 });

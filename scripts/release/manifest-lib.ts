@@ -9,6 +9,7 @@
 //   $ACCOUNT_ID              the user's account tag
 //   $KV_<BINDING>_ID         a KV namespace provisioned at deploy time
 //   $R2_<BINDING>_NAME       an R2 bucket provisioned at deploy time
+//   $D1_<BINDING>_ID         a D1 database provisioned at deploy time (manifest v3+)
 //   $WORKER_NAME(<pkg>)      the instance's chosen name for another worker in this release
 //   $SECRET(<name>)          a user-supplied secret, passed through as secret_text
 //   $PUBLIC_BASE_URL         the instance's public origin (the router's URL)
@@ -23,6 +24,13 @@ import type { AssetManifestEntry, CollectedAssets, CollectedModule } from "./has
 
 /** Manifest version: v2 adds required inbox infrastructure; older deploy services must fail closed. */
 export const MANIFEST_VERSION = 2;
+
+/**
+ * First manifest version whose deploy service provisions D1 databases and the Photos worker. A
+ * release needing either must not ship under an older version, which a deploy service would
+ * accept without being able to render it; `generateManifest` enforces that.
+ */
+export const D1_MANIFEST_VERSION = 3;
 
 /** A `{ binding: "NAME" }`-shaped wrangler binding declaration. */
 export interface BindingDecl {
@@ -108,6 +116,8 @@ export interface WranglerConfig {
   kv_namespaces?: BindingDecl[];
   /** R2 bucket bindings; names become `$R2_<BINDING>_NAME` placeholders. */
   r2_buckets?: BindingDecl[];
+  /** D1 database bindings; ids become `$D1_<BINDING>_ID` placeholders. */
+  d1_databases?: BindingDecl[];
   /** Workers AI binding declared by the mailbox worker. */
   ai?: BindingDecl;
   /** Email Sending bindings, including any configured address restrictions. */
@@ -180,7 +190,7 @@ export type ManifestBinding = { type: string; name: string } & Record<string, un
 /** Everything the manifest says about one worker in the release. */
 export interface WorkerEntry {
   /** Which role this worker plays in a deployment. */
-  kind: "backend" | "router" | "gatekeeper" | "inbox";
+  kind: "backend" | "router" | "gatekeeper" | "inbox" | "photos";
   /** Gatekeepers only: the path segment the router routes `/gatekeeper/<shortName>/*` on. */
   shortName?: string;
   /** Whether the deploy wizard offers this worker for installation. */
@@ -256,7 +266,8 @@ export interface WorkerBuild {
 // on a deployable worker needs an explicit decision about how customer instances get it.
 const HANDLED_CONFIG_KEYS = new Set([
   "$schema", "name", "main", "build", "compatibility_date", "compatibility_flags", "rules",
-  "migrations", "observability", "kv_namespaces", "r2_buckets", "worker_loaders", "services",
+  "migrations", "observability", "kv_namespaces", "r2_buckets", "d1_databases", "worker_loaders",
+  "services",
   "assets", "vars", "ai", "send_email", "durable_objects", "define",
   // Browser Rendering (Gadget PDF exports). Unlike artifacts it is generally available, so it
   // passes through to customer instances as a placeholder-free binding, like the AI binding.
@@ -409,6 +420,7 @@ function workerKind(pkgName: string): WorkerEntry["kind"] {
   if (pkgName === "workshop-backend") return "backend";
   if (pkgName === "router") return "router";
   if (pkgName === "inbox") return "inbox";
+  if (pkgName === "photos") return "photos";
   if (isGatekeeperPackage(pkgName)) return "gatekeeper";
   throw new Error(`cannot classify deployable package: ${pkgName}`);
 }
@@ -446,6 +458,13 @@ export function buildWorkerEntry(
       type: "r2_bucket",
       name: r2.binding,
       bucket_name: `$R2_${r2.binding}_NAME`,
+    });
+  }
+  for (const d1 of config.d1_databases ?? []) {
+    bindings.push({
+      type: "d1",
+      name: d1.binding,
+      id: `$D1_${d1.binding}_ID`,
     });
   }
   if (config.ai) bindings.push({ type: "ai", name: config.ai.binding });
@@ -522,9 +541,10 @@ export function buildWorkerEntry(
     // The router routes /gatekeeper/<short>/* by scanning its own GATEKEEPER_* bindings
     // (default entrypoint — it forwards whole HTTP requests, not vendor RPC).
     gatekeeperBindingExpansion = { propsByPackage: {} };
-  } else if (kind === "inbox") {
-    // A required core service, never a GatekeeperVendor or an OAuth connector. Version 2
-    // deployers collect these inputs and provision this worker before binding the router.
+  } else if (kind === "inbox" || kind === "photos") {
+    // A required core service, never a GatekeeperVendor or an OAuth connector. Deployers collect
+    // these inputs and provision this worker (inbox from v2, photos from v3) before binding the
+    // router.
     inputs = deployInputs ?? [];
     for (const input of inputs) {
       if (input.kind === "secret") {
@@ -619,6 +639,12 @@ export function generateManifest({
             `/gatekeeper/<slug> route). Rename one package so the slugs differ.`);
       }
       shortNameOwner.set(entry.shortName, w.pkgName);
+    }
+    if (MANIFEST_VERSION < D1_MANIFEST_VERSION &&
+        (entry.kind === "photos" || entry.bindings.some((b) => b.type === "d1"))) {
+      throw new Error(`${w.pkgName} needs D1 or the photos worker, which manifest version ` +
+          `${MANIFEST_VERSION} deploy services cannot provision. Raise MANIFEST_VERSION to ` +
+          `${D1_MANIFEST_VERSION} once the deploy service renders $D1_<BINDING>_ID.`);
     }
     workerEntries[w.pkgName] = entry;
   }
