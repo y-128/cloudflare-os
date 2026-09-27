@@ -192,7 +192,21 @@ export type StorageConnectionInput =
   | {
     kind: "r2-s3"; name: string; endpoint: string; bucket: string; prefix?: string;
     accessKeyId: string; secretAccessKey: string; roles?: StorageRole[];
+  }
+  | {
+    kind: "nas"; name: string;
+    /** The agent's Cloudflare Tunnel hostname, e.g. https://nas-agent.example.com. */
+    tunnelUrl: string;
+    /** Cloudflare Access service token in front of the tunnel hostname, if any. */
+    accessClientId?: string; accessClientSecret?: string;
+    roles?: StorageRole[];
   };
+
+/**
+ * A just-created connection. A NAS also gets its one-time pairing code, shown once: the agent
+ * redeems it (with `photo-storage-agent pair`) to register its key.
+ */
+export type StorageConnectionCreated = StorageConnectionView & { pairingCode?: string };
 
 /** A storage connection edit; credentials are replaced only when both halves are given. */
 export interface StorageConnectionPatch {

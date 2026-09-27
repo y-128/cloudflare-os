@@ -4,6 +4,7 @@ import type { PhotosEnv } from "../env";
 import { found } from "../http";
 import { decryptSecret } from "./credentials";
 import type { StorageProvider } from "./provider";
+import { NasProvider, type NasConfig, type NasSecret } from "./nas";
 import { R2BindingProvider, type R2BindingConfig } from "./r2-binding";
 import { R2S3Provider, type R2S3Config, type R2S3Secret } from "./r2-s3";
 
@@ -38,8 +39,11 @@ export class StorageRegistry {
         const secret = await decryptSecret<R2S3Secret>(this.env, row.id, row.secret_ciphertext);
         return new R2S3Provider(config as R2S3Config, secret);
       }
-      case "nas":
-        throw new Error("NAS connections arrive in phase 3");
+      case "nas": {
+        if (!row.secret_ciphertext) throw new Error(`connection ${row.id} has no credentials`);
+        const secret = await decryptSecret<NasSecret>(this.env, row.id, row.secret_ciphertext);
+        return new NasProvider(this.env, row.id, config as NasConfig, secret, this.origin);
+      }
     }
   }
 }

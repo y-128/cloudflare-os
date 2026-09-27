@@ -34,12 +34,17 @@
     "bindings": [
       { "name": "PHOTO_JOBS", "class_name": "PhotoJobsDO" },
       { "name": "SCHEMA_MIGRATOR", "class_name": "SchemaMigratorDO" },
+      { "name": "NAS_AGENT", "class_name": "NasAgentDO" },
     ],
   },
   "migrations": [
     {
       "tag": "v1",
       "new_sqlite_classes": ["PhotoJobsDO", "SchemaMigratorDO"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["NasAgentDO"],
     },
   ],
 }

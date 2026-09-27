@@ -1,12 +1,14 @@
 import { DurableObject } from "cloudflare:workers";
 import { createLogger } from "@gadgets/backend-utils/logger";
+import type { AgentMessage } from "../../shared/agent-protocol";
 import type { UploadFile, UploadOptions } from "../../shared/api-types";
+import type { StorageConnectionId } from "../../shared/ids";
 import { recordUsage } from "../db/usage";
 import type { PhotosEnv } from "../env";
 import { R2BindingProvider } from "../storage/r2-binding";
 import { StorageRegistry } from "../storage/registry";
 
-const logger = createLogger({ component: "photos.jobs" });
+const logger = createLogger<{ connectionId?: string; type?: string }>({ component: "photos.jobs" });
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -84,6 +86,16 @@ export class PhotoJobsDO extends DurableObject<PhotosEnv> {
   async finishUpload(id: string): Promise<void> {
     this.sql.exec("DELETE FROM upload_sessions WHERE id = ?", id);
     this.sql.exec("DELETE FROM upload_parts WHERE session_id = ?", id);
+  }
+
+  /** An authenticated agent event, already deduplicated by NasAgentDO. Import jobs handle these. */
+  async agentEvent(connectionId: StorageConnectionId, message: AgentMessage): Promise<void> {
+    logger.info("agent event", { event: "photos.nas.event", connectionId, type: message.type });
+  }
+
+  /** A NAS came back: jobs waiting on it can resume. */
+  async agentOnline(connectionId: StorageConnectionId): Promise<void> {
+    logger.info("agent online", { event: "photos.nas.resume", connectionId });
   }
 
   override async alarm(): Promise<void> {

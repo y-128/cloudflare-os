@@ -15,6 +15,7 @@ export default defineConfig({
         durableObjects: {
           PHOTO_JOBS: { className: "PhotoJobsDO", useSQLite: true },
           SCHEMA_MIGRATOR: { className: "SchemaMigratorDO", useSQLite: true },
+          NAS_AGENT: { className: "NasAgentDO", useSQLite: true },
         },
       },
     }),

@@ -59,19 +59,33 @@ export async function createConnection(
 ): Promise<StorageConnectionId> {
   const id = newId("stc");
   const now = Date.now();
-  const prefix = normalizePrefix(input.prefix);
-  const [config, secret] = input.kind === "r2-binding"
-    ? [{ prefix }, null]
-    : [
-      { endpoint: input.endpoint.replace(/\/+$/, ""), bucket: input.bucket, prefix },
-      { accessKeyId: input.accessKeyId, secretAccessKey: input.secretAccessKey },
-    ];
+  let config: Record<string, string>;
+  let secret: Record<string, string> | null;
+  switch (input.kind) {
+    case "r2-binding":
+      [config, secret] = [{ prefix: normalizePrefix(input.prefix) }, null];
+      break;
+    case "r2-s3":
+      config = { endpoint: input.endpoint.replace(/\/+$/, ""), bucket: input.bucket, prefix: normalizePrefix(input.prefix) };
+      secret = { accessKeyId: input.accessKeyId, secretAccessKey: input.secretAccessKey };
+      break;
+    case "nas":
+      config = { tunnelUrl: input.tunnelUrl.replace(/\/+$/, "") };
+      secret = {
+        agentKey: btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))),
+        ...(input.accessClientId && input.accessClientSecret
+          ? { accessClientId: input.accessClientId, accessClientSecret: input.accessClientSecret }
+          : {}),
+      };
+      break;
+  }
   await env.PHOTOS_DB.prepare(`INSERT INTO storage_connections
       (id, kind, name, config_json, secret_ciphertext, roles, created_by, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .bind(id, input.kind, input.name, JSON.stringify(config),
       secret ? await encryptSecret(env, id, secret) : null,
-      JSON.stringify(input.roles ?? ["original", "derivative", "replica"]), actor, now, now)
+      JSON.stringify(input.roles ?? (input.kind === "nas" ? ["original"] : ["original", "derivative", "replica"])),
+      actor, now, now)
     .run();
   return id;
 }

@@ -225,7 +225,23 @@ export const connectionCreate = z.discriminatedUnion("kind", [
     secretAccessKey: text(200),
     roles,
   }).strict(),
+  z.object({
+    kind: z.literal("nas"),
+    name: text(100),
+    tunnelUrl: z.string().url().max(300).refine((url) => url.startsWith("https://"), "tunnel must be https"),
+    accessClientId: text(200).optional(),
+    accessClientSecret: text(200).optional(),
+    roles,
+  }).strict(),
 ]) satisfies z.ZodType<StorageConnectionInput>;
+
+/** Validates an agent's pairing request. */
+export const agentPairing = z.object({
+  connectionId,
+  code: z.string().min(16).max(100),
+  /** Raw Ed25519 public key, base64. */
+  publicKey: z.string().min(40).max(64),
+}).strict();
 
 /** Validates a storage connection edit. */
 export const connectionPatch = z.object({
