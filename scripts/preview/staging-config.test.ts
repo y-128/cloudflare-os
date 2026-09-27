@@ -546,6 +546,7 @@ test("photos has an isolated preview database and no hostname", () => {
   assert.equal(photos.workers_dev, false);
   assert.equal(photos.preview_urls, false);
   assert.deepEqual(photos.previews?.d1_databases, [{ binding: "PHOTOS_DB" }]);
+  assert.deepEqual(photos.previews?.r2_buckets, [{ binding: "PHOTOS_BUCKET" }]);
   assert.ok(photos.previews?.services?.some(service =>
     service.binding === "WORKSHOP_AUTH" && service.service === "workshop-backend"));
   assert.ok(!(photos.d1_databases ?? []).some(db => "database_id" in db),

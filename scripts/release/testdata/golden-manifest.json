@@ -1083,6 +1083,11 @@
     "photos": {
       "bindings": [
         {
+          "bucket_name": "$R2_PHOTOS_BUCKET_NAME",
+          "name": "PHOTOS_BUCKET",
+          "type": "r2_bucket"
+        },
+        {
           "id": "$D1_PHOTOS_DB_ID",
           "name": "PHOTOS_DB",
           "type": "d1"

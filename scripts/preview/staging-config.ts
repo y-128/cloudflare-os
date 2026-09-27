@@ -358,6 +358,7 @@ function applyPhotos(config: StagingConfig): void {
     observability: previewObservability(config),
     vars: { ...config.vars },
     d1_databases: previewResourceBindings(config.d1_databases),
+    r2_buckets: previewResourceBindings(config.r2_buckets),
   };
 }
 

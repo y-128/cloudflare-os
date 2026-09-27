@@ -392,6 +392,9 @@ test("photos ships as a core service with its database, key and shared Workshop 
   assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_DB"), {
     type: "d1", name: "PHOTOS_DB", id: "$D1_PHOTOS_DB_ID",
   });
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_BUCKET"), {
+    type: "r2_bucket", name: "PHOTOS_BUCKET", bucket_name: "$R2_PHOTOS_BUCKET_NAME",
+  });
   assert.deepEqual(photos.bindings.find(binding => binding.name === "WORKSHOP_AUTH"), {
     type: "service", name: "WORKSHOP_AUTH", service: "$WORKER_NAME(workshop-backend)",
   });

@@ -156,9 +156,12 @@ cd /Users/y-128/Project/cfos
 export PATH="/usr/local/bin:$PATH"
 
 pnpm exec wrangler r2 bucket create inbox
+pnpm exec wrangler r2 bucket create photos
 ```
 
-添付ファイルの保存先です。バケット名 `inbox` は `packages/inbox/wrangler.jsonc` の `bucket_name` と一致している必要があります。
+`inbox` は添付ファイルの保存先です。バケット名は `packages/inbox/wrangler.jsonc` の `bucket_name` と一致している必要があります。
+`photos` は写真（Photos）の保存先で、`packages/photos/wrangler.jsonc` の `bucket_name` と一致している必要があります。
+Photos のメタデータ用 D1 データベース `photos` は、初回のデプロイで自動作成されるので手動の作成は不要です。
 
 ---
 
