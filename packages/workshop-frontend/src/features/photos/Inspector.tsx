@@ -130,9 +130,11 @@ export function Inspector({ photoId, albums, tags, photographers, onChanged, onC
           </span>
         </div>
 
-        <Input label={t('workshop-frontend.Photos.title_field')} value={draft.title} disabled={busy}
-          onChange={event => setDraft(current => ({ ...current, title: event.target.value }))}
-          onBlur={() => { if (draft.title !== (photo.title ?? '')) void patch({ title: draft.title || null }) }} />
+        <Field label={t('workshop-frontend.Photos.title_field')}>
+          <Input aria-label={t('workshop-frontend.Photos.title_field')} value={draft.title} disabled={busy}
+            onChange={event => setDraft(current => ({ ...current, title: event.target.value }))}
+            onBlur={() => { if (draft.title !== (photo.title ?? '')) void patch({ title: draft.title || null }) }} />
+        </Field>
         <Field label={t('workshop-frontend.Photos.caption')}>
           <Textarea aria-label={t('workshop-frontend.Photos.caption')} value={draft.caption} disabled={busy}
             onChange={event => setDraft(current => ({ ...current, caption: event.target.value }))}

@@ -11,6 +11,7 @@ export function StorageOverview() {
   if (usage.error) return <p role="alert" className="p-6">{usage.error}</p>
   if (!usage.data) return <div className="flex justify-center p-6"><Loader size="sm" /></div>
   const { d1Bytes, d1LimitBytes, photoCount, bytesPerPhoto, warning, sampledAt } = usage.data
+  // bytesPerPhoto includes the empty schema's fixed size, so it overstates small libraries.
   const percent = Math.min(100, (d1Bytes / d1LimitBytes) * 100)
   return (
     <section className="grid max-w-xl gap-4 p-6 text-sm">
