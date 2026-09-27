@@ -1,65 +1,13 @@
-import { createExecutionContext, runInDurableObject, waitOnExecutionContext } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  AGENT_AUTH_HEADER, AGENT_PROTOCOL_VERSION, agentRequestMessage, helloMessage, type PairingResult,
-  type WorkerMessage,
-} from "../shared/agent-protocol";
-import type { StorageConnectionCreated } from "../shared/api-types";
-import type { StorageConnectionId } from "../shared/ids";
-import { app } from "../workers/app";
+import { AGENT_AUTH_HEADER, agentRequestMessage, type PairingResult } from "../shared/agent-protocol";
 import type { NasAgentDO } from "../workers/durableObject/nas-agent";
 import { fromBase64, toBase64Url } from "../workers/storage/keys";
 import { NasProvider } from "../workers/storage/nas";
-import { callJson, env, resetDb } from "./helpers";
+import { base64, connect, hello, nas, outsideFetch, pair, settle } from "./agent-helpers";
+import { env, resetDb } from "./helpers";
 
 beforeEach(resetDb);
-
-const base64 = (bytes: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(bytes)));
-
-async function agentFetch(path: string, init?: RequestInit): Promise<Response> {
-  const ctx = createExecutionContext();
-  const response = await app.fetch(new Request(`https://cfos.example/api/photos/v1/agent${path}`, init), env, ctx);
-  await waitOnExecutionContext(ctx);
-  return response;
-}
-
-/** A NAS connection plus a freshly generated agent key pair, not yet paired. */
-async function nas() {
-  const created = await callJson<StorageConnectionCreated>("POST", "/storage", {
-    kind: "nas", name: "NAS", tunnelUrl: "https://nas-agent.example.com",
-  });
-  const keys = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]) as CryptoKeyPair;
-  const publicKey = base64(await crypto.subtle.exportKey("raw", keys.publicKey) as ArrayBuffer);
-  return { id: created.id, code: created.pairingCode!, keys, publicKey, created };
-}
-
-async function pair(agent: Awaited<ReturnType<typeof nas>>, code = agent.code) {
-  return agentFetch("/pair", {
-    method: "POST",
-    body: JSON.stringify({ connectionId: agent.id, code, publicKey: agent.publicKey }),
-  });
-}
-
-/** Opens the agent WebSocket and collects what the worker sends. */
-async function connect(id: StorageConnectionId) {
-  const response = await agentFetch(`/connect/${id}`, { headers: { Upgrade: "websocket" } });
-  const socket = response.webSocket!;
-  const received: WorkerMessage[] = [];
-  const closed = new Promise<number>((resolve) => socket.addEventListener("close", (event) => resolve(event.code)));
-  socket.addEventListener("message", (event) => received.push(JSON.parse(event.data as string) as WorkerMessage));
-  socket.accept();
-  return { socket, received, closed };
-}
-
-async function hello(agent: Awaited<ReturnType<typeof nas>>, overrides: { nonce?: string; timestamp?: number } = {}) {
-  const timestamp = overrides.timestamp ?? Date.now();
-  const nonce = overrides.nonce ?? toBase64Url(crypto.getRandomValues(new Uint8Array(16)));
-  const signature = await crypto.subtle.sign({ name: "Ed25519" }, agent.keys.privateKey,
-    new TextEncoder().encode(helloMessage(agent.id, timestamp, nonce)));
-  return JSON.stringify({ type: "hello", version: AGENT_PROTOCOL_VERSION, agentVersion: "test", timestamp, nonce, signature: base64(signature) });
-}
-
-const settle = () => new Promise((resolve) => setTimeout(resolve, 50));
 
 const status = async (id: string) => (await env.PHOTOS_DB.prepare("SELECT status FROM storage_connections WHERE id = ?")
   .bind(id).first<{ status: string }>())?.status;
@@ -79,8 +27,8 @@ describe("pairing", () => {
 
   it("refuses connections from an agent that never paired", async () => {
     const agent = await nas();
-    expect((await agentFetch(`/connect/${agent.id}`, { headers: { Upgrade: "websocket" } })).status).toBe(403);
-    expect((await agentFetch("/connect/stc_01J00000000000000000000000", { headers: { Upgrade: "websocket" } })).status).toBe(404);
+    expect((await outsideFetch(`https://cfos.example/api/photos/v1/agent/connect/${agent.id}`, { headers: { Upgrade: "websocket" } })).status).toBe(403);
+    expect((await outsideFetch("https://cfos.example/api/photos/v1/agent/connect/stc_01J00000000000000000000000", { headers: { Upgrade: "websocket" } })).status).toBe(404);
   });
 });
 

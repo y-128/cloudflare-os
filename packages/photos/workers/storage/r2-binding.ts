@@ -65,8 +65,8 @@ export class R2BindingProvider implements StorageProvider {
   }
 
   async createUpload(_key: string, size: number, _contentType: string, slot: UploadSlotRef): Promise<UploadTarget> {
-    const expiresAt = Date.now() + UPLOAD_TTL_MS;
-    const token = await signGrant(this.env, { op: "write", ...slot, expiresAt });
+    const expiresAt = Date.now() + (slot.ttlMs ?? UPLOAD_TTL_MS);
+    const token = await signGrant(this.env, { op: "write", sessionId: slot.sessionId, slot: slot.slot, expiresAt });
     const url = `${this.origin}${PHOTOS_API_BASE}/upload/${token}`;
     if (size <= PROXY_MAX_BYTES) return { kind: "worker-proxy", url, expiresAt };
     const parts = Math.ceil(size / PART_BYTES);

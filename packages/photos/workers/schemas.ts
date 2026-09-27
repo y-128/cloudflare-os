@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   BULK_EDIT_LIMIT, STORAGE_ROLES, UPLOAD_BATCH_LIMIT, type AlbumPatch, type BulkPhotoEdit,
   type DownloadVariant, type PhotoPatch, type PhotographerInput, type StorageConnectionInput,
-  type StorageConnectionPatch, type UploadRequest,
+  type ImportOptions, type StorageConnectionPatch, type UploadRequest,
 } from "../shared/api-types";
 import type { NormalizedExif } from "../shared/exif";
 import {
@@ -243,10 +243,30 @@ export const agentPairing = z.object({
   publicKey: z.string().min(40).max(64),
 }).strict();
 
+/** Validates NAS import settings. */
+export const importOptions = z.object({
+  mode: z.enum(["reference", "copy", "move"]),
+  derivativeConnectionId: connectionId,
+  replicaConnectionId: connectionId.optional(),
+  visibility: visibility.optional(),
+  tagIds: idList(tagId).optional(),
+  albumId: albumId.optional(),
+}).strict().refine((options) => options.mode === "reference" || options.replicaConnectionId,
+  "copy and move need a replica destination") satisfies z.ZodType<ImportOptions>;
+
+/** Validates a request to scan a NAS folder. */
+export const importScan = z.object({
+  connectionId,
+  /** Relative to the agent's library root; never absolute and never climbing out of it. */
+  folder: z.string().max(500).refine((folder) => !folder.startsWith("/") && !folder.split("/").includes(".."),
+    "folder must stay inside the library"),
+}).strict();
+
 /** Validates a storage connection edit. */
 export const connectionPatch = z.object({
   name: text(100).optional(),
   roles,
+  autoImport: importOptions.nullable().optional(),
   accessKeyId: text(200).optional(),
   secretAccessKey: text(200).optional(),
 }).strict() satisfies z.ZodType<StorageConnectionPatch>;

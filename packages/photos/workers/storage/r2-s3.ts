@@ -2,7 +2,7 @@ import { AwsClient } from "aws4fetch";
 import type { ConnectionStatus } from "../../shared/api-types";
 import {
   DOWNLOAD_TTL_MS, UPLOAD_TTL_MS, attachmentDisposition, type DownloadOptions, type DownloadTarget,
-  type StorageObject, type StorageProvider, type UploadTarget,
+  type StorageObject, type StorageProvider, type UploadSlotRef, type UploadTarget,
 } from "./provider";
 
 /** Non-secret settings of an `r2-s3` connection (usually another Cloudflare account's bucket). */
@@ -118,8 +118,8 @@ export class R2S3Provider implements StorageProvider {
     return { kind: "redirect", ...signed };
   }
 
-  async createUpload(key: string, _size: number, contentType: string): Promise<UploadTarget> {
-    const signed = await this.presign(this.url(key), "PUT", UPLOAD_TTL_MS);
+  async createUpload(key: string, _size: number, contentType: string, slot?: UploadSlotRef): Promise<UploadTarget> {
+    const signed = await this.presign(this.url(key), "PUT", slot?.ttlMs ?? UPLOAD_TTL_MS);
     return { kind: "presigned-put", url: signed.url, headers: { "Content-Type": contentType }, expiresAt: signed.expiresAt };
   }
 }

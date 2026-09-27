@@ -36,7 +36,7 @@ export async function listConnections(db: D1Database): Promise<StorageConnection
     id: row.id,
     kind: row.kind,
     name: row.name,
-    config: parseJson<Record<string, string>>(row.config_json, {}),
+    config: parseJson<StorageConnectionView["config"]>(row.config_json, {}),
     hasSecret: row.secret_ciphertext !== null,
     roles: parseJson<StorageRole[]>(row.roles, []),
     status: row.status,
@@ -97,9 +97,13 @@ export async function updateConnection(
   const row = found(await getConnectionRow(env.PHOTOS_DB, id), "connection_not_found");
   const replaceSecret = patch.accessKeyId !== undefined && patch.secretAccessKey !== undefined;
   if (replaceSecret && row.kind !== "r2-s3") throw new HttpError(400, "connection_has_no_credentials");
-  await env.PHOTOS_DB.prepare(`UPDATE storage_connections SET name = ?, roles = ?,
+  if (patch.autoImport !== undefined && row.kind !== "nas") throw new HttpError(400, "not_a_nas");
+  const config = parseJson<Record<string, unknown>>(row.config_json, {});
+  if (patch.autoImport === null) delete config.autoImport;
+  else if (patch.autoImport) config.autoImport = patch.autoImport;
+  await env.PHOTOS_DB.prepare(`UPDATE storage_connections SET name = ?, roles = ?, config_json = ?,
       secret_ciphertext = ?, updated_at = ? WHERE id = ?`)
-    .bind(patch.name ?? row.name, patch.roles ? JSON.stringify(patch.roles) : row.roles,
+    .bind(patch.name ?? row.name, patch.roles ? JSON.stringify(patch.roles) : row.roles, JSON.stringify(config),
       replaceSecret
         ? await encryptSecret(env, id, { accessKeyId: patch.accessKeyId, secretAccessKey: patch.secretAccessKey })
         : row.secret_ciphertext && new Uint8Array(row.secret_ciphertext),

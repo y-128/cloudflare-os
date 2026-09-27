@@ -1,6 +1,6 @@
 import type { NormalizedExif } from "./exif";
 import type {
-  AlbumId, AssetId, PhotoId, PhotographerId, StorageConnectionId, TagId,
+  AlbumId, AssetId, JobId, PhotoId, PhotographerId, StorageConnectionId, TagId,
 } from "./ids";
 import type { ExposurePolicy, Visibility } from "./visibility";
 
@@ -174,8 +174,11 @@ export interface StorageConnectionView {
   id: StorageConnectionId;
   kind: StorageKind;
   name: string;
-  /** Non-secret settings: `{ prefix }` for r2-binding, `{ endpoint, bucket, prefix }` for r2-s3. */
-  config: Record<string, string>;
+  /**
+   * Non-secret settings: `{ prefix }` for r2-binding, `{ endpoint, bucket, prefix }` for r2-s3,
+   * `{ tunnelUrl, autoImport? }` for a NAS.
+   */
+  config: Record<string, string> & { autoImport?: ImportOptions };
   hasSecret: boolean;
   roles: StorageRole[];
   status: ConnectionStatus;
@@ -212,6 +215,8 @@ export type StorageConnectionCreated = StorageConnectionView & { pairingCode?: s
 export interface StorageConnectionPatch {
   name?: string;
   roles?: StorageRole[];
+  /** NAS only: import new files in the watched folder with these settings; null stops it. */
+  autoImport?: ImportOptions | null;
   accessKeyId?: string;
   secretAccessKey?: string;
 }
@@ -281,6 +286,51 @@ export type DownloadVariant = "original" | "raw" | "jpeg" | "preview";
 export type DownloadTargetView =
   | { kind: "redirect"; url: string; expiresAt: number }
   | { kind: "unavailable"; reason: "offline" | "missing" };
+
+/** How a NAS import treats the originals it finds. */
+export type ImportMode = "reference" | "copy" | "move";
+
+/** Settings for importing from a NAS (and for its watched Incoming folder). */
+export interface ImportOptions {
+  /** reference keeps originals on the NAS; copy also replicates them; move replicates then deletes. */
+  mode: ImportMode;
+  /** Where previews and thumbnails go. */
+  derivativeConnectionId: StorageConnectionId;
+  /** Where replicas go; required for copy and move. */
+  replicaConnectionId?: StorageConnectionId;
+  visibility?: Visibility;
+  tagIds?: TagId[];
+  albumId?: AlbumId;
+}
+
+/** Where an import job stands. */
+export type ImportJobState = "scanning" | "scanned" | "running" | "succeeded" | "cancelled";
+
+/** One file of an import job that did not go through. */
+export interface ImportFailure {
+  path: string;
+  error: string;
+}
+
+/** An import job as the Import screen shows it. */
+export interface ImportJobView {
+  id: JobId;
+  connectionId: StorageConnectionId;
+  folder: string;
+  /** Jobs started by the watched folder rather than by someone. */
+  automatic: boolean;
+  state: ImportJobState;
+  options: ImportOptions | null;
+  found: number;
+  newCount: number;
+  duplicates: number;
+  done: number;
+  failed: number;
+  failures: ImportFailure[];
+  createdBy: string;
+  createdAt: number;
+  updatedAt: number;
+}
 
 /** A page of results and the cursor for the next one. */
 export interface Page<T> {

@@ -8,6 +8,7 @@ import { HttpError } from "./http";
 import { agentRoutes } from "./routes/agent";
 import { albumsRoutes } from "./routes/albums";
 import { blobRoutes, downloadsRoutes } from "./routes/downloads";
+import { importsRoutes } from "./routes/imports";
 import { photographersRoutes } from "./routes/photographers";
 import { photosRoutes } from "./routes/photos";
 import { storageRoutes } from "./routes/storage";
@@ -48,6 +49,7 @@ const api = new Hono<PhotosHono>()
   .route("/photos", photosRoutes)
   .route("/photos", downloadsRoutes)
   .route("/uploads", uploadsRoutes)
+  .route("/imports", importsRoutes)
   .route("/tags", tagsRoutes)
   .route("/albums", albumsRoutes)
   .route("/photographers", photographersRoutes)

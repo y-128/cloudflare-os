@@ -6,7 +6,7 @@ import type { UploadSession, UploadSlotName } from "../durableObject/photo-jobs"
 import type { PhotosEnv, PhotosHono } from "../env";
 import { found, HttpError } from "../http";
 import { verifyGrant } from "../storage/grants";
-import { UPLOAD_TTL_MS, type StorageProvider } from "../storage/provider";
+import { PROXY_MAX_BYTES, UPLOAD_TTL_MS, type StorageProvider } from "../storage/provider";
 import { R2BindingProvider } from "../storage/r2-binding";
 import { StorageRegistry } from "../storage/registry";
 import { uploadRequest } from "../schemas";
@@ -179,8 +179,13 @@ export const uploadWriteRoutes = new Hono<{ Bindings: PhotosEnv }>()
       await jobs(c.env).recordPart(upload.id, uploaded.partNumber, uploaded.etag);
       return c.body(null, 204);
     }
+    // Browsers announce every size up front; the NAS agent renders derivatives later, so theirs
+    // are checked when it reports them instead.
+    const length = Number(c.req.header("Content-Length"));
     const expected = slot === "original" ? upload.file.size : upload.file[slot]?.size;
-    if (Number(c.req.header("Content-Length")) !== expected) throw new HttpError(400, "upload_size_mismatch");
+    if (expected === undefined ? !(length > 0 && length <= PROXY_MAX_BYTES) : length !== expected) {
+      throw new HttpError(400, "upload_size_mismatch");
+    }
     await provider.write(key, stream, CONTENT_TYPE[slot](upload));
     return c.body(null, 204);
   });

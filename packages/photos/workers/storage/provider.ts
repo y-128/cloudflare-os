@@ -50,6 +50,8 @@ export interface StorageProvider {
 export interface UploadSlotRef {
   sessionId: string;
   slot: "original" | "preview" | "thumbnail";
+  /** How long the target stays valid; defaults to UPLOAD_TTL_MS (the NAS agent needs days). */
+  ttlMs?: number;
 }
 
 /** Default lifetime of a download URL. */

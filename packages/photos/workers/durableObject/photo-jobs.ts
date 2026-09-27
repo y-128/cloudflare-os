@@ -1,8 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import { createLogger } from "@gadgets/backend-utils/logger";
 import type { AgentMessage } from "../../shared/agent-protocol";
-import type { UploadFile, UploadOptions } from "../../shared/api-types";
-import type { StorageConnectionId } from "../../shared/ids";
+import type { ImportJobView, ImportOptions, UploadFile, UploadOptions } from "../../shared/api-types";
+import type { JobId, StorageConnectionId } from "../../shared/ids";
+import { IMPORT_SCHEMA, ImportJobs } from "../jobs/imports";
 import { recordUsage } from "../db/usage";
 import type { PhotosEnv } from "../env";
 import { R2BindingProvider } from "../storage/r2-binding";
@@ -34,6 +35,7 @@ export interface UploadSession {
  */
 export class PhotoJobsDO extends DurableObject<PhotosEnv> {
   private readonly sql = this.ctx.storage.sql;
+  private readonly imports: ImportJobs;
 
   constructor(ctx: DurableObjectState, env: PhotosEnv) {
     super(ctx, env);
@@ -42,6 +44,14 @@ export class PhotoJobsDO extends DurableObject<PhotosEnv> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS upload_parts (
       session_id TEXT NOT NULL, part_number INTEGER NOT NULL, etag TEXT NOT NULL,
       PRIMARY KEY (session_id, part_number))`);
+    for (const statement of IMPORT_SCHEMA) this.sql.exec(statement);
+    this.imports = new ImportJobs({
+      sql: this.sql,
+      env,
+      createUploads: (sessions) => this.createUploads(sessions),
+      finishUpload: (id) => this.finishUpload(id),
+      parts: (id) => this.parts(id),
+    });
   }
 
   /** Makes sure the alarm is armed. Cheap and idempotent. */
@@ -88,9 +98,42 @@ export class PhotoJobsDO extends DurableObject<PhotosEnv> {
     this.sql.exec("DELETE FROM upload_parts WHERE session_id = ?", id);
   }
 
-  /** An authenticated agent event, already deduplicated by NasAgentDO. Import jobs handle these. */
-  async agentEvent(connectionId: StorageConnectionId, message: AgentMessage): Promise<void> {
-    logger.info("agent event", { event: "photos.nas.event", connectionId, type: message.type });
+  /** An authenticated agent event, already deduplicated by NasAgentDO. */
+  async agentEvent(connectionId: StorageConnectionId, message: AgentMessage, origin: string): Promise<void> {
+    await this.imports.onEvent(connectionId, message, origin);
+  }
+
+  /** Asks a NAS agent to scan a folder, starting an import job. */
+  async importScan(connectionId: StorageConnectionId, folder: string, actor: string, origin: string): Promise<JobId> {
+    return this.imports.scan(connectionId, folder, actor, origin);
+  }
+
+  /** Starts importing a scanned job's new files. */
+  async importStart(jobId: JobId, options: ImportOptions): Promise<ImportJobView> {
+    await this.imports.start(jobId, options);
+    return this.imports.get(jobId);
+  }
+
+  /** Stops an import job. */
+  async importCancel(jobId: JobId): Promise<ImportJobView> {
+    this.imports.cancel(jobId);
+    return this.imports.get(jobId);
+  }
+
+  /** Retries an import job's failed files. */
+  async importRetry(jobId: JobId): Promise<ImportJobView> {
+    await this.imports.retry(jobId);
+    return this.imports.get(jobId);
+  }
+
+  /** Recent import jobs. */
+  async importList(): Promise<ImportJobView[]> {
+    return this.imports.list();
+  }
+
+  /** One import job. */
+  async importGet(jobId: JobId): Promise<ImportJobView> {
+    return this.imports.get(jobId);
   }
 
   /** A NAS came back: jobs waiting on it can resume. */
@@ -137,6 +180,8 @@ export class PhotoJobsDO extends DurableObject<PhotosEnv> {
         logger.warn("expired upload cleanup failed", { event: "photos.upload.cleanup_failed", error: err });
         continue;
       }
+      // An agent that never used its targets (a NAS off for days) leaves its item retryable.
+      this.sql.exec("UPDATE import_items SET state = 'failed', error = 'targets_expired', session_id = NULL WHERE session_id = ?", row.id);
       await this.finishUpload(row.id);
     }
   }

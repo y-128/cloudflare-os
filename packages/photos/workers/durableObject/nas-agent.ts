@@ -87,6 +87,8 @@ export class NasAgentDO extends DurableObject<PhotosEnv> {
       return new Response("expected a WebSocket", { status: 426 });
     }
     if (!await this.ctx.storage.get("publicKey")) return new Response("not paired", { status: 403 });
+    // The public origin the agent reached us at: where its write targets must point.
+    await this.ctx.storage.put("origin", new URL(request.url).origin);
     const pair = new WebSocketPair();
     this.ctx.acceptWebSocket(pair[1]);
     pair[1].serializeAttachment({ authenticated: false } satisfies Attachment);
@@ -175,7 +177,8 @@ export class NasAgentDO extends DurableObject<PhotosEnv> {
     const first = this.sql.exec("INSERT OR IGNORE INTO seen_events (event_id, seen_at) VALUES (?, ?) RETURNING 1 AS n",
       message.eventId, Date.now()).toArray().length > 0;
     if (!first) return;
-    await this.env.PHOTO_JOBS.getByName("library").agentEvent(await this.connectionId(), message);
+    await this.env.PHOTO_JOBS.getByName("library").agentEvent(
+      await this.connectionId(), message, await this.ctx.storage.get<string>("origin") ?? "");
   }
 
   private pending(): AgentCommand[] {
