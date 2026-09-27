@@ -1,16 +1,18 @@
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import type { UploadSlot } from "../../shared/api-types";
 import { ID_PREFIX, newId, type PhotoId } from "../../shared/ids";
 import { createPhotoRecord, type NewAsset } from "../db/photos";
 import type { UploadSession, UploadSlotName } from "../durableObject/photo-jobs";
-import type { PhotosHono } from "../env";
+import type { PhotosEnv, PhotosHono } from "../env";
 import { found, HttpError } from "../http";
+import { verifyGrant } from "../storage/grants";
 import { UPLOAD_TTL_MS, type StorageProvider } from "../storage/provider";
 import { R2BindingProvider } from "../storage/r2-binding";
+import { StorageRegistry } from "../storage/registry";
 import { uploadRequest } from "../schemas";
 import { body, registry } from "./common";
 
-const jobs = (c: Context<PhotosHono>) => c.env.PHOTO_JOBS.getByName("library");
+const jobs = (env: PhotosEnv) => env.PHOTO_JOBS.getByName("library");
 
 /** A storage key segment safe in any provider and readable in a bucket listing. */
 function safeName(filename: string): string {
@@ -18,8 +20,8 @@ function safeName(filename: string): string {
 }
 
 /** The session's live record, or a 404 once it completed or expired. */
-async function session(c: Context<PhotosHono>): Promise<UploadSession> {
-  return found(await jobs(c).getUpload(c.req.param("session") ?? ""), "upload_not_found");
+async function session(env: PhotosEnv, id: string): Promise<UploadSession> {
+  return found(await jobs(env).getUpload(id), "upload_not_found");
 }
 
 /** A photo whose original already has these bytes, if any. */
@@ -66,7 +68,7 @@ export const uploadsRoutes = new Hono<PhotosHono>()
         preview: file.preview ? `derived/${id}/preview.jpg` : null,
         thumbnail: file.thumbnail ? `derived/${id}/thumbnail.webp` : null,
       };
-      const target = await original.createUpload(keys.original!, file.size, file.mimeType, `/uploads/${id}/original`);
+      const target = await original.createUpload(keys.original!, file.size, file.mimeType, { sessionId: id, slot: "original" });
       const multipartUploadId = target.kind === "multipart" && original instanceof R2BindingProvider
         ? await original.startMultipart(keys.original!, file.mimeType)
         : null;
@@ -80,52 +82,25 @@ export const uploadsRoutes = new Hono<PhotosHono>()
         sessionId: id,
         original: target,
         preview: keys.preview && file.preview
-          ? await derivatives.createUpload(keys.preview, file.preview.size, "image/jpeg", `/uploads/${id}/preview`)
+          ? await derivatives.createUpload(keys.preview, file.preview.size, "image/jpeg", { sessionId: id, slot: "preview" })
           : null,
         thumbnail: keys.thumbnail && file.thumbnail
-          ? await derivatives.createUpload(keys.thumbnail, file.thumbnail.size, "image/webp", `/uploads/${id}/thumbnail`)
+          ? await derivatives.createUpload(keys.thumbnail, file.thumbnail.size, "image/webp", { sessionId: id, slot: "thumbnail" })
           : null,
       });
     }
-    if (sessions.length) await jobs(c).createUploads(sessions);
+    if (sessions.length) await jobs(c.env).createUploads(sessions);
     return c.json(slots);
   })
-  // Proxied writes, for storage the browser cannot write directly (the deployment's own bucket).
-  .put("/:session/:slot{original|preview|thumbnail}", async (c) => {
-    const upload = await session(c);
-    const slot = c.req.param("slot") as UploadSlotName;
-    const key = found(upload.keys[slot], "upload_slot_not_found");
-    const provider = await registry(c).get(slot === "original"
-      ? upload.options.originalConnectionId
-      : upload.options.derivativeConnectionId);
-    if (!(provider instanceof R2BindingProvider)) throw new HttpError(400, "upload_not_proxied");
-    const stream = c.req.raw.body;
-    if (!stream) throw new HttpError(400, "empty_upload");
-
-    const part = c.req.query("part");
-    if (part !== undefined) {
-      const partNumber = Number(part);
-      if (slot !== "original" || !upload.multipartUploadId || !Number.isInteger(partNumber) || partNumber < 1) {
-        throw new HttpError(400, "invalid_part");
-      }
-      const uploaded = await provider.uploadPart(key, upload.multipartUploadId, partNumber, stream);
-      await jobs(c).recordPart(upload.id, uploaded.partNumber, uploaded.etag);
-      return c.body(null, 204);
-    }
-    const expected = slot === "original" ? upload.file.size : upload.file[slot]?.size;
-    if (Number(c.req.header("Content-Length")) !== expected) throw new HttpError(400, "upload_size_mismatch");
-    await provider.write(key, stream, slot === "original" ? upload.file.mimeType : slot === "preview" ? "image/jpeg" : "image/webp");
-    return c.body(null, 204);
-  })
   .post("/:session/complete", async (c) => {
-    const upload = await session(c);
+    const upload = await session(c.env, c.req.param("session"));
     const storage = registry(c);
     const original = await storage.get(upload.options.originalConnectionId);
     const derivatives = await storage.get(upload.options.derivativeConnectionId);
     const { file, keys, options } = upload;
 
     if (upload.multipartUploadId && original instanceof R2BindingProvider) {
-      await original.completeMultipart(keys.original!, upload.multipartUploadId, await jobs(c).parts(upload.id));
+      await original.completeMultipart(keys.original!, upload.multipartUploadId, await jobs(c.env).parts(upload.id));
     }
     await verify(original, keys.original!, file.size);
     for (const slot of ["preview", "thumbnail"] as const) {
@@ -153,19 +128,59 @@ export const uploadsRoutes = new Hono<PhotosHono>()
     let photoId: PhotoId;
     try {
       photoId = await createPhotoRecord(c.env.PHOTOS_DB, {
-      takenAt: takenAt ?? Date.now(),
-      takenAtSource: file.exif?.takenAt !== undefined ? "exif" : file.lastModified !== undefined ? "file" : "import",
-      exif: file.exif,
-      visibility: options.visibility,
-      tagIds: options.tagIds,
-      albumIds: options.albumId ? [options.albumId] : undefined,
-      assets,
+        takenAt: takenAt ?? Date.now(),
+        takenAtSource: file.exif?.takenAt !== undefined ? "exif" : file.lastModified !== undefined ? "file" : "import",
+        exif: file.exif,
+        visibility: options.visibility,
+        tagIds: options.tagIds,
+        albumIds: options.albumId ? [options.albumId] : undefined,
+        assets,
       }, upload.actor);
     } catch (err) {
       // A second completion races the first to the same storage keys; the unique index keeps one.
       if (String(err).includes("UNIQUE")) throw new HttpError(409, "upload_already_completed");
       throw err;
     }
-    await jobs(c).finishUpload(upload.id);
+    await jobs(c.env).finishUpload(upload.id);
     return c.json({ photoId }, 201);
+  });
+
+const CONTENT_TYPE: Record<UploadSlotName, (upload: UploadSession) => string> = {
+  original: (upload) => upload.file.mimeType,
+  preview: () => "image/jpeg",
+  thumbnail: () => "image/webp",
+};
+
+/**
+ * Proxied writes into the deployment's own bucket, which cannot sign URLs. Mounted outside the
+ * administrator check so the NAS agent can use them too: the signed grant in the URL is the whole
+ * authority, and it names one slot of one live session.
+ */
+export const uploadWriteRoutes = new Hono<{ Bindings: PhotosEnv }>()
+  .put("/:token", async (c) => {
+    const grant = found(await verifyGrant(c.env, c.req.param("token"), "write"), "not_found");
+    const upload = await session(c.env, grant.sessionId);
+    const slot = grant.slot;
+    const key = found(upload.keys[slot], "upload_slot_not_found");
+    const provider = await new StorageRegistry(c.env, new URL(c.req.url).origin).get(slot === "original"
+      ? upload.options.originalConnectionId
+      : upload.options.derivativeConnectionId);
+    if (!(provider instanceof R2BindingProvider)) throw new HttpError(400, "upload_not_proxied");
+    const stream = c.req.raw.body;
+    if (!stream) throw new HttpError(400, "empty_upload");
+
+    const part = c.req.query("part");
+    if (part !== undefined) {
+      const partNumber = Number(part);
+      if (slot !== "original" || !upload.multipartUploadId || !Number.isInteger(partNumber) || partNumber < 1) {
+        throw new HttpError(400, "invalid_part");
+      }
+      const uploaded = await provider.uploadPart(key, upload.multipartUploadId, partNumber, stream);
+      await jobs(c.env).recordPart(upload.id, uploaded.partNumber, uploaded.etag);
+      return c.body(null, 204);
+    }
+    const expected = slot === "original" ? upload.file.size : upload.file[slot]?.size;
+    if (Number(c.req.header("Content-Length")) !== expected) throw new HttpError(400, "upload_size_mismatch");
+    await provider.write(key, stream, CONTENT_TYPE[slot](upload));
+    return c.body(null, 204);
   });

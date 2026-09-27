@@ -1,8 +1,9 @@
 import type { PhotosEnv } from "../env";
 import { derivedKey, fromBase64, toBase64Url } from "./keys";
 
-/** What a delivery token grants: reading one object, once decoded, until it expires. */
-export interface BlobGrant {
+/** Reading one object until the grant expires: what a /blob URL carries. */
+export interface ReadGrant {
+  op: "read";
   connectionId: string;
   key: string;
   /** Milliseconds since the epoch. */
@@ -12,23 +13,39 @@ export interface BlobGrant {
   contentType?: string;
 }
 
+/** Writing one slot of one upload session until the grant expires: what an /upload URL carries. */
+export interface WriteGrant {
+  op: "write";
+  sessionId: string;
+  slot: "original" | "preview" | "thumbnail";
+  expiresAt: number;
+}
+
+/**
+ * A signed, expiring capability carried in a URL. The `op` is part of what is signed, so a read
+ * grant can never be replayed as a write or the reverse.
+ */
+export type Grant = ReadGrant | WriteGrant;
+
 /** Signs a grant into an opaque URL-safe token. */
-export async function signBlobToken(env: PhotosEnv, grant: BlobGrant): Promise<string> {
+export async function signGrant(env: PhotosEnv, grant: Grant): Promise<string> {
   const payload = new TextEncoder().encode(JSON.stringify(grant));
   const signature = await crypto.subtle.sign("HMAC", await derivedKey(env, "blob-token"), payload);
   return `${toBase64Url(payload)}.${toBase64Url(new Uint8Array(signature))}`;
 }
 
-/** Verifies a token and returns its grant, or null when it is forged, malformed or expired. */
-export async function verifyBlobToken(env: PhotosEnv, token: string, now = Date.now()): Promise<BlobGrant | null> {
+/** Verifies a token as a grant of `op`; null when forged, malformed, expired, or for another op. */
+export async function verifyGrant<Op extends Grant["op"]>(
+  env: PhotosEnv, token: string, op: Op, now = Date.now(),
+): Promise<Extract<Grant, { op: Op }> | null> {
   const [payloadText, signatureText, extra] = token.split(".");
   if (!payloadText || !signatureText || extra !== undefined) return null;
   try {
     const payload = fromBase64(payloadText);
     const valid = await crypto.subtle.verify("HMAC", await derivedKey(env, "blob-token"), fromBase64(signatureText), payload);
     if (!valid) return null;
-    const grant = JSON.parse(new TextDecoder().decode(payload)) as BlobGrant;
-    return grant.expiresAt > now ? grant : null;
+    const grant = JSON.parse(new TextDecoder().decode(payload)) as Grant;
+    return grant.op === op && grant.expiresAt > now ? grant as Extract<Grant, { op: Op }> : null;
   } catch {
     return null;
   }

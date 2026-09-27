@@ -3,7 +3,7 @@ import type { AssetRole, DownloadTargetView, FormatFamily } from "../../shared/a
 import type { PhotosEnv, PhotosHono } from "../env";
 import { found } from "../http";
 import { photoId, downloadRequest } from "../schemas";
-import { verifyBlobToken } from "../storage/blob-token";
+import { verifyGrant } from "../storage/grants";
 import { attachmentDisposition } from "../storage/provider";
 import { StorageRegistry } from "../storage/registry";
 import { body, param, registry } from "./common";
@@ -56,7 +56,7 @@ export const downloadsRoutes = new Hono<PhotosHono>()
  */
 export const blobRoutes = new Hono<{ Bindings: PhotosEnv }>()
   .get("/:token", async (c) => {
-    const grant = found(await verifyBlobToken(c.env, c.req.param("token")), "not_found");
+    const grant = found(await verifyGrant(c.env, c.req.param("token"), "read"), "not_found");
     const provider = await new StorageRegistry(c.env, new URL(c.req.url).origin).get(grant.connectionId);
     const object = found(await provider.read(grant.key), "not_found");
     const headers = new Headers({

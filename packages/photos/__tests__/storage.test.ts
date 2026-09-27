@@ -5,7 +5,7 @@ import type {
 } from "../shared/api-types";
 import type { StorageConnectionId } from "../shared/ids";
 import { app } from "../workers/app";
-import { roundedExpiry, signBlobToken, verifyBlobToken } from "../workers/storage/blob-token";
+import { roundedExpiry, signGrant, verifyGrant } from "../workers/storage/grants";
 import { decryptSecret, encryptSecret } from "../workers/storage/credentials";
 import { R2BindingProvider } from "../workers/storage/r2-binding";
 import { R2S3Provider } from "../workers/storage/r2-s3";
@@ -21,14 +21,15 @@ async function browserGet(url: string): Promise<Response> {
   return response;
 }
 
-/** Writes bytes to a proxied upload target through the API. */
+/** Writes bytes to a proxied upload target as a browser or the NAS agent would: no Photos headers. */
 async function put(target: UploadTargetView | null, bytes: Uint8Array): Promise<Response> {
   if (target?.kind !== "worker-proxy") throw new Error(`expected a proxied target, got ${target?.kind}`);
-  return call("PUT", new URL(target.url).pathname.replace("/api/photos/v1", ""), {
-    body: undefined,
-    headers: { "Content-Length": String(bytes.byteLength) },
-    rawBody: bytes,
-  });
+  const ctx = createExecutionContext();
+  const response = await app.fetch(new Request(target.url, {
+    method: "PUT", body: bytes, headers: { "Content-Length": String(bytes.byteLength) },
+  }), env, ctx);
+  await waitOnExecutionContext(ctx);
+  return response;
 }
 
 async function sha256(bytes: Uint8Array): Promise<string> {
@@ -64,15 +65,16 @@ describe("credentials", () => {
   });
 });
 
-describe("blob tokens", () => {
-  it("verify only untampered, unexpired grants", async () => {
-    const grant = { connectionId: "stc_a", key: "k", expiresAt: Date.now() + 1000 };
-    const token = await signBlobToken(env, grant);
-    expect(await verifyBlobToken(env, token)).toEqual(grant);
-    expect(await verifyBlobToken(env, token, grant.expiresAt)).toBeNull();
-    const forged = await signBlobToken(env, { ...grant, key: "other" });
-    expect(await verifyBlobToken(env, `${forged.split(".")[0]}.${token.split(".")[1]}`)).toBeNull();
-    expect(await verifyBlobToken(env, "garbage")).toBeNull();
+describe("grants", () => {
+  it("verify only untampered, unexpired grants of the requested operation", async () => {
+    const grant = { op: "read" as const, connectionId: "stc_a", key: "k", expiresAt: Date.now() + 1000 };
+    const token = await signGrant(env, grant);
+    expect(await verifyGrant(env, token, "read")).toEqual(grant);
+    expect(await verifyGrant(env, token, "write")).toBeNull();
+    expect(await verifyGrant(env, token, "read", grant.expiresAt)).toBeNull();
+    const forged = await signGrant(env, { ...grant, key: "other" });
+    expect(await verifyGrant(env, `${forged.split(".")[0]}.${token.split(".")[1]}`, "read")).toBeNull();
+    expect(await verifyGrant(env, "garbage", "read")).toBeNull();
   });
 
   it("round expiries so URLs repeat within a window", () => {
@@ -171,6 +173,13 @@ describe("uploads", () => {
     expect(await announce({ bytes, filename: "copy.jpg" }, connection)).toEqual({ clientId: "c1", status: "duplicate", photoId });
   });
 
+  it("refuses writes without a valid grant", async () => {
+    const ctx = createExecutionContext();
+    const response = await app.fetch(new Request("https://cfos.example/api/photos/v1/upload/abc.def", { method: "PUT", body: "x" }), env, ctx);
+    await waitOnExecutionContext(ctx);
+    expect(response.status).toBe(404);
+  });
+
   it("refuses bodies that differ from what was announced", async () => {
     const connection = await r2Connection();
     const slot = await announce({ bytes: new TextEncoder().encode("12345") }, connection);
@@ -180,9 +189,11 @@ describe("uploads", () => {
 
   it("assembles large originals from parts", async () => {
     const provider = new R2BindingProvider(env, "stc_x", { prefix: "" }, "https://cfos.example");
-    const target = await provider.createUpload("big", 100 * 1000 * 1000, "image/tiff", "/uploads/upl_x/original");
+    const target = await provider.createUpload("big", 100 * 1000 * 1000, "image/tiff", { sessionId: "upl_x", slot: "original" });
     expect(target.kind).toBe("multipart");
-    if (target.kind === "multipart") expect(target.partUrls[0]).toBe("https://cfos.example/api/photos/v1/uploads/upl_x/original?part=1");
+    if (target.kind === "multipart") {
+      expect(target.partUrls[0]).toMatch(/^https:\/\/cfos\.example\/api\/photos\/v1\/upload\/[\w-]+\.[\w-]+\?part=1$/);
+    }
 
     const uploadId = await provider.startMultipart("big", "image/tiff");
     const partBytes = new Uint8Array(5 * 1024 * 1024).fill(1);

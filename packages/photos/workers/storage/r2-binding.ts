@@ -1,9 +1,9 @@
 import { PHOTOS_API_BASE } from "../../shared/api-types";
 import type { PhotosEnv } from "../env";
-import { roundedExpiry, signBlobToken } from "./blob-token";
+import { roundedExpiry, signGrant } from "./grants";
 import {
   DOWNLOAD_TTL_MS, PART_BYTES, PROXY_MAX_BYTES, UPLOAD_TTL_MS, type DownloadOptions,
-  type DownloadTarget, type StorageObject, type StorageProvider, type UploadTarget,
+  type DownloadTarget, type StorageObject, type StorageProvider, type UploadSlotRef, type UploadTarget,
 } from "./provider";
 
 /** Non-secret settings of an `r2-binding` connection. */
@@ -14,7 +14,7 @@ export interface R2BindingConfig {
 
 /**
  * The deployment's own bucket, reached through the PHOTOS_BUCKET binding. A binding cannot sign
- * URLs, so the browser reads through /blob tokens and writes through the worker (in parts when a
+ * URLs, so readers go through /blob grants and writers through /upload grants (in parts when a
  * file exceeds one request's limit).
  */
 export class R2BindingProvider implements StorageProvider {
@@ -56,17 +56,18 @@ export class R2BindingProvider implements StorageProvider {
 
   async createDownload(key: string, options: DownloadOptions = {}): Promise<DownloadTarget> {
     const expiresAt = roundedExpiry(options.ttlMs ?? DOWNLOAD_TTL_MS);
-    const token = await signBlobToken(this.env, {
-      connectionId: this.connectionId, key, expiresAt,
+    const token = await signGrant(this.env, {
+      op: "read", connectionId: this.connectionId, key, expiresAt,
       ...(options.filename ? { filename: options.filename } : {}),
       ...(options.contentType ? { contentType: options.contentType } : {}),
     });
     return { kind: "redirect", url: `${this.origin}${PHOTOS_API_BASE}/blob/${token}`, expiresAt };
   }
 
-  async createUpload(_key: string, size: number, _contentType: string, sessionPath: string): Promise<UploadTarget> {
+  async createUpload(_key: string, size: number, _contentType: string, slot: UploadSlotRef): Promise<UploadTarget> {
     const expiresAt = Date.now() + UPLOAD_TTL_MS;
-    const url = `${this.origin}${PHOTOS_API_BASE}${sessionPath}`;
+    const token = await signGrant(this.env, { op: "write", ...slot, expiresAt });
+    const url = `${this.origin}${PHOTOS_API_BASE}/upload/${token}`;
     if (size <= PROXY_MAX_BYTES) return { kind: "worker-proxy", url, expiresAt };
     const parts = Math.ceil(size / PART_BYTES);
     return {

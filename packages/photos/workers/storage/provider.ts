@@ -13,8 +13,8 @@ export interface StorageObject {
 export type DownloadTarget = DownloadTargetView;
 
 /**
- * Where a browser writes an object to. `worker-proxy` and `multipart` URLs are Photos API routes
- * and need the usual request headers; `presigned-put` goes straight to the bucket.
+ * Where a browser or the NAS agent writes an object to. Every URL carries its own authority (a
+ * presigned bucket URL, or a signed Photos /upload grant), so no session headers are needed.
  */
 export type UploadTarget = UploadTargetView;
 
@@ -40,10 +40,16 @@ export interface StorageProvider {
   delete(key: string): Promise<void>;
   createDownload(key: string, options?: DownloadOptions): Promise<DownloadTarget>;
   /**
-   * A browser upload target for `key`. `sessionPath` is the Photos API path of the upload slot
-   * (`/uploads/<session>/<slot>`), used by providers that proxy the bytes through the worker.
+   * An upload target for `key`. `slot` names the upload session slot it fills, used by providers
+   * that proxy the bytes through the worker.
    */
-  createUpload(key: string, size: number, contentType: string, sessionPath: string): Promise<UploadTarget>;
+  createUpload(key: string, size: number, contentType: string, slot: UploadSlotRef): Promise<UploadTarget>;
+}
+
+/** The upload session slot a proxied write fills. */
+export interface UploadSlotRef {
+  sessionId: string;
+  slot: "original" | "preview" | "thumbnail";
 }
 
 /** Default lifetime of a download URL. */

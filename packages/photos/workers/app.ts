@@ -11,7 +11,7 @@ import { photographersRoutes } from "./routes/photographers";
 import { photosRoutes } from "./routes/photos";
 import { storageRoutes } from "./routes/storage";
 import { tagsRoutes } from "./routes/tags";
-import { uploadsRoutes } from "./routes/uploads";
+import { uploadsRoutes, uploadWriteRoutes } from "./routes/uploads";
 
 export { PhotoJobsDO } from "./durableObject/photo-jobs";
 export { SchemaMigratorDO } from "./durableObject/schema";
@@ -62,6 +62,7 @@ export const app = new Hono<PhotosHono>()
   })
   // Before the authenticated API: blob URLs carry their own authority (see blobRoutes).
   .route(`${PHOTOS_API_BASE}/blob`, blobRoutes)
+  .route(`${PHOTOS_API_BASE}/upload`, uploadWriteRoutes)
   .route(PHOTOS_API_BASE, api)
   .notFound((c) => c.json({ error: "not_found" }, 404))
   .onError((err, c) => {
