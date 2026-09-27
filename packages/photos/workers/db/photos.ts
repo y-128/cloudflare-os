@@ -27,6 +27,7 @@ interface PhotoRow extends SummaryRow {
   created_by: string;
   updated_by: string;
   updated_at: number;
+  deleted_at: number | null;
 }
 
 interface ExifRow {
@@ -105,7 +106,7 @@ export async function getPhotoDetail(
   const [photo, exif, tags, albums, assets] = await db.batch([
     db.prepare(`SELECT ${SUMMARY_COLUMNS}, p.title, p.caption, p.rating, p.download_allowed,
         p.taken_at_source, p.photographer_id, p.cover_preview_asset_id, p.created_by,
-        p.updated_by, p.updated_at
+        p.updated_by, p.updated_at, p.deleted_at
         FROM photos p WHERE p.id = ?`).bind(id),
     db.prepare("SELECT * FROM photo_exif WHERE photo_id = ?").bind(id),
     db.prepare(`SELECT t.* FROM photo_tags pt JOIN tags t ON t.id = pt.tag_id
@@ -162,6 +163,7 @@ export async function getPhotoDetail(
     updatedBy: row.updated_by,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    deletedAt: row.deleted_at,
   };
 }
 

@@ -115,6 +115,7 @@ describe("search", () => {
   it("moves photos to the trash and back", async () => {
     const id = await addPhoto();
     expect((await call("DELETE", `/photos/${id}`)).status).toBe(204);
+    expect((await callJson<PhotoDetail>("GET", `/photos/${id}`)).deletedAt).toBeGreaterThan(0);
     expect(await searchIds({})).toEqual([]);
     expect(await searchIds({ trashed: true })).toEqual([id]);
     await call("POST", `/photos/${id}/restore`);

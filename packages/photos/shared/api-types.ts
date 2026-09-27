@@ -90,6 +90,8 @@ export interface PhotoDetail extends PhotoSummary {
   updatedBy: string;
   createdAt: number;
   updatedAt: number;
+  /** When the photo was moved to the trash; null while it is in the library. */
+  deletedAt: number | null;
 }
 
 /** Fields an inspector edit may change. Absent fields are left as they are. */
