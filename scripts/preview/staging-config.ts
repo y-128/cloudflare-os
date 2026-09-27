@@ -399,6 +399,7 @@ function applyRouter(config: StagingConfig, { gatekeepers }: PreviewContext): vo
   config.services = [
     { binding: "WORKSHOP_BACKEND", service: "workshop-backend" },
     { binding: "MAIL_INBOX", service: "inbox" },
+    { binding: "PHOTOS", service: "photos" },
     ...routerGatekeeperServices(gatekeepers),
   ];
   config.previews = {

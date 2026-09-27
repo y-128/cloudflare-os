@@ -656,6 +656,7 @@ async function deploy({ dryRun }: { dryRun: boolean }): Promise<void> {
     patchPreviewServiceBindings(router, {
       [backend.name]: backendPreview.id,
       [inbox.name]: inboxPreview.id,
+      [photos.name]: photosPreview.id,
     });
     const routerPreview = await deployPreview(router, previewName, wrangler.command);
     assertRouterPreviewUrl(router, previewName, workersDevHost, routerPreview.url);

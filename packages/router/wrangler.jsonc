@@ -21,6 +21,10 @@
     // gatekeeper は自分で書く。これが無いと受信メールが Gadget に渡らず、
     // /gatekeeper/email/* も 404 になる。他の gatekeeper を使うときも同様に追加する。
     {
+      "binding": "PHOTOS",
+      "service": "photos"
+    },
+    {
       "binding": "GATEKEEPER_EMAIL",
       "service": "gatekeeper-email"
     }

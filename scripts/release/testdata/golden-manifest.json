@@ -1195,6 +1195,11 @@
           "type": "service"
         },
         {
+          "name": "PHOTOS",
+          "service": "$WORKER_NAME(photos)",
+          "type": "service"
+        },
+        {
           "name": "GATEKEEPER_EMAIL",
           "service": "$WORKER_NAME(gatekeeper-email)",
           "type": "service"
