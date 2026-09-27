@@ -22,8 +22,11 @@ import { join } from "node:path";
 import { parse } from "jsonc-parser";
 import type { AssetManifestEntry, CollectedAssets, CollectedModule } from "./hash-lib.ts";
 
-/** Manifest version: v2 adds required inbox infrastructure; older deploy services must fail closed. */
-export const MANIFEST_VERSION = 2;
+/**
+ * Manifest version: v2 adds required inbox infrastructure, v3 the photos worker and its D1
+ * database (`$D1_<BINDING>_ID`); older deploy services must fail closed.
+ */
+export const MANIFEST_VERSION = 3;
 
 /**
  * First manifest version whose deploy service provisions D1 databases and the Photos worker. A

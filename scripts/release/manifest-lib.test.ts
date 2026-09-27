@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { collectAssets, collectModules, stableStringify } from "./hash-lib.ts";
 import {
   buildWorkerEntry, generateManifest, readDeployablePackages, readDeployInputs, releaseShortName,
-  MANIFEST_VERSION, D1_MANIFEST_VERSION, type WorkerBuild,
+  D1_MANIFEST_VERSION, type WorkerBuild,
 } from "./manifest-lib.ts";
 
 const RELEASE = dirname(fileURLToPath(import.meta.url));
@@ -326,7 +326,7 @@ test("a gatekeeper-prefixed library is not a deployable worker", () => {
 // Inbox is a required core service and must never be offered as an OAuth gatekeeper.
 test("inbox ships with its storage, mail, AI, and shared Workshop authentication contract", () => {
   const manifest = buildTestManifest();
-  assert.equal(manifest.manifestVersion, 2);
+  assert.ok(manifest.manifestVersion >= 2);
   const inbox = manifest.workers.inbox;
   assert.equal(inbox.kind, "inbox");
   assert.equal(inbox.shortName, undefined);
@@ -355,8 +355,7 @@ test("inbox ships with its storage, mail, AI, and shared Workshop authentication
   });
 });
 
-// Photos is the first worker with a D1 database. Neither ships yet; these pin the contract the
-// deploy service must implement before MANIFEST_VERSION can reach D1_MANIFEST_VERSION.
+// A synthetic photos build, so the D1 rendering is pinned independently of photos' real config.
 const photosBuild: WorkerBuild = {
   pkgName: "photos",
   config: {
@@ -383,11 +382,17 @@ test("D1 databases become deploy-time placeholders and photos is a core service"
   assert.ok(!photos.bindings.some(binding => binding.name === "CLIENT_SECRET"));
 });
 
-test("a release needing D1 fails until the manifest version says deployers can provision it", () => {
-  const withPhotos = () => buildTestManifest([...readTestWorkerBuilds(), photosBuild]);
-  if (MANIFEST_VERSION < D1_MANIFEST_VERSION) {
-    assert.throws(withPhotos, /Raise MANIFEST_VERSION/);
-  } else {
-    assert.equal(withPhotos().workers.photos.kind, "photos");
-  }
+
+test("photos ships as a core service with its database, key and shared Workshop authentication", () => {
+  const manifest = buildTestManifest();
+  assert.equal(manifest.manifestVersion, D1_MANIFEST_VERSION);
+  const photos = manifest.workers.photos;
+  assert.equal(photos.kind, "photos");
+  assert.deepEqual(photos.inputs?.map(input => input.name), ["PHOTOS_CREDENTIAL_KEY"]);
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_DB"), {
+    type: "d1", name: "PHOTOS_DB", id: "$D1_PHOTOS_DB_ID",
+  });
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "WORKSHOP_AUTH"), {
+    type: "service", name: "WORKSHOP_AUTH", service: "$WORKER_NAME(workshop-backend)",
+  });
 });
