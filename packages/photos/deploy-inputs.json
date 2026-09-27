@@ -1,0 +1,8 @@
+[
+  {
+    "name": "PHOTOS_CREDENTIAL_KEY",
+    "kind": "secret",
+    "label": "Photos credential encryption key",
+    "help": "32 random bytes, base64-encoded. Generate one with `openssl rand -base64 32` and keep it: replacing it makes stored storage credentials unreadable."
+  }
+]

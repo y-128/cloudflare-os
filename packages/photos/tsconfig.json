@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["./worker-configuration.d.ts"]
+  },
+  "include": ["workers", "shared", "worker-configuration.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}
