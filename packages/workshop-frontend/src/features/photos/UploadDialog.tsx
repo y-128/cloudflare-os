@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Button, Dialog } from '@cloudflare/kumo'
+import { Button, Checkbox, Dialog } from '@cloudflare/kumo'
 import { CheckCircle, Copy, UploadSimple, WarningCircle, X } from '@phosphor-icons/react'
 import { useTranslation } from '@gadgets/i18n'
 import type { AlbumView, StorageConnectionView, TagView } from '../../../../photos/shared/api-types'
@@ -26,6 +26,7 @@ export function UploadDialog({ files, connections, albums, tags, onClose, onUplo
   const [visibility, setVisibility] = useState<Visibility>('private')
   const [tagId, setTagId] = useState<TagId | null>(null)
   const [albumId, setAlbumId] = useState<AlbumId | null>(null)
+  const [pairRawJpeg, setPairRawJpeg] = useState(true)
   const [progress, setProgress] = useState<UploadProgress[]>([])
   const [running, setRunning] = useState(false)
   const finished = progress.length === files.length && progress.every(p => ['done', 'duplicate', 'failed'].includes(p.state))
@@ -41,6 +42,7 @@ export function UploadDialog({ files, connections, albums, tags, onClose, onUplo
       visibility,
       ...(tagId ? { tagIds: [tagId] } : {}),
       ...(albumId ? { albumId } : {}),
+      ...(pairRawJpeg ? {} : { pairRawJpeg: false }),
     }, (index, next) => setProgress(current => current.map((p, i) => i === index ? next : p)))
     setRunning(false)
     onUploaded()
@@ -75,6 +77,8 @@ export function UploadDialog({ files, connections, albums, tags, onClose, onUplo
                 <OptionSelect<AlbumId> label={t('workshop-frontend.Photos.add_to_album')} value={albumId} disabled={running}
                   placeholder={t('workshop-frontend.Photos.none')}
                   options={albums.map(album => ({ value: album.id, label: album.title }))} onChange={setAlbumId} />
+                <Checkbox label={t('workshop-frontend.Photos.pair_raw_jpeg')} checked={pairRawJpeg} disabled={running}
+                  onCheckedChange={checked => setPairRawJpeg(checked === true)} />
               </div>
             )}
           {progress.length > 0 && (

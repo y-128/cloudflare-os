@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSearch } from './searchSyntax'
+import { formatSearch, parseSearch } from './searchSyntax'
 
 describe('parseSearch', () => {
   it('turns fields and comparisons into a structured query', () => {
@@ -27,5 +27,15 @@ describe('parseSearch', () => {
       text: 'sunset golden hour iso<=abc owner:me raw:maybe',
     })
     expect(parseSearch('   ')).toEqual({})
+  })
+})
+
+describe('formatSearch', () => {
+  it('round-trips everything the search bar can express', () => {
+    const text = 'camera:"Z 9" lens:35mm iso<=800 f<2.8 shutter<=1/500 raw:yes dup:no fav from:2026-09-01 to:2026-09-30 sunset beach'
+    const query = parseSearch(text)
+    expect(query.duplicates).toBe(false)
+    expect(formatSearch(query)).toBe(text)
+    expect(parseSearch(formatSearch(query))).toEqual(query)
   })
 })

@@ -87,6 +87,8 @@ export function ImportOptionsForm({ connections, albums, tags, value, onChange, 
           placeholder={t('workshop-frontend.Photos.none')} options={albums.map(album => ({ value: album.id, label: album.title }))}
           onChange={albumId => onChange({ ...value, albumId: albumId ?? undefined })} />
       </div>
+      <Checkbox label={t('workshop-frontend.Photos.pair_raw_jpeg')} checked={value.pairRawJpeg !== false} disabled={disabled}
+        onCheckedChange={checked => onChange({ ...value, pairRawJpeg: checked === true ? undefined : false })} />
     </div>
   )
 }

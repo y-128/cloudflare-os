@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Button, Input } from '@cloudflare/kumo'
-import { List, MagnifyingGlass, UploadSimple } from '@phosphor-icons/react'
+import { List, MagnifyingGlass, SlidersHorizontal, UploadSimple } from '@phosphor-icons/react'
 import { useTranslation } from '@gadgets/i18n'
 import { useDocumentTitle } from '../../useDocumentTitle'
 import type { AlbumView, PhotographerView, StorageConnectionView, TagView } from '../../../../photos/shared/api-types'
 import type { PhotoId } from '../../../../photos/shared/ids'
 import { jsonRequest, photosApi, photosErrorMessage } from '../../features/photos/api'
+import { AdvancedSearch } from '../../features/photos/AdvancedSearch'
 import { BulkEditBar } from '../../features/photos/BulkEditBar'
 import { Inspector } from '../../features/photos/Inspector'
 import { LibraryGrid } from '../../features/photos/LibraryGrid'
@@ -34,6 +35,7 @@ export function PhotosPage({ view, photo, q, onNavigate }: {
   const [error, setError] = useState<string | null>(null)
   const [uploads, setUploads] = useState<File[] | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
 
   const albums = usePhotosResource<AlbumView[]>('/albums', revision)
   const tags = usePhotosResource<TagView[]>('/tags', revision)
@@ -78,6 +80,8 @@ export function PhotosPage({ view, photo, q, onNavigate }: {
             <MagnifyingGlass size={14} className="shrink-0 text-kumo-subtle" />
             <Input aria-label={t('workshop-frontend.Photos.search')} placeholder={t('workshop-frontend.Photos.search_placeholder')}
               value={searchText} onChange={event => setSearchText(event.target.value)} className="w-full" />
+            <Button type="button" variant={advancedOpen ? 'secondary' : 'ghost'} shape="square" size="sm" aria-expanded={advancedOpen}
+              aria-label={t('workshop-frontend.Photos.advanced_search')} onClick={() => setAdvancedOpen(value => !value)}><SlidersHorizontal size={14} /></Button>
           </form>
           <label className="inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 py-1.5 text-sm hover:bg-kumo-tint">
             <UploadSimple size={14} />{t('workshop-frontend.Photos.upload')}
@@ -85,6 +89,10 @@ export function PhotosPage({ view, photo, q, onNavigate }: {
               onChange={event => { const files = [...event.target.files ?? []]; event.target.value = ''; if (files.length) setUploads(files) }} />
           </label>
         </header>
+        {advancedOpen && (
+          <AdvancedSearch key={q ?? ''} text={searchText} onClose={() => setAdvancedOpen(false)}
+            onSearch={text => { setSearchText(text); setAdvancedOpen(false); onNavigate({ q: text }) }} />
+        )}
         {(error ?? loadError) && <p role="alert" className="border-b border-kumo-line p-3 text-sm">{error ?? loadError}</p>}
         {selection.length > 1 && (
           <BulkEditBar photoIds={selection} albums={albums.data ?? []} tags={tags.data ?? []} photographers={photographers.data ?? []}
@@ -116,7 +124,7 @@ export function PhotosPage({ view, photo, q, onNavigate }: {
       {selection.length === 1 && (
         <div className="fixed inset-0 z-30 bg-kumo-base md:static md:z-auto md:w-80 md:shrink-0 md:border-l md:border-kumo-line">
           <Inspector key={selection[0]} photoId={selection[0]} albums={albums.data ?? []} tags={tags.data ?? []}
-            photographers={photographers.data ?? []} onChanged={refresh} onClose={() => select([])} />
+            photographers={photographers.data ?? []} onChanged={refresh} onClose={() => select([])} onOpen={id => select([id])} />
         </div>
       )}
     </section>

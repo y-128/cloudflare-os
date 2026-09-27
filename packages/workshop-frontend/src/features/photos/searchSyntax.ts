@@ -34,8 +34,8 @@ function parseDate(value: string): number {
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
- * Parses the search bar: `camera:"ILCE-7M4" lens:35mm iso<=800 f<2.8 shutter<=1/500 raw:yes fav
- * from:2026-09-01 to:2026-09-30` plus free text. Unrecognized `key:value` tokens stay free text,
+ * Parses the search bar: `camera:"ILCE-7M4" lens:35mm iso<=800 f<2.8 shutter<=1/500 raw:yes dup:yes
+ * fav from:2026-09-01 to:2026-09-30` plus free text. Unrecognized `key:value` tokens stay free text,
  * so nothing typed is silently dropped.
  */
 export function parseSearch(input: string): SearchQuery {
@@ -62,6 +62,8 @@ export function parseSearch(input: string): SearchQuery {
       query.lensModels = [...query.lensModels ?? [], value]
     } else if (key === 'raw' && ['yes', 'no'].includes(value.toLowerCase())) {
       query.hasRaw = value.toLowerCase() === 'yes'
+    } else if (key === 'dup' && ['yes', 'no'].includes(value.toLowerCase())) {
+      query.duplicates = value.toLowerCase() === 'yes'
     } else if (key === 'from' && Number.isFinite(parseDate(value))) {
       query.takenFrom = parseDate(value)
     } else if (key === 'to' && Number.isFinite(parseDate(value))) {
@@ -75,4 +77,38 @@ export function parseSearch(input: string): SearchQuery {
   if (numeric.length) query.numeric = numeric
   if (text.length) query.text = text.join(' ')
   return query
+}
+
+const FIELD_ALIAS: Record<NumericField, string> = {
+  iso: 'iso', fNumber: 'f', focalLength35mm: 'focal', focalLengthMm: 'mm', exposureTimeS: 'shutter', rating: 'rating',
+}
+const OPERATOR_SYMBOL = Object.fromEntries(OPERATORS.map(([symbol, op]) => [op, symbol])) as Record<NumericOp, string>
+
+const quote = (value: string) => /\s/.test(value) ? `"${value}"` : value
+
+function formatDate(time: number): string {
+  const date = new Date(time)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+function formatNumber(field: NumericField, value: number): string {
+  return field === 'exposureTimeS' && value > 0 && value < 1 ? `1/${Math.round(1 / value)}` : String(value)
+}
+
+/**
+ * Writes a query back as search-bar text, the inverse of {@link parseSearch} for everything the
+ * bar can express, so the detailed search form and the bar stay one source of truth.
+ */
+export function formatSearch(query: SearchQuery): string {
+  const tokens: string[] = []
+  for (const model of query.cameraModels ?? []) tokens.push(`camera:${quote(model)}`)
+  for (const lens of query.lensModels ?? []) tokens.push(`lens:${quote(lens)}`)
+  for (const { field, op, value } of query.numeric ?? []) tokens.push(`${FIELD_ALIAS[field]}${OPERATOR_SYMBOL[op]}${formatNumber(field, value)}`)
+  if (query.hasRaw !== undefined) tokens.push(`raw:${query.hasRaw ? 'yes' : 'no'}`)
+  if (query.duplicates !== undefined) tokens.push(`dup:${query.duplicates ? 'yes' : 'no'}`)
+  if (query.favorite) tokens.push('fav')
+  if (query.takenFrom !== undefined) tokens.push(`from:${formatDate(query.takenFrom)}`)
+  if (query.takenTo !== undefined) tokens.push(`to:${formatDate(query.takenTo)}`)
+  if (query.text) tokens.push(query.text)
+  return tokens.join(' ')
 }

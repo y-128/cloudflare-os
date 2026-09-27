@@ -1,15 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button, Input, Loader, Switch, Textarea } from '@cloudflare/kumo'
-import { ArrowCounterClockwise, Circle, DownloadSimple, Star, Trash, X } from '@phosphor-icons/react'
+import { ArrowCounterClockwise, ArrowsSplit, Circle, DownloadSimple, Star, Trash, X } from '@phosphor-icons/react'
 import { useTranslation } from '@gadgets/i18n'
 import type {
   AlbumView, DownloadTargetView, DownloadVariant, PhotoDetail, PhotoPatch, PhotographerView, TagView,
 } from '../../../../photos/shared/api-types'
 import { formatExposureTime } from '../../../../photos/shared/exif'
-import type { AlbumId, PhotoId, PhotographerId, TagId } from '../../../../photos/shared/ids'
+import type { AlbumId, AssetId, PhotoId, PhotographerId, TagId } from '../../../../photos/shared/ids'
 import { VISIBILITIES, type Visibility } from '../../../../photos/shared/visibility'
 import { jsonRequest, photosApi, photosErrorMessage } from './api'
 import { OptionSelect } from './OptionSelect'
+import { RelatedPhotos } from './RelatedPhotos'
 import { usePhotosResource } from './usePhotosResource'
 
 /** A labelled block of the inspector. */
@@ -51,13 +52,15 @@ export function downloadVariants(photo: Pick<PhotoDetail, 'assets'>): DownloadVa
 }
 
 /** Details and edits for one photo. Every change is saved as it is made. */
-export function Inspector({ photoId, albums, tags, photographers, onChanged, onClose }: {
+export function Inspector({ photoId, albums, tags, photographers, onChanged, onClose, onOpen }: {
   photoId: PhotoId
   albums: AlbumView[]
   tags: TagView[]
   photographers: PhotographerView[]
   onChanged: () => void
   onClose: () => void
+  /** Shows another photo in the inspector instead. */
+  onOpen: (photoId: PhotoId) => void
 }) {
   const { t } = useTranslation()
   const [revision, setRevision] = useState(0)
@@ -95,6 +98,10 @@ export function Inspector({ photoId, albums, tags, photographers, onChanged, onC
     link.rel = 'noopener'
     link.click()
   })
+  const merge = (other: PhotoId) => run(async () => {
+    setPhoto(await photosApi<PhotoDetail>(`/photos/${photoId}/merge`, jsonRequest('POST', { photoId: other })))
+  })
+  const split = (assetId: AssetId) => run(() => photosApi(`/photos/${photoId}/split`, jsonRequest('POST', { assetId })))
   const bulk = (change: { addTagIds?: TagId[]; removeTagIds?: TagId[]; addToAlbumIds?: AlbumId[]; removeFromAlbumIds?: AlbumId[] }) =>
     run(() => photosApi('/photos/bulk', jsonRequest('POST', { photoIds: [photoId], ...change })))
 
@@ -107,6 +114,7 @@ export function Inspector({ photoId, albums, tags, photographers, onChanged, onC
   const trashed = photo.deletedAt !== null
   const tagOptions = tags.filter(tag => !photo.tags.some(own => own.id === tag.id))
   const albumOptions = albums.filter(album => !photo.albums.some(own => own.id === album.id))
+  const splittable = photo.assets.filter(asset => asset.role === 'original').length > 1 && !trashed
 
   return (
     <aside aria-label={t('workshop-frontend.Photos.inspector')} className="flex h-full flex-col overflow-y-auto">
@@ -236,11 +244,19 @@ export function Inspector({ photoId, albums, tags, photographers, onChanged, onC
             {photo.assets.map(asset => (
               <li key={asset.id} className="flex items-center gap-2">
                 <Circle size={8} weight="fill" className={asset.connection.status === 'offline' ? 'text-kumo-danger' : 'text-green-500'} />
-                <span className="truncate" title={asset.storageKey}>{asset.connection.name} · {t(`workshop-frontend.Photos.role_${asset.role}`)}</span>
+                <span className="min-w-0 flex-1 truncate" title={asset.storageKey}>{asset.connection.name} · {t(`workshop-frontend.Photos.role_${asset.role}`)}{asset.role === 'original' && asset.formatFamily ? ` (${asset.formatFamily.toUpperCase()})` : ''}</span>
+                {splittable && asset.role === 'original' && (
+                  <Button variant="ghost" size="sm" disabled={busy} onClick={() => void split(asset.id)}
+                    aria-label={t('workshop-frontend.Photos.split_asset', { name: asset.originalFilename ?? asset.storageKey })}>
+                    <ArrowsSplit size={12} />{t('workshop-frontend.Photos.split')}
+                  </Button>
+                )}
               </li>
             ))}
           </ul>
         </Field>
+
+        {!trashed && <RelatedPhotos photoId={photoId} revision={revision} busy={busy} onMerge={other => void merge(other)} onOpen={onOpen} />}
 
         <p className="text-xs text-kumo-subtle">{t('workshop-frontend.Photos.edited_by', { name: photo.updatedBy, date: new Date(photo.updatedAt).toLocaleString() })}</p>
 
