@@ -71,7 +71,8 @@ export const app = new Hono<PhotosHono>()
   .route(PHOTOS_API_BASE, api)
   .notFound((c) => c.json({ error: "not_found" }, 404))
   .onError((err, c) => {
-    if (err instanceof HttpError) return c.json({ error: err.code }, err.status);
+    const known = HttpError.revive(err);
+    if (known) return c.json({ error: known.code }, known.status);
     if (err instanceof ZodError || err instanceof SyntaxError) {
       return c.json({ error: "invalid_request" }, 400);
     }
