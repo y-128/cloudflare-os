@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Button, Input } from '@cloudflare/kumo'
 import {
-  Clock, Eye, EyeSlash, Globe, HardDrives, Images, Plus, Star, Tag, Trash, User,
+  Clock, DownloadSimple, Eye, EyeSlash, Globe, HardDrives, Images, Plus, Star, Tag, Trash, User,
 } from '@phosphor-icons/react'
 import { useTranslation } from '@gadgets/i18n'
 import type { AlbumView, PhotographerView, TagView } from '../../../../photos/shared/api-types'
@@ -101,6 +101,7 @@ export function PhotosNavigation({ view, albums, tags, photographers, onSelect, 
         {item({ kind: 'visibility', value: 'private' }, <EyeSlash size={14} />, t('workshop-frontend.Photos.visibility_private'))}
       </Section>
       <Section title={t('workshop-frontend.Photos.manage')}>
+        {item({ kind: 'imports' }, <DownloadSimple size={14} />, t('workshop-frontend.Photos.imports'))}
         {item({ kind: 'trash' }, <Trash size={14} />, t('workshop-frontend.Photos.trash'))}
         {item({ kind: 'storage' }, <HardDrives size={14} />, t('workshop-frontend.Photos.storage'))}
       </Section>

@@ -17,6 +17,7 @@ export const photosErrorMessage = (err: unknown): string => {
   if (err.status === 403) return t('workshop-frontend.Photos.admin_only')
   if (err.code === 'credential_key_missing') return t('workshop-frontend.Photos.credential_key_missing')
   if (err.code === 'tag_exists') return t('workshop-frontend.Photos.tag_exists')
+  if (err.code === 'nas_unreachable') return t('workshop-frontend.Photos.nas_unreachable')
   if (err.code === 'tag_cycle') return t('workshop-frontend.Photos.tag_cycle')
   return t('workshop-frontend.Photos.request_failed', { status: err.status })
 }

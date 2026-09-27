@@ -12,6 +12,7 @@ import { LibraryGrid } from '../../features/photos/LibraryGrid'
 import { PhotosNavigation } from '../../features/photos/PhotosNavigation'
 import { queryForView, type PhotosView } from '../../features/photos/photosView'
 import { parseSearch } from '../../features/photos/searchSyntax'
+import { ImportScreen } from '../../features/photos/ImportScreen'
 import { StorageOverview } from '../../features/photos/StorageOverview'
 import { usePhotosResource } from '../../features/photos/usePhotosResource'
 import { UploadDialog } from '../../features/photos/UploadDialog'
@@ -101,8 +102,10 @@ export function PhotosPage({ view, photo, q, onNavigate }: {
           }}
         >
           {view.kind === 'storage'
-            ? <StorageOverview />
-            : <LibraryGrid query={query} revision={revision} selection={selection} onSelectionChange={select} />}
+            ? <StorageOverview albums={albums.data ?? []} tags={tags.data ?? []} />
+            : view.kind === 'imports'
+              ? <ImportScreen connections={connections.data ?? []} albums={albums.data ?? []} tags={tags.data ?? []} onImported={refresh} />
+              : <LibraryGrid query={query} revision={revision} selection={selection} onSelectionChange={select} />}
         </div>
       </div>
 

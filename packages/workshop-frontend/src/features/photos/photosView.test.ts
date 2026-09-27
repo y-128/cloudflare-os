@@ -4,7 +4,7 @@ import { queryForView, searchForView, viewFromSearch, type PhotosView } from './
 describe('photos views', () => {
   it('round-trips every view through the URL', () => {
     const views: PhotosView[] = [
-      { kind: 'library' }, { kind: 'recent' }, { kind: 'favorites' }, { kind: 'trash' }, { kind: 'storage' },
+      { kind: 'library' }, { kind: 'recent' }, { kind: 'favorites' }, { kind: 'trash' }, { kind: 'storage' }, { kind: 'imports' },
       { kind: 'album', id: 'alb_01J00000000000000000000000' },
       { kind: 'tag', id: 'tag_01J00000000000000000000000' },
       { kind: 'photographer', id: 'pgr_01J00000000000000000000000' },

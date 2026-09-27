@@ -4,7 +4,7 @@ import type { Visibility } from '../../../../photos/shared/visibility'
 
 /** What the main pane shows, as chosen in the left pane. */
 export type PhotosView =
-  | { kind: 'library' | 'recent' | 'favorites' | 'trash' | 'storage' }
+  | { kind: 'library' | 'recent' | 'favorites' | 'trash' | 'storage' | 'imports' }
   | { kind: 'album'; id: AlbumId }
   | { kind: 'tag'; id: TagId }
   | { kind: 'photographer'; id: PhotographerId }
@@ -18,7 +18,7 @@ export interface PhotosSearch {
   q?: string
 }
 
-const SIMPLE = ['library', 'recent', 'favorites', 'trash', 'storage'] as const
+const SIMPLE = ['library', 'recent', 'favorites', 'trash', 'storage', 'imports'] as const
 const VISIBILITY: readonly string[] = ['private', 'unlisted', 'public']
 
 /** Reads a view from URL parameters; anything unrecognized is the library. */
