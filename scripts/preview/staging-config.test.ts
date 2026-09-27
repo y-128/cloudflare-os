@@ -537,3 +537,17 @@ test("inbox has an isolated preview mailbox and a static router binding", () => 
   assert.ok(previewsOf(configs, "router").services?.some(service =>
     service.binding === "MAIL_INBOX" && service.service === "inbox"));
 });
+
+// Photos gets a fresh database per preview and, like inbox, stays private behind the router.
+test("photos has an isolated preview database and no hostname", () => {
+  const { configs } = buildAll();
+  const photos = configs.get("photos");
+  assert.ok(photos);
+  assert.equal(photos.workers_dev, false);
+  assert.equal(photos.preview_urls, false);
+  assert.deepEqual(photos.previews?.d1_databases, [{ binding: "PHOTOS_DB" }]);
+  assert.ok(photos.previews?.services?.some(service =>
+    service.binding === "WORKSHOP_AUTH" && service.service === "workshop-backend"));
+  assert.ok(!(photos.d1_databases ?? []).some(db => "database_id" in db),
+      "a preview must never inherit another deployment's database");
+});

@@ -65,7 +65,7 @@ cp deploy.config.sample.json deploy.config.json
 
 1. Node 24 と pnpm の確認
 2. `pnpm build`
-3. **正しい順序**で4つの Worker をデプロイ(router は他を参照するので最後)
+3. **正しい順序**で5つの Worker をデプロイ(router は他を参照するので最後)
 4. デプロイ結果から**公開 URL を検出**
 5. 公開 URL のリダイレクト先から **Cloudflare Access のチーム URL と Application Audience を検出**
 6. secret を Worker ごとに振り分けて一括設定

@@ -32,11 +32,13 @@
     "CFOS_PUBLIC_URL   … router のデプロイ結果から取得します",
     "MAIL_ROUTING_WORKER … router の worker 名を使います",
     "Access の2値      … 公開URLへのリダイレクト先から検出します",
+    "PHOTOS_CREDENTIAL_KEY … 未設定なら初回だけ生成します。設定後は変更しないでください",
     "検出に失敗した場合や、明示したい場合だけ値を書いてください。"
   ],
 
   "CFOS_PUBLIC_URL": "",
   "MAIL_ROUTING_WORKER": "",
   "ACCESS_TEAM_URL": "",
-  "ACCESS_AUD": ""
+  "ACCESS_AUD": "",
+  "PHOTOS_CREDENTIAL_KEY": ""
 }

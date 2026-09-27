@@ -9,7 +9,7 @@
 # 値は deploy.config.json から読みます。deploy.config.sample.json をコピーして
 # 作ってください。値は表示もログ出力もしません。
 #
-# Worker の順序は router を最後にします。router は他の3つをサービスバインディングで
+# Worker の順序は router を最後にします。router は他の Worker をサービスバインディングで
 # 参照するため、先にデプロイすると参照先を見失います。
 
 set -uo pipefail
@@ -19,7 +19,7 @@ CONFIG="$ROOT/deploy.config.json"
 # packages/ 配下の「ディレクトリ名」。パッケージ名とは一致しないものがあるので注意
 # (packages/gatekeeper-email のパッケージ名は @gadgets/email-gatekeeper で前後が逆)。
 # 順序は router を最後にする。router は他をサービスバインディングで参照するため。
-WORKERS=(workshop-backend inbox gatekeeper-email router)
+WORKERS=(workshop-backend inbox photos gatekeeper-email router)
 # Node 24 でないと gatekeeper-google のテストが URLPattern 未定義で落ちる。
 REQUIRED_NODE_MAJOR=24
 # Access のログインリダイレクトを読み取るときの待ち時間。
@@ -126,7 +126,7 @@ if [ -z "$ASSUME_YES" ]; then
   else
     echo "以下を本番環境に反映します。"
     [ -z "$SECRETS_ONLY" ] && printf '  デプロイ: %s\n' "${WORKERS[*]}"
-    echo "  secret : workshop-backend と inbox に設定"
+    echo "  secret : workshop-backend、inbox、photos に設定"
   fi
   printf "続けますか? [y/N] "
   read -r reply
@@ -264,12 +264,25 @@ step "secret の設定"
 
 # 対象 Worker 向けの secret を JSON にまとめて stdin から wrangler へ渡す。
 # 値をコマンドライン引数に置かないので、プロセス一覧にも履歴にも残らない。
+# Worker に設定済みの secret 名を1行1件で出す。取得できなければ何も出さない。
+existing_secrets() {
+  ( cd "$ROOT" && pnpm --filter "$(package_name "$1")" exec wrangler secret list --format json 2>/dev/null ) \
+    | node -e '
+      let input = "";
+      process.stdin.on("data", chunk => { input += chunk; });
+      process.stdin.on("end", () => {
+        try { for (const { name } of JSON.parse(input)) console.log(name); } catch {}
+      });
+    '
+}
+
 put_secrets() {
-  local worker="$1" name payload count
+  local worker="$1" name payload count existing=""
   name="$(package_name "$worker")"
+  [ "$worker" = "photos" ] && existing="$(existing_secrets photos)"
   payload="$(node -e '
     const config = JSON.parse(Buffer.from(process.argv[1], "base64").toString("utf8"));
-    const [target, publicUrl, accessTeamUrl, accessAud, routingWorker] = process.argv.slice(2);
+    const [target, publicUrl, accessTeamUrl, accessAud, routingWorker, existing] = process.argv.slice(2);
     const secrets = {};
     /** 空でない値だけを積む。空の項目は設定せず、既存の値を残す。 */
     const set = (key, value) => { if (value) secrets[key] = value; };
@@ -277,6 +290,15 @@ put_secrets() {
       set("ADMINS", config.ADMINS);
       set("CF_ACCESS_AUD", accessAud);
       set("CF_ACCESS_ISS", accessTeamUrl);
+    } else if (target === "photos") {
+      // 暗号鍵は一度設定したら上書きしない。変えると保存済みの接続情報を復号できなくなる。
+      // deploy.config.json に値がなければ、初回だけここで生成する。
+      if (!existing.split("\n").includes("PHOTOS_CREDENTIAL_KEY")) {
+        set("PHOTOS_CREDENTIAL_KEY",
+          config.PHOTOS_CREDENTIAL_KEY || require("node:crypto").randomBytes(32).toString("base64"));
+      }
+      // Access の内側では外部の人が /share/* を開けないので、直接共有リンクは Access なしのときだけ。
+      if (!accessAud) set("PHOTOS_DIRECT_SHARE", "1");
     } else {
       // DOMAINS と EMAIL_ADDRESSES はここで設定しない。packages/inbox/wrangler.jsonc の
       // vars として宣言済みで、同名の secret は作れない (Cloudflare API code 10053)。
@@ -294,7 +316,7 @@ put_secrets() {
       "$(node -e '
         const config = JSON.parse(Buffer.from(process.argv[1], "base64").toString("utf8"));
         process.stdout.write(config.MAIL_ROUTING_WORKER || "router");
-      ' "$CONFIG_B64")")"
+      ' "$CONFIG_B64")" "$existing")"
 
   count="$(printf '%s' "$payload" | node -e '
     let input = "";
@@ -323,6 +345,18 @@ put_secrets() {
 
 put_secrets workshop-backend
 put_secrets inbox
+put_secrets photos
+
+# Access を後から有効にした場合、以前に設定した直接共有リンクの許可を取り消す。
+if [ -n "$ACCESS_AUD" ] && existing_secrets photos | grep -x PHOTOS_DIRECT_SHARE >/dev/null; then
+  if [ -n "$DRY_RUN" ]; then
+    echo "[deploy] photos: PHOTOS_DIRECT_SHARE を削除します (--dry-run のため実行しません)"
+  else
+    echo "[deploy] photos: Access が有効なので PHOTOS_DIRECT_SHARE を削除します"
+    ( cd "$ROOT" && printf 'y\n' | pnpm --filter "$(package_name photos)" exec wrangler secret delete PHOTOS_DIRECT_SHARE ) \
+      || die "photos の PHOTOS_DIRECT_SHARE を削除できませんでした"
+  fi
+fi
 
 # --- 完了 ---------------------------------------------------------------------
 
