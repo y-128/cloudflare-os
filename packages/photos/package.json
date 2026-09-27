@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@gadgets/backend-utils": "workspace:*",
+    "aws4fetch": "^1.0.20",
     "hono": "^4.13.7",
     "zod": "^3.25.76"
   },

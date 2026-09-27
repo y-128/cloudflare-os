@@ -1,7 +1,10 @@
 import { z } from "zod";
 import {
-  BULK_EDIT_LIMIT, type AlbumPatch, type BulkPhotoEdit, type PhotoPatch, type PhotographerInput,
+  BULK_EDIT_LIMIT, STORAGE_ROLES, UPLOAD_BATCH_LIMIT, type AlbumPatch, type BulkPhotoEdit,
+  type DownloadVariant, type PhotoPatch, type PhotographerInput, type StorageConnectionInput,
+  type StorageConnectionPatch, type UploadRequest,
 } from "../shared/api-types";
+import type { NormalizedExif } from "../shared/exif";
 import {
   ID_PREFIX, isId, type AlbumId, type PhotoId, type PhotographerId, type StorageConnectionId,
   type TagId,
@@ -22,7 +25,8 @@ export const albumId = id(ID_PREFIX.album) as z.ZodType<AlbumId>;
 export const tagId = id(ID_PREFIX.tag) as z.ZodType<TagId>;
 /** Validates a photographer id. */
 export const photographerId = id(ID_PREFIX.photographer) as z.ZodType<PhotographerId>;
-const connectionId = id(ID_PREFIX.storageConnection) as z.ZodType<StorageConnectionId>;
+/** Validates a storage connection id. */
+export const connectionId = id(ID_PREFIX.storageConnection) as z.ZodType<StorageConnectionId>;
 
 const visibility = z.enum(VISIBILITIES);
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -139,3 +143,94 @@ export const aliasCreate = z.object({
   artist: text(200),
   applyToExisting: z.boolean().default(true),
 }).strict();
+
+const finite = z.number().finite();
+const shortText = z.string().max(200);
+
+/** Validates browser-read EXIF: only range and type, since only the uploader's own photo is affected. */
+const exif = z.object({
+  takenAt: z.number().int().optional(),
+  timezoneOffsetMin: z.number().int().min(-24 * 60).max(24 * 60).optional(),
+  make: shortText.optional(),
+  model: shortText.optional(),
+  lensModel: shortText.optional(),
+  focalLengthMm: finite.min(0).optional(),
+  focalLength35mm: finite.min(0).optional(),
+  fNumber: finite.min(0).optional(),
+  exposureTimeS: finite.min(0).optional(),
+  iso: z.number().int().min(0).optional(),
+  exposureBiasEv: finite.optional(),
+  meteringMode: shortText.optional(),
+  flashFired: z.boolean().optional(),
+  whiteBalance: shortText.optional(),
+  orientation: z.number().int().min(1).max(8).optional(),
+  pixelWidth: z.number().int().min(0).optional(),
+  pixelHeight: z.number().int().min(0).optional(),
+  gps: z.object({
+    lat: finite.min(-90).max(90), lon: finite.min(-180).max(180), altM: finite.optional(),
+  }).strict().optional(),
+  artist: shortText.optional(),
+  copyright: z.string().max(500).optional(),
+}).strict() satisfies z.ZodType<NormalizedExif>;
+
+const derivative = z.object({
+  size: z.number().int().min(1).max(50 * 1000 * 1000),
+  width: z.number().int().min(1),
+  height: z.number().int().min(1),
+}).strict();
+
+/** Validates an upload announcement. */
+export const uploadRequest = z.object({
+  files: z.array(z.object({
+    clientId: z.string().min(1).max(100),
+    filename: z.string().min(1).max(255),
+    mimeType: z.string().min(1).max(100),
+    formatFamily: z.enum(["raw", "jpeg", "heif", "png", "webp", "avif", "tiff", "other"]),
+    size: z.number().int().min(1).max(5 * 1000 ** 4),
+    sha256: z.string().regex(/^[0-9a-f]{64}$/),
+    lastModified: z.number().int().optional(),
+    width: z.number().int().min(1).optional(),
+    height: z.number().int().min(1).optional(),
+    exif: exif.optional(),
+    preview: derivative.optional(),
+    thumbnail: derivative.optional(),
+  }).strict()).min(1).max(UPLOAD_BATCH_LIMIT),
+  options: z.object({
+    originalConnectionId: connectionId,
+    derivativeConnectionId: connectionId,
+    visibility: visibility.optional(),
+    tagIds: idList(tagId).optional(),
+    albumId: albumId.optional(),
+  }).strict(),
+}).strict() satisfies z.ZodType<UploadRequest>;
+
+/** Validates a download request. */
+export const downloadRequest = z.object({
+  variant: z.enum(["original", "raw", "jpeg", "preview"]) satisfies z.ZodType<DownloadVariant>,
+}).strict();
+
+const roles = z.array(z.enum(STORAGE_ROLES)).min(1).optional();
+const prefix = z.string().max(200).regex(/^[A-Za-z0-9._/-]*$/).optional();
+
+/** Validates a new storage connection. */
+export const connectionCreate = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("r2-binding"), name: text(100), prefix, roles }).strict(),
+  z.object({
+    kind: z.literal("r2-s3"),
+    name: text(100),
+    endpoint: z.string().url().max(300).refine((url) => url.startsWith("https://"), "endpoint must be https"),
+    bucket: z.string().regex(/^[a-z0-9][a-z0-9.-]{1,62}$/),
+    prefix,
+    accessKeyId: text(200),
+    secretAccessKey: text(200),
+    roles,
+  }).strict(),
+]) satisfies z.ZodType<StorageConnectionInput>;
+
+/** Validates a storage connection edit. */
+export const connectionPatch = z.object({
+  name: text(100).optional(),
+  roles,
+  accessKeyId: text(200).optional(),
+  secretAccessKey: text(200).optional(),
+}).strict() satisfies z.ZodType<StorageConnectionPatch>;

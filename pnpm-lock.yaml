@@ -970,6 +970,9 @@ importers:
       '@gadgets/backend-utils':
         specifier: workspace:*
         version: link:../backend-utils
+      aws4fetch:
+        specifier: ^1.0.20
+        version: 1.0.20
       hono:
         specifier: ^4.13.7
         version: 4.13.7

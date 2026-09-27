@@ -24,6 +24,8 @@ interface PhotoRow extends SummaryRow {
   taken_at_source: PhotoDetail["takenAtSource"];
   photographer_id: PhotographerId | null;
   cover_preview_asset_id: string | null;
+  preview_connection_id: string | null;
+  preview_key: string | null;
   created_by: string;
   updated_by: string;
   updated_at: number;
@@ -101,12 +103,14 @@ function toExif(row: ExifRow, takenAt: number): NormalizedExif {
 export async function getPhotoDetail(
   db: D1Database,
   id: PhotoId,
-  urls: { thumbnail: ThumbnailUrlFor; preview: (assetId: string | null) => Promise<string | null> },
+  displayUrl: ThumbnailUrlFor,
 ): Promise<PhotoDetail> {
   const [photo, exif, tags, albums, assets] = await db.batch([
     db.prepare(`SELECT ${SUMMARY_COLUMNS}, p.title, p.caption, p.rating, p.download_allowed,
         p.taken_at_source, p.photographer_id, p.cover_preview_asset_id, p.created_by,
-        p.updated_by, p.updated_at, p.deleted_at
+        p.updated_by, p.updated_at, p.deleted_at,
+        (SELECT connection_id FROM photo_assets WHERE id = p.cover_preview_asset_id) AS preview_connection_id,
+        (SELECT storage_key FROM photo_assets WHERE id = p.cover_preview_asset_id) AS preview_key
         FROM photos p WHERE p.id = ?`).bind(id),
     db.prepare("SELECT * FROM photo_exif WHERE photo_id = ?").bind(id),
     db.prepare(`SELECT t.* FROM photo_tags pt JOIN tags t ON t.id = pt.tag_id
@@ -132,7 +136,7 @@ export async function getPhotoDetail(
     : null;
 
   return {
-    ...await toSummary(row, urls.thumbnail),
+    ...await toSummary(row, displayUrl),
     title: row.title,
     caption: row.caption,
     rating: row.rating,
@@ -158,7 +162,9 @@ export async function getPhotoDetail(
       sha256: a.sha256,
       state: a.state,
     })),
-    previewUrl: await urls.preview(row.cover_preview_asset_id),
+    previewUrl: await displayUrl(row.preview_connection_id && row.preview_key
+      ? { connectionId: row.preview_connection_id, key: row.preview_key }
+      : null),
     createdBy: row.created_by,
     updatedBy: row.updated_by,
     createdAt: row.created_at,

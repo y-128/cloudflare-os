@@ -3,6 +3,7 @@ import type { PhotoId } from "../../shared/ids";
 import type { NumericField, NumericOp, SearchQuery, SearchSort } from "../../shared/search-query";
 import type { Visibility } from "../../shared/visibility";
 import { HttpError } from "../http";
+import type { DisplayUrl } from "../storage/delivery";
 
 // Column for each numeric field. Keys are the closed NumericField set, so no caller-supplied text
 // ever reaches the SQL itself; values are bound.
@@ -25,14 +26,15 @@ const SORT: Record<SearchSort, { column: "taken_at" | "created_at"; descending: 
   created_desc: { column: "created_at", descending: true },
 };
 
-/** A thumbnail URL for a photo's cover thumbnail, or null; supplied by the storage layer. */
-export type ThumbnailUrlFor = (row: { id: PhotoId; cover_thumbnail_asset_id: string | null }) =>
-  Promise<string | null>;
+/** A display URL for a stored file, or null; supplied by the storage layer. */
+export type ThumbnailUrlFor = DisplayUrl;
 
 /** Columns every summary query selects, as `p` joined to its EXIF as `e`. */
 export const SUMMARY_COLUMNS = `
   p.id, p.taken_at, p.created_at, p.width, p.height, p.favorite, p.visibility,
   p.cover_thumbnail_asset_id,
+  (SELECT connection_id FROM photo_assets WHERE id = p.cover_thumbnail_asset_id) AS thumb_connection_id,
+  (SELECT storage_key FROM photo_assets WHERE id = p.cover_thumbnail_asset_id) AS thumb_key,
   EXISTS (SELECT 1 FROM photo_assets a
           WHERE a.photo_id = p.id AND a.role = 'original' AND a.format_family = 'raw') AS has_raw,
   EXISTS (SELECT 1 FROM photo_assets a JOIN storage_connections c ON c.id = a.connection_id
@@ -49,6 +51,8 @@ export interface SummaryRow {
   favorite: number;
   visibility: Visibility;
   cover_thumbnail_asset_id: string | null;
+  thumb_connection_id: string | null;
+  thumb_key: string | null;
   has_raw: number;
   original_available: number;
 }
@@ -62,7 +66,9 @@ export async function toSummary(row: SummaryRow, thumbnailUrl: ThumbnailUrlFor):
     height: row.height,
     favorite: row.favorite === 1,
     visibility: row.visibility,
-    thumbnailUrl: await thumbnailUrl(row),
+    thumbnailUrl: await thumbnailUrl(row.thumb_connection_id && row.thumb_key
+      ? { connectionId: row.thumb_connection_id, key: row.thumb_key }
+      : null),
     hasRaw: row.has_raw === 1,
     originalAvailable: row.original_available === 1,
   };

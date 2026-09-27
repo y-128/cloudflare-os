@@ -11,6 +11,7 @@ export default defineConfig({
         // 32 zero bytes: a well-formed key, never a real one.
         bindings: { PHOTOS_CREDENTIAL_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" },
         d1Databases: ["PHOTOS_DB"],
+        r2Buckets: ["PHOTOS_BUCKET"],
         durableObjects: {
           PHOTO_JOBS: { className: "PhotoJobsDO", useSQLite: true },
           SCHEMA_MIGRATOR: { className: "SchemaMigratorDO", useSQLite: true },

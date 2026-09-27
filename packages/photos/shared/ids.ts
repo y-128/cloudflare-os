@@ -28,6 +28,7 @@ export const ID_PREFIX = {
   publicationTarget: "ptg",
   publication: "pub",
   job: "job",
+  upload: "upl",
 } as const;
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";

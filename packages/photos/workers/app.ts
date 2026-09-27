@@ -6,10 +6,12 @@ import { authenticateAdmin, hasValidCredentialKey } from "./auth";
 import type { PhotosEnv, PhotosHono } from "./env";
 import { HttpError } from "./http";
 import { albumsRoutes } from "./routes/albums";
+import { blobRoutes, downloadsRoutes } from "./routes/downloads";
 import { photographersRoutes } from "./routes/photographers";
 import { photosRoutes } from "./routes/photos";
 import { storageRoutes } from "./routes/storage";
 import { tagsRoutes } from "./routes/tags";
+import { uploadsRoutes } from "./routes/uploads";
 
 export { PhotoJobsDO } from "./durableObject/photo-jobs";
 export { SchemaMigratorDO } from "./durableObject/schema";
@@ -42,6 +44,8 @@ const api = new Hono<PhotosHono>()
     await next();
   })
   .route("/photos", photosRoutes)
+  .route("/photos", downloadsRoutes)
+  .route("/uploads", uploadsRoutes)
   .route("/tags", tagsRoutes)
   .route("/albums", albumsRoutes)
   .route("/photographers", photographersRoutes)
@@ -51,10 +55,13 @@ const api = new Hono<PhotosHono>()
 export const app = new Hono<PhotosHono>()
   .use("*", async (c, next) => {
     await next();
-    // Everything here is per-administrator data; never let a shared cache keep it.
-    c.header("Cache-Control", "no-store");
+    // Everything here is per-administrator data; never let a shared cache keep it. Blob responses
+    // set their own private, expiring policy.
+    if (!c.res.headers.has("Cache-Control")) c.header("Cache-Control", "no-store");
     c.header("X-Content-Type-Options", "nosniff");
   })
+  // Before the authenticated API: blob URLs carry their own authority (see blobRoutes).
+  .route(`${PHOTOS_API_BASE}/blob`, blobRoutes)
   .route(PHOTOS_API_BASE, api)
   .notFound((c) => c.json({ error: "not_found" }, 404))
   .onError((err, c) => {

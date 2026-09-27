@@ -36,7 +36,9 @@ export function fakeWorkshop() {
 export async function call(
   method: string,
   path: string,
-  options: { body?: unknown; headers?: Record<string, string>; env?: Partial<PhotosEnv> } = {},
+  options: {
+    body?: unknown; rawBody?: Uint8Array; headers?: Record<string, string>; env?: Partial<PhotosEnv>;
+  } = {},
 ): Promise<Response> {
   const ctx = createExecutionContext();
   const request = new Request(`https://cfos.example${PHOTOS_API_BASE}${path}`, {
@@ -47,7 +49,7 @@ export async function call(
       ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
       ...options.headers,
     },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: options.rawBody ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
   });
   const response = await app.fetch(request, {
     ...env, WORKSHOP_AUTH: fakeWorkshop().fetcher, ...options.env,

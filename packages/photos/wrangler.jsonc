@@ -24,6 +24,12 @@
       "database_name": "photos",
     },
   ],
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS_BUCKET",
+      "bucket_name": "photos",
+    },
+  ],
   "durable_objects": {
     "bindings": [
       { "name": "PHOTO_JOBS", "class_name": "PhotoJobsDO" },

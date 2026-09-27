@@ -1,7 +1,8 @@
 import type { Context } from "hono";
 import type { z } from "zod";
-import type { ThumbnailUrlFor } from "../db/search";
 import type { PhotosHono } from "../env";
+import { displayUrls, type DisplayUrl } from "../storage/delivery";
+import { StorageRegistry } from "../storage/registry";
 
 /** Parses and validates a JSON request body; failures surface as 400s via the error handler. */
 export async function body<S extends z.ZodTypeAny>(c: Context<PhotosHono>, schema: S): Promise<z.output<S>> {
@@ -13,14 +14,17 @@ export function param<S extends z.ZodTypeAny>(c: Context<PhotosHono>, name: stri
   return schema.parse(c.req.param(name));
 }
 
-/**
- * Delivery URLs for thumbnails and previews. Phase 1 has no storage providers yet, so there is
- * nothing to deliver; Phase 2 replaces this with short-lived /blob URLs.
- */
-export const deliveryUrls: {
-  thumbnail: ThumbnailUrlFor;
-  preview: (assetId: string | null) => Promise<string | null>;
-} = {
-  thumbnail: async () => null,
-  preview: async () => null,
-};
+/** The storage registry for this request (providers are cached per request). */
+export function registry(c: Context<PhotosHono>): StorageRegistry {
+  let current = c.get("registry");
+  if (!current) {
+    current = new StorageRegistry(c.env, new URL(c.req.url).origin);
+    c.set("registry", current);
+  }
+  return current;
+}
+
+/** Display URLs for thumbnails and previews in this request's responses. */
+export function display(c: Context<PhotosHono>): DisplayUrl {
+  return displayUrls(registry(c));
+}

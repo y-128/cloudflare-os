@@ -163,6 +163,111 @@ export interface PhotographerSuggestion {
   photographer: PhotographerView | null;
 }
 
+/** What a storage connection may hold. */
+export type StorageRole = "original" | "derivative" | "replica";
+
+/** Every storage role. */
+export const STORAGE_ROLES = ["original", "derivative", "replica"] as const satisfies readonly StorageRole[];
+
+/** A storage connection as listed; secrets are never returned, only whether they are set. */
+export interface StorageConnectionView {
+  id: StorageConnectionId;
+  kind: StorageKind;
+  name: string;
+  /** Non-secret settings: `{ prefix }` for r2-binding, `{ endpoint, bucket, prefix }` for r2-s3. */
+  config: Record<string, string>;
+  hasSecret: boolean;
+  roles: StorageRole[];
+  status: ConnectionStatus;
+  /** Why the last check failed, e.g. `cors` or `bucket_403`. */
+  statusDetail: string | null;
+  lastSeenAt: number | null;
+  assetCount: number;
+  byteSize: number;
+}
+
+/** A new storage connection. */
+export type StorageConnectionInput =
+  | { kind: "r2-binding"; name: string; prefix?: string; roles?: StorageRole[] }
+  | {
+    kind: "r2-s3"; name: string; endpoint: string; bucket: string; prefix?: string;
+    accessKeyId: string; secretAccessKey: string; roles?: StorageRole[];
+  };
+
+/** A storage connection edit; credentials are replaced only when both halves are given. */
+export interface StorageConnectionPatch {
+  name?: string;
+  roles?: StorageRole[];
+  accessKeyId?: string;
+  secretAccessKey?: string;
+}
+
+/** Most files one upload request may announce. */
+export const UPLOAD_BATCH_LIMIT = 200;
+
+/** A browser-generated derivative (preview JPEG or thumbnail WebP) to upload with its original. */
+export interface DerivativeSpec {
+  size: number;
+  width: number;
+  height: number;
+}
+
+/** One file a browser wants to upload, with what it already computed locally. */
+export interface UploadFile {
+  /** The browser's own id for the file, echoed back so it can match targets to files. */
+  clientId: string;
+  filename: string;
+  mimeType: string;
+  formatFamily: FormatFamily;
+  size: number;
+  /** Lowercase hex SHA-256 of the whole file. */
+  sha256: string;
+  /** The file's modification time, used when EXIF has no capture time. */
+  lastModified?: number;
+  width?: number;
+  height?: number;
+  exif?: NormalizedExif;
+  preview?: DerivativeSpec;
+  thumbnail?: DerivativeSpec;
+}
+
+/** Where uploaded files go and what they start with. */
+export interface UploadOptions {
+  originalConnectionId: StorageConnectionId;
+  derivativeConnectionId: StorageConnectionId;
+  visibility?: Visibility;
+  tagIds?: TagId[];
+  albumId?: AlbumId;
+}
+
+/** A batch of files to upload. */
+export interface UploadRequest {
+  files: UploadFile[];
+  options: UploadOptions;
+}
+
+/** A browser upload target; see the worker's storage/provider.ts for how each kind is written. */
+export type UploadTargetView =
+  | { kind: "presigned-put"; url: string; headers: Record<string, string>; expiresAt: number }
+  | { kind: "worker-proxy"; url: string; expiresAt: number }
+  | { kind: "multipart"; partUrls: string[]; partSize: number; expiresAt: number };
+
+/** What to do with one announced file. */
+export type UploadSlot =
+  | { clientId: string; status: "duplicate"; photoId: PhotoId | null }
+  | {
+    clientId: string; status: "upload"; sessionId: string;
+    original: UploadTargetView; preview: UploadTargetView | null; thumbnail: UploadTargetView | null;
+  };
+
+/** Which file of a photo to download. */
+export type DownloadVariant = "original" | "raw" | "jpeg" | "preview";
+
+/** A short-lived download URL, or why there is none. */
+export type DownloadTargetView =
+  | { kind: "redirect"; url: string; expiresAt: number }
+  | { kind: "unavailable"; reason: "offline" | "missing" };
+
 /** A page of results and the cursor for the next one. */
 export interface Page<T> {
   items: T[];
