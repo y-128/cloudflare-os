@@ -66,6 +66,11 @@ describe("RAW+JPEG pairs", () => {
     await env.PHOTOS_DB.prepare("UPDATE photo_assets SET sha256 = ?, byte_size = (SELECT byte_size FROM photo_assets WHERE photo_id = ?) WHERE photo_id = ?")
       .bind(sha, one, two).run();
     expect((await callJson<RelatedPhotos>("GET", `/photos/${one}/related`)).duplicates.map((p) => p.id)).toEqual([two as PhotoId]);
+    const alone = await addPhoto();
+    const found = await callJson<{ items: PhotoSummary[] }>("POST", "/photos/search", { query: { duplicates: true } });
+    expect(found.items.map((p) => p.id).toSorted()).toEqual([one, two].toSorted());
+    const unique = await callJson<{ items: PhotoSummary[] }>("POST", "/photos/search", { query: { duplicates: false } });
+    expect(unique.items.map((p) => p.id)).toEqual([alone]);
     await call("DELETE", `/photos/${two}`);
     expect((await callJson<RelatedPhotos>("GET", `/photos/${one}/related`)).duplicates).toEqual([]);
   });

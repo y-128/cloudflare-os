@@ -37,6 +37,8 @@ export interface SearchQuery {
   visibility?: Visibility[];
   favorite?: boolean;
   hasRaw?: boolean;
+  /** Only photos with a byte-identical file in another live photo (or, false, none). */
+  duplicates?: boolean;
   takenFrom?: number;
   takenTo?: number;
   numeric?: { field: NumericField; op: NumericOp; value: number }[];

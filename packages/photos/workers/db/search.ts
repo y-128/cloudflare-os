@@ -152,6 +152,13 @@ export function buildSearchSql(query: SearchQuery, cursor: Cursor | null, limit:
     where.push(`${query.hasRaw ? "" : "NOT "}EXISTS (SELECT 1 FROM photo_assets a
       WHERE a.photo_id = p.id AND a.role = 'original' AND a.format_family = 'raw')`);
   }
+  if (query.duplicates !== undefined) {
+    where.push(`${query.duplicates ? "" : "NOT "}EXISTS (SELECT 1 FROM photo_assets mine
+      JOIN photo_assets other ON other.sha256 = mine.sha256 AND other.byte_size = mine.byte_size
+        AND other.photo_id <> mine.photo_id AND other.role IN ('original', 'replica')
+      JOIN photos o ON o.id = other.photo_id AND o.deleted_at IS NULL
+      WHERE mine.photo_id = p.id AND mine.role IN ('original', 'replica') AND mine.sha256 IS NOT NULL)`);
+  }
   if (query.takenFrom !== undefined) {
     where.push("p.taken_at >= ?");
     params.push(query.takenFrom);

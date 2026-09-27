@@ -45,6 +45,7 @@ export const searchRequest = z.object({
     visibility: z.array(visibility).optional(),
     favorite: z.boolean().optional(),
     hasRaw: z.boolean().optional(),
+    duplicates: z.boolean().optional(),
     takenFrom: z.number().int().optional(),
     takenTo: z.number().int().optional(),
     numeric: z.array(z.object({
