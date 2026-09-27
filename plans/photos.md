@@ -36,6 +36,7 @@ Photos は画像編集ソフトではなく、整理、検索、保管、バッ�
 
 | 依存先 | 想定している現状（2026-09 時点の `main`） | Photos 側で必要な変更 |
 | --- | --- | --- |
+| `scripts/preview/{staging-config,preview}.ts` | デプロイ対象のパッケージごとに `apply*` があり、未知のパッケージは失敗する | `applyPhotos` を加え、プレビューごとに D1 を自動作成し、鍵を毎回生成して渡す |
 | `packages/router/src/index.ts` | `MAIL_INBOX` を `/api/inbox/*` に振り分け、その後で汎用の `/api/*` を `WORKSHOP_BACKEND` に送る | `PHOTOS` バインディングと、`/api/photos/*` と `/share/*` の分岐を、汎用 `/api/*` より前に追加する |
 | `packages/router/wrangler.jsonc` | `services` に `WORKSHOP_BACKEND`、`MAIL_INBOX`、`GATEKEEPER_EMAIL`。`run_worker_first` は `/api/*` など | `{ "binding": "PHOTOS", "service": "photos" }` と、`run_worker_first` への `/share/*` を追加する |
 | `packages/workshop-backend/src/inbox-auth.ts` | Access JWT か Bearer トークンを検証し、`X-Inbox-Request: 1` と Origin で CSRF を防ぐ。結果は 204 か 403 だけ | 検査部分を、要求マーカーのヘッダー名を引数に取る共通関数に切り出す |
@@ -46,8 +47,8 @@ Photos は画像編集ソフトではなく、整理、検索、保管、バッ�
 | `packages/workshop-frontend/src/components/AppShell/Sidebar.tsx` | `SidebarItem to="/inbox"` が並ぶ | Photos の項目を一つ追加する |
 | `packages/i18n/src/locales/{en,ja}.ts` | キーは `workshop-frontend.<Component>.<key>` 形式 | `workshop-frontend.Photos.*` を追加する |
 
-共有ファイルへの変更は上表の九か所に限り、残りは新規ディレクトリの中で完結させる。
-ローカル専用ブランチとの衝突が起きうるのはこの九か所なので、各 PR ではこれらの変更を独立したコミットに分ける。
+共有ファイルへの変更は上表の十か所に限り、残りは新規ディレクトリの中で完結させる。
+ローカル専用ブランチとの衝突が起きうるのはこの十か所なので、各 PR ではこれらの変更を独立したコミットに分ける。
 
 実装開始時の確認手順は次のとおり。
 
@@ -58,6 +59,7 @@ git log --oneline main..<branch>     # 各ブランチの未 push コミット
 git diff main...<branch> --stat -- \
   packages/router packages/workshop-backend/src/server.ts \
   packages/workshop-backend/src/inbox-auth.ts scripts/release/manifest-lib.ts scripts/deploy.sh \
+  scripts/preview \
   packages/workshop-frontend/src/routes packages/workshop-frontend/src/components/AppShell \
   packages/i18n/src/locales
 ```
@@ -104,8 +106,6 @@ packages/photos/
 ├── vitest.config.ts
 ├── tsconfig.json
 ├── worker-configuration.d.ts    # scripts/generate-worker-types.ts で生成
-├── migrations/                  # D1 マイグレーション（連番、適用済みは編集しない）
-│   └── 0001_init.sql
 ├── shared/                      # フロントエンドと Agent も使う型と純粋関数（Worker 依存なし）
 │   ├── api-types.ts             # REST の入出力型
 │   ├── ids.ts                   # ID の接頭辞と生成
@@ -119,6 +119,8 @@ packages/photos/
 │   ├── env.ts
 │   ├── auth.ts                  # WORKSHOP_AUTH 呼び出し
 │   ├── db/
+│   │   ├── migrations/          # D1 マイグレーション（文の配列。連番、適用済みは編集しない）
+│   │   │   └── 0001-init.ts
 │   │   ├── migrate.ts           # 起動時のスキーマ適用（後述）
 │   │   ├── photos.ts
 │   │   ├── assets.ts
@@ -208,7 +210,7 @@ ULID にしたのは、時刻順に並ぶため `ORDER BY id` がそのまま登
 `created_by` と `updated_by` には、`/api/photos-auth` が返す `actor`（Access 構成ではメールアドレス、それ以外では Cloudflare OS の利用者名）を入れる。
 
 ```sql
--- migrations/0001_init.sql
+-- workers/db/migrations/0001-init.ts（実際は文ごとの文字列の配列）
 
 CREATE TABLE schema_migrations (
   version     INTEGER PRIMARY KEY,
@@ -483,7 +485,7 @@ EXIF 原文を D1 に入れない理由は二つある。
 D1 マイグレーションは、Worker 自身が起動時に適用する。
 `wrangler d1 migrations apply` に頼ると、顧客環境へのデプロイでデプロイサービスがマイグレーションを実行する必要があり、`manifest-lib.ts` のマニフェスト契約を広げることになるからである。
 
-- `migrations/*.sql` はビルド時に `src/generated/migrations.ts` へ文字列として取り込む（format-blueprints と同じ方式）。
+- マイグレーションは `workers/db/migrations/*.ts` に、SQL 文の配列として置く。`.sql` ファイルにしないのは、wrangler（esbuild）と vitest（vite）でテキスト読み込みの書き方が異なり、同じファイルを両方から読めないためである。文ごとに分けるのは、D1 の `exec()` が改行で文を区切るため、複数行の文は `batch()` で流す必要があるからである。
 - 最初のリクエストで単一インスタンスの `SchemaMigratorDO`（`idFromName("schema")`）を呼び、その中で `schema_migrations` を見て未適用分を `db.batch()` で適用する。DO を経由するのは、複数のインスタンスが同時に適用を始めるのを防ぐためである。
 - 適用済みのバージョンは Worker のメモリに保持し、以後は確認を省く。
 
@@ -1225,7 +1227,7 @@ Photos の項目は、Inbox と同じく管理者にだけ表示する。
 ## フェーズと PR の分け方
 
 構想のフェーズをそのまま使い、各フェーズを次の PR に分ける。
-既存ファイルへの変更（前述の九か所）は、どのフェーズでも独立したコミットにする。
+既存ファイルへの変更（前述の十か所）は、どのフェーズでも独立したコミットにする。
 
 | フェーズ | PR | 主な内容 | 既存ファイルへの変更 |
 | --- | --- | --- | --- |
