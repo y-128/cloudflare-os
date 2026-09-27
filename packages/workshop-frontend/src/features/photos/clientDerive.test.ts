@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { fit, formatFamily, normalizeExif, sha256File } from './clientDerive'
+import { normalizeExif } from '../../../../photos/shared/exif'
+import { fit, formatFamily, sha256File } from './clientDerive'
 
 describe('formatFamily', () => {
   it('recognizes RAW by extension and common formats by extension or type', () => {

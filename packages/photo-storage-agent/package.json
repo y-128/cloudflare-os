@@ -1,0 +1,28 @@
+{
+  "name": "@gadgets/photo-storage-agent",
+  "version": "1.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "description": "Runs on a NAS next to cloudflared: scans, hashes and renders photos for Cloudflare OS Photos, and serves originals read-only through Cloudflare Tunnel.",
+  "bin": {
+    "photo-storage-agent": "./src/main.ts"
+  },
+  "scripts": {
+    "start": "node src/main.ts run",
+    "pair": "node src/main.ts pair",
+    "test:run": "node --test 'test/**/*.test.ts'"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "dependencies": {
+    "exifr": "7.1.3",
+    "sharp": "^0.34.3"
+  },
+  "devDependencies": {
+    "@gadgets/scripts": "workspace:*",
+    "@types/node": "26.1.0",
+    "typescript": "catalog:"
+  }
+}

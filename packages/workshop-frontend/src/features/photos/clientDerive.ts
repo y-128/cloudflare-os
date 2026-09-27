@@ -1,7 +1,7 @@
 import { parse as parseExif, thumbnail as embeddedThumbnail } from 'exifr/dist/full.esm.mjs'
 import { createSHA256 } from 'hash-wasm'
 import type { DerivativeSpec, FormatFamily, UploadFile } from '../../../../photos/shared/api-types'
-import type { NormalizedExif } from '../../../../photos/shared/exif'
+import { normalizeExif, type NormalizedExif, type RawExif } from '../../../../photos/shared/exif'
 
 /** Long edge of the preview JPEG and the thumbnail WebP. */
 export const PREVIEW_EDGE = 2048
@@ -32,76 +32,6 @@ export async function sha256File(file: Blob): Promise<string> {
     hasher.update(new Uint8Array(await file.slice(offset, offset + HASH_CHUNK).arrayBuffer()))
   }
   return hasher.digest('hex')
-}
-
-/** EXIF fields as exifr names them, for the subset Photos keeps. */
-interface RawExif {
-  DateTimeOriginal?: Date
-  CreateDate?: Date
-  OffsetTimeOriginal?: string
-  Make?: string
-  Model?: string
-  LensModel?: string
-  FocalLength?: number
-  FocalLengthIn35mmFormat?: number
-  FNumber?: number
-  ExposureTime?: number
-  ISO?: number
-  ExposureCompensation?: number
-  MeteringMode?: string | number
-  Flash?: string | number
-  WhiteBalance?: string | number
-  Orientation?: number | string
-  ExifImageWidth?: number
-  ExifImageHeight?: number
-  latitude?: number
-  longitude?: number
-  GPSAltitude?: number
-  Artist?: string
-  Copyright?: string
-}
-
-const text = (value: unknown) => typeof value === 'string' && value.trim() ? value.trim().slice(0, 200) : undefined
-const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : undefined
-const int = (value: unknown) => number(value) !== undefined ? Math.round(value as number) : undefined
-
-/** "+09:00" → 540. */
-function offsetMinutes(offset: string | undefined): number | undefined {
-  const match = /^([+-])(\d{2}):(\d{2})$/.exec(offset ?? '')
-  return match ? (match[1] === '-' ? -1 : 1) * (Number(match[2]) * 60 + Number(match[3])) : undefined
-}
-
-/** Maps exifr output to the normalized EXIF the API accepts, dropping anything malformed. */
-export function normalizeExif(raw: RawExif | undefined): NormalizedExif | undefined {
-  if (!raw) return undefined
-  const taken = raw.DateTimeOriginal ?? raw.CreateDate
-  const flash = raw.Flash
-  const exif: NormalizedExif = {
-    takenAt: taken instanceof Date && !Number.isNaN(taken.getTime()) ? taken.getTime() : undefined,
-    timezoneOffsetMin: offsetMinutes(raw.OffsetTimeOriginal),
-    make: text(raw.Make),
-    model: text(raw.Model),
-    lensModel: text(raw.LensModel),
-    focalLengthMm: number(raw.FocalLength),
-    focalLength35mm: number(raw.FocalLengthIn35mmFormat),
-    fNumber: number(raw.FNumber),
-    exposureTimeS: number(raw.ExposureTime),
-    iso: int(raw.ISO),
-    exposureBiasEv: number(raw.ExposureCompensation),
-    meteringMode: text(String(raw.MeteringMode ?? '')),
-    flashFired: typeof flash === 'number' ? (flash & 1) === 1 : typeof flash === 'string' ? /fired/i.test(flash) && !/not fired|did not/i.test(flash) : undefined,
-    whiteBalance: text(String(raw.WhiteBalance ?? '')),
-    orientation: typeof raw.Orientation === 'number' && raw.Orientation >= 1 && raw.Orientation <= 8 ? raw.Orientation : undefined,
-    pixelWidth: int(raw.ExifImageWidth),
-    pixelHeight: int(raw.ExifImageHeight),
-    gps: number(raw.latitude) !== undefined && number(raw.longitude) !== undefined
-      ? { lat: raw.latitude!, lon: raw.longitude!, altM: number(raw.GPSAltitude) }
-      : undefined,
-    artist: text(raw.Artist),
-    copyright: raw.Copyright ? String(raw.Copyright).trim().slice(0, 500) || undefined : undefined,
-  }
-  const cleaned = JSON.parse(JSON.stringify(exif)) as NormalizedExif
-  return Object.keys(cleaned).length ? cleaned : undefined
 }
 
 /** Reads EXIF from a file, or undefined when it has none or cannot be parsed. */
