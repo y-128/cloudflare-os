@@ -1229,9 +1229,9 @@ Photos の項目は、Inbox と同じく管理者にだけ表示する。
 
 | フェーズ | PR | 主な内容 | 既存ファイルへの変更 |
 | --- | --- | --- | --- |
-| 0 | 準備 A | `manifest-lib.ts` の `d1_databases` 対応と `photos` 種別、golden 更新 | `scripts/release/*` |
+| 0 | 準備 A | `manifest-lib.ts` の `d1_databases` 対応と `photos` 種別。`MANIFEST_VERSION` は 2 のまま据え置き、D1 か `photos` を含むリリースは版が 3 未満なら生成に失敗させる | `scripts/release/*` |
 | 0 | 準備 B | 認証の共通関数と `/api/photos-auth` | `workshop-backend` の二ファイル |
-| 1 Core | 1 | `packages/photos` の雛形、D1 スキーマと自己適用、`PHOTOS_CREDENTIAL_KEY` の検査、写真、タグ、アルバム、撮影者の API、検索、使用量の記録 | `scripts/deploy.sh` |
+| 1 Core | 1 | `packages/photos` の雛形、D1 スキーマと自己適用、`PHOTOS_CREDENTIAL_KEY` の検査、写真、タグ、アルバム、撮影者の API、検索、使用量の記録。`MANIFEST_VERSION` を 3 に上げ、golden を更新する（デプロイサービスが `$D1_<BINDING>_ID` に対応してから） | `scripts/deploy.sh`、`scripts/release/*` |
 | 1 Core | 2 | Library、Inspector、左ペイン、検索バー、Storage 画面の使用量表示 | router、Sidebar、routes、i18n |
 | 2 R2 | 3 | `r2-binding`、`r2-s3`、秘密情報の暗号化、Upload、Download、`/blob/:token`、ブラウザでの派生画像生成 | なし |
 | 3 NAS | 4 | `photo-storage-agent`、`NasAgentDO`、ペアリングと Agent 認証、NAS Provider、Worker による中継 | なし |
