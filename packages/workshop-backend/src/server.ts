@@ -1,4 +1,4 @@
-import { authorizeInboxRequest } from "./inbox-auth";
+import { authorizeInboxRequest, authorizePhotosRequest } from "./inbox-auth";
 import { LinkDirectoryApiImpl } from "./link-directory";
 import type { LinkDirectoryApi } from "@gadgets/workshop-shared/api";
 export { LinkDirectoryDurableObject } from "./link-directory";
@@ -818,8 +818,9 @@ export default {
     // browser via the `attempt` stub from PublicApi.startGatekeeperLogin(). So the backend no longer
     // hosts /auth/* callbacks.
 
-    if (url.pathname === "/api/inbox-auth") {
-      return authorizeInboxRequest(req, env, async ({ access, token }) => {
+    if (url.pathname === "/api/inbox-auth" || url.pathname === "/api/photos-auth") {
+      const authorize = url.pathname === "/api/inbox-auth" ? authorizeInboxRequest : authorizePhotosRequest;
+      return authorize(req, env, async ({ access, token }) => {
         // Reuse the RPC account admission, session verification and admin authority unchanged.
         const publicApi = new PublicApiImpl(ctx, env, () => {}, access);
         const authenticated = access
