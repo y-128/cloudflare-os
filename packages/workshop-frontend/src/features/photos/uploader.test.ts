@@ -5,22 +5,23 @@ import { writeTarget } from './uploader'
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear() })
 
 describe('writeTarget', () => {
-  it('sends presigned PUTs as signed, without Photos credentials', async () => {
+  it('never attaches session credentials: every target carries its own authority', async () => {
     const fetchMock = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async () => new Response(null, { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)
     localStorage.setItem('authToken', 'admin:secret')
     await writeTarget({ kind: 'presigned-put', url: 'https://bucket.example/k?X-Amz-Signature=x', headers: { 'Content-Type': 'image/jpeg' }, expiresAt: 0 }, new Blob(['a']), 'image/jpeg')
-    const [, init] = fetchMock.mock.calls[0]
-    const headers = new Headers(init.headers)
-    expect(headers.get('Authorization')).toBeNull()
-    expect(headers.get('Content-Type')).toBe('image/jpeg')
+    await writeTarget({ kind: 'worker-proxy', url: '/api/photos/v1/upload/grant', expiresAt: 0 }, new Blob(['a']), 'image/png')
+    for (const [, init] of fetchMock.mock.calls) {
+      expect(new Headers(init.headers).get('Authorization')).toBeNull()
+      expect(init.credentials).toBe('omit')
+    }
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('Content-Type')).toBe('image/png')
   })
 
-  it('splits multipart targets into their parts, each authenticated', async () => {
+  it('splits multipart targets into their parts', async () => {
     const bodies: number[] = []
     const fetchMock = vi.fn<(url: string, init: RequestInit) => Promise<Response>>(async (_url, init) => {
       bodies.push((init.body as Blob).size)
-      expect(new Headers(init.headers).get('X-Photos-Request')).toBe('1')
       return new Response(null, { status: 204 })
     })
     vi.stubGlobal('fetch', fetchMock)

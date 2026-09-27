@@ -1,7 +1,6 @@
 import type {
   UploadOptions, UploadSlot, UploadTargetView,
 } from '../../../../photos/shared/api-types'
-import { PHOTOS_REQUEST_HEADER } from '../../../../photos/shared/api-types'
 import { jsonRequest, photosApi, PhotosRequestError } from './api'
 import { prepareFile, type PreparedFile } from './clientDerive'
 
@@ -15,16 +14,10 @@ export type UploadProgress =
   | { state: 'duplicate'; photoId: string | null }
   | { state: 'failed'; error: string }
 
-/** Headers for writes that go through the Photos API rather than straight to a bucket. */
-function apiHeaders(): Headers {
-  const headers = new Headers({ [PHOTOS_REQUEST_HEADER]: '1' })
-  const token = localStorage.getItem('authToken')
-  if (token) headers.set('Authorization', `Bearer ${token}`)
-  return headers
-}
-
 async function send(url: string, body: Blob, headers: Headers): Promise<void> {
-  const response = await fetch(url, { method: 'PUT', body, headers, credentials: 'same-origin' })
+  // Every target URL carries its own authority (a presigned URL or a signed upload grant), so no
+  // session credentials are attached.
+  const response = await fetch(url, { method: 'PUT', body, headers, credentials: 'omit' })
   if (!response.ok) throw new PhotosRequestError(`Upload failed with ${response.status}`, response.status)
 }
 
@@ -33,14 +26,11 @@ export async function writeTarget(target: UploadTargetView, blob: Blob, contentT
   switch (target.kind) {
     case 'presigned-put':
       return send(target.url, blob, new Headers(target.headers))
-    case 'worker-proxy': {
-      const headers = apiHeaders()
-      headers.set('Content-Type', contentType)
-      return send(target.url, blob, headers)
-    }
+    case 'worker-proxy':
+      return send(target.url, blob, new Headers({ 'Content-Type': contentType }))
     case 'multipart':
       for (const [index, url] of target.partUrls.entries()) {
-        await send(url, blob.slice(index * target.partSize, (index + 1) * target.partSize), apiHeaders())
+        await send(url, blob.slice(index * target.partSize, (index + 1) * target.partSize), new Headers())
       }
   }
 }
