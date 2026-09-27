@@ -28,7 +28,7 @@ export class R2BindingProvider implements StorageProvider {
   ) {}
 
   private path(key: string): string {
-    return `${this.config.prefix}${key}`;
+    return `${this.config.prefix ?? ""}${key}`;
   }
 
   async testConnection(): Promise<{ status: "online" }> {

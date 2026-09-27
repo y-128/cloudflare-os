@@ -41,7 +41,7 @@ export class R2S3Provider implements StorageProvider {
   }
 
   private url(key = ""): URL {
-    const path = key ? `/${encodeURIComponent(this.config.prefix + key).replaceAll("%2F", "/")}` : "";
+    const path = key ? `/${encodeURIComponent((this.config.prefix ?? "") + key).replaceAll("%2F", "/")}` : "";
     return new URL(`${this.config.endpoint.replace(/\/+$/, "")}/${encodeURIComponent(this.config.bucket)}${path}`);
   }
 
