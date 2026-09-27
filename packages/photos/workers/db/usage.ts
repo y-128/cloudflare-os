@@ -11,15 +11,21 @@ interface SampleRow {
   photo_count: number;
 }
 
-/** Measures the database (D1 reports its size in every result's meta) and records a sample. */
-export async function recordUsage(db: D1Database): Promise<LibraryUsage> {
+async function measure(db: D1Database): Promise<SampleRow> {
+  // D1 reports the database's size in every result's meta.
   const result = await db.prepare("SELECT COUNT(*) AS n FROM photos WHERE deleted_at IS NULL")
     .all<{ n: number }>();
-  const sample: SampleRow = {
-    sampled_at: Date.now(),
-    d1_bytes: result.meta.size_after,
-    photo_count: result.results[0].n,
-  };
+  return { sampled_at: Date.now(), d1_bytes: result.meta.size_after, photo_count: result.results[0].n };
+}
+
+/** Measures the database now, without recording it (one COUNT over an index). */
+export async function currentUsage(db: D1Database): Promise<LibraryUsage> {
+  return toUsage(await measure(db));
+}
+
+/** Measures the database and keeps the sample as history; PhotoJobsDO does this daily. */
+export async function recordUsage(db: D1Database): Promise<LibraryUsage> {
+  const sample = await measure(db);
   await db.batch([
     db.prepare("INSERT OR REPLACE INTO usage_samples (sampled_at, d1_bytes, photo_count) VALUES (?, ?, ?)")
       .bind(sample.sampled_at, sample.d1_bytes, sample.photo_count),
@@ -27,13 +33,6 @@ export async function recordUsage(db: D1Database): Promise<LibraryUsage> {
         (SELECT sampled_at FROM usage_samples ORDER BY sampled_at DESC LIMIT ?)`).bind(SAMPLES_KEPT),
   ]);
   return toUsage(sample);
-}
-
-/** The latest recorded sample, taking one if none exists yet. */
-export async function latestUsage(db: D1Database): Promise<LibraryUsage> {
-  const row = await db.prepare("SELECT * FROM usage_samples ORDER BY sampled_at DESC LIMIT 1")
-    .first<SampleRow>();
-  return row ? toUsage(row) : recordUsage(db);
 }
 
 function toUsage(row: SampleRow): LibraryUsage {

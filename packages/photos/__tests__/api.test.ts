@@ -6,6 +6,7 @@ import type {
 import type { PhotoId } from "../shared/ids";
 import type { SearchQuery } from "../shared/search-query";
 import { applyMigrations, SCHEMA_VERSION } from "../workers/db/migrate";
+import { recordUsage } from "../workers/db/usage";
 import { ACTOR, addPhoto, call, callJson, env, fakeWorkshop, resetDb } from "./helpers";
 
 beforeEach(resetDb);
@@ -292,5 +293,13 @@ describe("usage", () => {
     expect(usage.d1Bytes).toBeGreaterThan(0);
     expect(usage.bytesPerPhoto).toBe(usage.d1Bytes);
     expect(usage.warning).toBe(false);
+    await addPhoto();
+    expect((await callJson<LibraryUsage>("GET", "/storage/usage")).photoCount).toBe(2);
+  });
+
+  it("keeps the daily samples as history", async () => {
+    await recordUsage(env.PHOTOS_DB);
+    const { results } = await env.PHOTOS_DB.prepare("SELECT photo_count FROM usage_samples").all();
+    expect(results).toEqual([{ photo_count: 0 }]);
   });
 });
