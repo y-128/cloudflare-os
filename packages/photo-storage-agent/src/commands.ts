@@ -45,7 +45,7 @@ export async function runCommand(root: string, command: AgentCommand, emit: (eve
         const { preview, thumbnail } = await renderDerivatives(await resolveInside(root, command.path));
         await writeTarget(command.preview, preview.bytes, "image/jpeg");
         await writeTarget(command.thumbnail, thumbnail.bytes, "image/webp");
-        emit({ type: "derived", jobId: command.jobId, photoId: command.photoId, preview: preview.spec, thumbnail: thumbnail.spec });
+        emit({ type: "derived", jobId: command.jobId, photoId: command.photoId, path: command.path, preview: preview.spec, thumbnail: thumbnail.spec });
         return;
       }
       case "replicate": {

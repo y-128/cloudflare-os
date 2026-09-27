@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import type { UploadSlot } from "../../shared/api-types";
 import { ID_PREFIX, newId, type PhotoId } from "../../shared/ids";
-import { createPhotoRecord, type NewAsset } from "../db/photos";
+import { findPairPartner } from "../db/pairing";
+import { addToPhoto, createPhotoRecord, type NewAsset } from "../db/photos";
 import type { UploadSession, UploadSlotName } from "../durableObject/photo-jobs";
 import type { PhotosEnv, PhotosHono } from "../env";
 import { found, HttpError } from "../http";
@@ -125,15 +126,24 @@ export const uploadsRoutes = new Hono<PhotosHono>()
       });
     }
     const takenAt = file.exif?.takenAt ?? file.lastModified;
+    const albumIds = options.albumId ? [options.albumId] : undefined;
+    // Only an EXIF capture time is trusted to pair: file times differ between a RAW and its JPEG.
+    const partner = options.pairRawJpeg === false || file.exif?.takenAt === undefined ? null
+      : await findPairPartner(c.env.PHOTOS_DB, { filename: file.filename, formatFamily: file.formatFamily, takenAt: file.exif.takenAt });
     let photoId: PhotoId;
     try {
-      photoId = await createPhotoRecord(c.env.PHOTOS_DB, {
+      if (partner) {
+        const covers = file.formatFamily !== "raw" || await c.env.PHOTOS_DB.prepare(
+          "SELECT cover_thumbnail_asset_id IS NULL AS missing FROM photos WHERE id = ?").bind(partner).first<number>("missing") === 1;
+        await addToPhoto(c.env.PHOTOS_DB, partner, { assets, tagIds: options.tagIds, albumIds }, upload.actor, covers);
+        photoId = partner;
+      } else photoId = await createPhotoRecord(c.env.PHOTOS_DB, {
         takenAt: takenAt ?? Date.now(),
         takenAtSource: file.exif?.takenAt !== undefined ? "exif" : file.lastModified !== undefined ? "file" : "import",
         exif: file.exif,
         visibility: options.visibility,
         tagIds: options.tagIds,
-        albumIds: options.albumId ? [options.albumId] : undefined,
+        albumIds,
         assets,
       }, upload.actor);
     } catch (err) {

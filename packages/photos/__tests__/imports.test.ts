@@ -27,7 +27,12 @@ async function scanned(files: AgentFile[]) {
   expect(scan).toMatchObject({ jobId: job.id, folder: "2026/Event-A" });
   await agent.emit({ type: "scan-result", jobId: job.id, files, done: true });
   agent.socket.send(JSON.stringify({ type: "ack", seq: scan.seq }));
-  return { agent, job: await callJson<ImportJobView>("GET", `/imports/${job.id}`) };
+  const view = await vi.waitFor(async () => {
+    const current = await callJson<ImportJobView>("GET", `/imports/${job.id}`);
+    expect(current.state).toBe("scanned");
+    return current;
+  });
+  return { agent, job: view };
 }
 
 /** Plays the agent's part for every derive command it has received. */
@@ -38,7 +43,7 @@ async function deriveAll(agent: Awaited<ReturnType<typeof onlineAgent>>, count =
     expect((await putTarget(command.preview, preview)).status).toBe(204);
     expect((await putTarget(command.thumbnail, thumbnail)).status).toBe(204);
     await agent.emit({
-      type: "derived", jobId: command.jobId, photoId: command.photoId,
+      type: "derived", jobId: command.jobId, photoId: command.photoId, path: command.path,
       preview: { size: preview.byteLength, width: 2048, height: 1365 },
       thumbnail: { size: thumbnail.byteLength, width: 400, height: 267 },
     });
@@ -117,7 +122,7 @@ describe("NAS imports", () => {
     await start(job.id, { mode: "copy", derivativeConnectionId: cache, replicaConnectionId: cache });
     await settle();
     await deriveAll(agent);
-    const [replicate] = agent.commands("replicate");
+    const [replicate] = await agent.awaitCommands("replicate");
     // A short write is refused outright; one that never happens fails the check on report.
     expect((await putTarget(replicate.upload, new TextEncoder().encode("short"))).status).toBe(400);
     await agent.emit({ type: "replicated", jobId: job.id, assetId: replicate.assetId });
@@ -155,6 +160,31 @@ describe("NAS imports", () => {
       .toMatchObject({ automatic: true, state: "running", found: 2, duplicates: 1 }));
     agent.socket.close(1000, "done");
     await settle(200);
+  });
+
+  it("pairs a RAW with the JPEG beside it and derives only the JPEG", async () => {
+    const cache = await r2();
+    const { agent, job } = await scanned([
+      file("2026/Event-A/DSC9.ARW", "raw9"), file("2026/Event-A/DSC9.JPG", "jpg9"), file("2026/Event-B/DSC9.ARW", "other"),
+    ]);
+    await start(job.id, { mode: "reference", derivativeConnectionId: cache });
+    // The two DSC9.ARW files are in different folders, so only Event-A's joins its JPEG.
+    expect((await agent.awaitCommands("derive", 2)).map((c) => c.path)).toEqual(["2026/Event-A/DSC9.JPG", "2026/Event-B/DSC9.ARW"]);
+    await deriveAll(agent, 2);
+    await vi.waitFor(async () => expect(await callJson<ImportJobView>("GET", `/imports/${job.id}`))
+      .toMatchObject({ state: "succeeded", done: 3 }));
+    const detail = await callJson<PhotoDetail>("GET", `/photos/${agent.commands("derive")[0].photoId}`);
+    expect(detail.assets.filter((a) => a.role === "original").map((a) => a.storageKey))
+      .toEqual(["2026/Event-A/DSC9.JPG", "2026/Event-A/DSC9.ARW"]);
+    expect(detail.hasRaw).toBe(true);
+  });
+
+  it("refuses to start a job still scanning, with its status intact across RPC", async () => {
+    const agent = await onlineAgent();
+    const job = await callJson<ImportJobView>("POST", "/imports/scan", { connectionId: agent.id, folder: "x" });
+    const response = await call("POST", `/imports/${job.id}/start`, { body: { options: { mode: "reference", derivativeConnectionId: await r2() } } });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "job_not_ready" });
   });
 
   it("keeps folder paths inside the library", async () => {

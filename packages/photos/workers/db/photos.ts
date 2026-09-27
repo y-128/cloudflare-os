@@ -10,6 +10,7 @@ import {
 import type { Visibility } from "../../shared/visibility";
 import { found } from "../http";
 import { appendPhotosStatement, removePhotosStatement, touchStatement } from "./albums";
+import { primaryStatement } from "./pairing";
 import {
   photographerForArtist, toPhotographerView, type PhotographerRow,
 } from "./photographers";
@@ -278,6 +279,51 @@ export interface NewPhoto {
   assets: NewAsset[];
 }
 
+function insertAsset(db: D1Database, photoId: PhotoId, a: NewAsset & { id: AssetId }, primary: boolean, now: number) {
+  return db.prepare(`INSERT INTO photo_assets (id, photo_id, role, format_family,
+      is_primary, connection_id, storage_key, original_filename, mime_type, byte_size, sha256,
+      width, height, state, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(a.id, photoId, a.role, a.formatFamily ?? null, primary ? 1 : 0, a.connectionId,
+      a.storageKey, a.originalFilename ?? null, a.mimeType, a.byteSize, a.sha256 ?? null,
+      a.width ?? null, a.height ?? null, a.state ?? "available", now);
+}
+
+function tagStatement(db: D1Database, photoId: PhotoId, tagIds: TagId[]) {
+  return db.prepare(`INSERT OR IGNORE INTO photo_tags (photo_id, tag_id, source)
+      SELECT ?, id, 'import' FROM tags WHERE id IN (SELECT value FROM json_each(?))`)
+    .bind(photoId, JSON.stringify(tagIds));
+}
+
+/**
+ * Adds the files of a new upload or import to an existing photo, as the other half of a RAW+JPEG
+ * pair, along with the tags and albums the import asked for. With `covers`, the new derivatives
+ * become the photo's covers (a JPEG renders better than a RAW's embedded preview).
+ */
+export async function addToPhoto(
+  db: D1Database, photoId: PhotoId, input: Pick<NewPhoto, "assets" | "tagIds" | "albumIds">,
+  actor: string, covers: boolean,
+): Promise<void> {
+  const now = Date.now();
+  const assets = input.assets.map((a) => ({ ...a, id: newId("ast") }));
+  const statements = assets.map((a) => insertAsset(db, photoId, a, false, now));
+  const cover = (role: AssetRole) => assets.find((a) => a.role === role)?.id;
+  const thumbnail = cover("thumbnail");
+  const preview = cover("preview");
+  if (covers && thumbnail) {
+    statements.push(db.prepare("UPDATE photos SET cover_thumbnail_asset_id = ? WHERE id = ?").bind(thumbnail, photoId));
+  }
+  if (covers && preview) {
+    statements.push(db.prepare("UPDATE photos SET cover_preview_asset_id = ? WHERE id = ?").bind(preview, photoId));
+  }
+  if (input.tagIds?.length) statements.push(tagStatement(db, photoId, input.tagIds));
+  if (input.albumIds?.length) statements.push(appendPhotosStatement(db, input.albumIds, [photoId]));
+  statements.push(
+    db.prepare("UPDATE photos SET updated_by = ?, updated_at = ? WHERE id = ?").bind(actor, now, photoId),
+    primaryStatement(db, photoId),
+  );
+  await db.batch(statements);
+}
+
 /**
  * Registers a photo with its EXIF, files, tags and albums in one atomic batch. Without an
  * explicit photographer, one aliased to the EXIF Artist is assigned.
@@ -303,12 +349,7 @@ export async function createPhotoRecord(db: D1Database, input: NewPhoto, actor: 
         input.visibility ?? "private", cover("thumbnail"), cover("preview"),
         primary?.width ?? exif?.pixelWidth ?? null, primary?.height ?? exif?.pixelHeight ?? null,
         actor, actor, now, now),
-    ...assets.map((a) => db.prepare(`INSERT INTO photo_assets (id, photo_id, role, format_family,
-        is_primary, connection_id, storage_key, original_filename, mime_type, byte_size, sha256,
-        width, height, state, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .bind(a.id, id, a.role, a.formatFamily ?? null, a === primary ? 1 : 0, a.connectionId,
-        a.storageKey, a.originalFilename ?? null, a.mimeType, a.byteSize, a.sha256 ?? null,
-        a.width ?? null, a.height ?? null, a.state ?? "available", now)),
+    ...assets.map((a) => insertAsset(db, id, a, a === primary, now)),
   ];
   if (exif) {
     statements.push(db.prepare(`INSERT INTO photo_exif (photo_id, make, model, lens_model,
@@ -324,11 +365,7 @@ export async function createPhotoRecord(db: D1Database, input: NewPhoto, actor: 
         exif.pixelHeight ?? null, exif.gps?.lat ?? null, exif.gps?.lon ?? null,
         exif.gps?.altM ?? null, exif.artist ?? null, exif.copyright ?? null));
   }
-  if (input.tagIds?.length) {
-    statements.push(db.prepare(`INSERT OR IGNORE INTO photo_tags (photo_id, tag_id, source)
-        SELECT ?, id, 'import' FROM tags WHERE id IN (SELECT value FROM json_each(?))`)
-      .bind(id, JSON.stringify(input.tagIds)));
-  }
+  if (input.tagIds?.length) statements.push(tagStatement(db, id, input.tagIds));
   if (input.albumIds?.length) statements.push(appendPhotosStatement(db, input.albumIds, [id]));
   await db.batch(statements);
   return id;

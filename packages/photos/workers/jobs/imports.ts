@@ -9,7 +9,8 @@ import {
 } from "../../shared/ids";
 import { getConnectionRow } from "../db/storage-connections";
 import type { NewAgentCommand } from "../durableObject/nas-agent";
-import { createPhotoRecord } from "../db/photos";
+import { addToPhoto, createPhotoRecord, type NewAsset } from "../db/photos";
+import { findPairPartner, primaryStatement } from "../db/pairing";
 import type { UploadSession } from "../durableObject/photo-jobs";
 import type { PhotosEnv } from "../env";
 import { HttpError, parseJson } from "../http";
@@ -153,10 +154,17 @@ export class ImportJobs {
    */
   private async dispatch(item: ItemRow, connectionId: string, command: NewAgentCommand,
     changes: Partial<ItemRow>): Promise<void> {
-    await this.host.exclusive(async () => {
-      const seq = await this.nas(connectionId).send(command);
-      this.setItem(item, { ...changes, command_seq: seq });
+    // A throw inside blockConcurrencyWhile resets the whole object, so errors are carried out.
+    const failure = await this.host.exclusive(async () => {
+      try {
+        const seq = await this.nas(connectionId).send(command);
+        this.setItem(item, { ...changes, command_seq: seq });
+        return null;
+      } catch (err) {
+        return { err };
+      }
     });
+    if (failure) throw failure.err;
   }
 
   /** Starts a job by asking the agent to scan a folder. */
@@ -180,7 +188,10 @@ export class ImportJobs {
     if (options.mode !== "reference" && !options.replicaConnectionId) throw new HttpError(400, "replica_required");
     this.sql.exec("UPDATE import_jobs SET options_json = ? WHERE id = ?", JSON.stringify(options), jobId);
     this.touch(jobId, "running");
-    for (const item of this.items(jobId, "state = 'new'")) await this.register({ ...job, options_json: JSON.stringify(options) }, item);
+    // JPEGs first, so the RAW half of a pair joins its JPEG instead of deriving a preview of its own.
+    const items = this.items(jobId, "state = 'new'").toSorted((a, b) =>
+      Number(describePath(a.path).family === "raw") - Number(describePath(b.path).family === "raw") || a.seq - b.seq);
+    for (const item of items) await this.register({ ...job, options_json: JSON.stringify(options) }, item);
     this.finishIfIdle(jobId);
   }
 
@@ -252,7 +263,7 @@ export class ImportJobs {
       switch (message.type) {
         case "scan-result": return await this.onScanResult(message.jobId, message.files, message.done);
         case "file-discovered": return await this.onDiscovered(connectionId, message.file, origin);
-        case "derived": return await this.onDerived(message.jobId, message.photoId, message.preview, message.thumbnail);
+        case "derived": return await this.onDerived(message.jobId, message.photoId, message.path, message.preview, message.thumbnail);
         case "replicated": return await this.onReplicated(message.jobId, message.assetId);
         case "deleted": return await this.onDeleted(message.jobId, message.assetId);
         case "failed": return this.onFailed(message.jobId, message.seq, message.error);
@@ -318,21 +329,27 @@ export class ImportJobs {
     const options = parseJson<ImportOptions>(job.options_json, null as never);
     const { family, mimeType } = describePath(item.path);
     const exif = parseJson<NormalizedExif | undefined>(item.exif_json, undefined);
+    const takenAt = exif?.takenAt ?? item.mtime;
+    const asset: NewAsset = {
+      role: "original", connectionId: job.connection_id, storageKey: item.path, mimeType,
+      byteSize: item.size, formatFamily: family, isPrimary: true, originalFilename: basename(item.path),
+      sha256: item.sha256, width: item.width ?? undefined, height: item.height ?? undefined,
+    };
+    const albumIds = options.albumId ? [options.albumId] : undefined;
+    const partner = options.pairRawJpeg === false ? null : await findPairPartner(this.env.PHOTOS_DB, {
+      filename: item.path, formatFamily: family, takenAt, location: { connectionId: job.connection_id, storageKey: item.path },
+    });
     let photoId: PhotoId;
     try {
-      photoId = await createPhotoRecord(this.env.PHOTOS_DB, {
-        takenAt: exif?.takenAt ?? item.mtime,
-        takenAtSource: exif?.takenAt !== undefined ? "exif" : "file",
-        exif,
-        visibility: options.visibility,
-        tagIds: options.tagIds,
-        albumIds: options.albumId ? [options.albumId] : undefined,
-        assets: [{
-          role: "original", connectionId: job.connection_id, storageKey: item.path, mimeType,
-          byteSize: item.size, formatFamily: family, isPrimary: true, originalFilename: basename(item.path),
-          sha256: item.sha256, width: item.width ?? undefined, height: item.height ?? undefined,
-        }],
-      }, job.created_by);
+      if (partner) {
+        await addToPhoto(this.env.PHOTOS_DB, partner, { assets: [asset], tagIds: options.tagIds, albumIds }, job.created_by, false);
+        photoId = partner;
+      } else {
+        photoId = await createPhotoRecord(this.env.PHOTOS_DB, {
+          takenAt, takenAtSource: exif?.takenAt !== undefined ? "exif" : "file", exif,
+          visibility: options.visibility, tagIds: options.tagIds, albumIds, assets: [asset],
+        }, job.created_by);
+      }
     } catch (err) {
       if (String(err).includes("UNIQUE")) {
         this.setItem(item, { state: "duplicate" });
@@ -342,9 +359,11 @@ export class ImportJobs {
       throw err;
     }
     const original = await this.env.PHOTOS_DB.prepare(
-      "SELECT id FROM photo_assets WHERE photo_id = ? AND role = 'original'").bind(photoId).first<AssetId>("id");
+      "SELECT id FROM photo_assets WHERE connection_id = ? AND storage_key = ?").bind(job.connection_id, item.path).first<AssetId>("id");
     this.setItem(item, { photo_id: photoId, original_asset_id: original });
-    await this.derive(job, item);
+    // The RAW half of a pair shows its JPEG's derivatives; a JPEG joining a RAW renders better ones.
+    if (partner && family === "raw") await this.afterDerivatives(job, item, options);
+    else await this.derive(job, item);
   }
 
   private registry(job: JobRow) {
@@ -380,13 +399,10 @@ export class ImportJobs {
     };
   }
 
-  private itemForPhoto(jobId: JobId, photoId: PhotoId): ItemRow | null {
-    return this.items(jobId, "photo_id = ?", photoId)[0] ?? null;
-  }
-
-  private async onDerived(jobId: JobId, photoId: PhotoId, preview: DerivedFile | null, thumbnail: DerivedFile | null) {
+  private async onDerived(jobId: JobId, photoId: PhotoId, path: string, preview: DerivedFile | null, thumbnail: DerivedFile | null) {
     const job = this.job(jobId);
-    const item = this.itemForPhoto(jobId, photoId);
+    // Both halves of a RAW+JPEG pair can be deriving for one photo; the path tells them apart.
+    const item = this.items(jobId, "photo_id = ? AND path = ?", photoId, path)[0];
     if (!job || !item || item.state !== "deriving" || !item.session_id) return;
     const options = parseJson<ImportOptions>(job.options_json, null as never);
     const provider = await this.registry(job).get(options.derivativeConnectionId);
@@ -403,9 +419,14 @@ export class ImportJobs {
     }
     await attachDerivatives(this.env.PHOTOS_DB, photoId, options.derivativeConnectionId, assets);
     await this.host.finishUpload(sessionId);
+    await this.afterDerivatives(job, item, options);
+  }
+
+  /** Replicates the original if the job copies or moves; otherwise the item is done. */
+  private async afterDerivatives(job: JobRow, item: ItemRow, options: ImportOptions): Promise<void> {
     if (options.mode === "reference") {
       this.setItem(item, { state: "done", session_id: null });
-      this.finishIfIdle(jobId);
+      this.finishIfIdle(job.id);
       return;
     }
     await this.replicate(job, item, options);
@@ -479,6 +500,7 @@ export class ImportJobs {
       this.env.PHOTOS_DB.prepare(`UPDATE photo_assets SET role = 'original', is_primary = 1, replica_of_asset_id = NULL
           WHERE replica_of_asset_id = ? AND role = 'replica'`).bind(assetId),
       this.env.PHOTOS_DB.prepare("DELETE FROM photo_assets WHERE id = ?").bind(assetId),
+      primaryStatement(this.env.PHOTOS_DB, item.photo_id!),
     ]);
     this.setItem(item, { state: "done" });
     this.finishIfIdle(jobId);

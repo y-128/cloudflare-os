@@ -94,6 +94,24 @@ export interface PhotoDetail extends PhotoSummary {
   deletedAt: number | null;
 }
 
+/** Photos the inspector offers next to one photo. */
+export interface RelatedPhotos {
+  /** Other photos holding a byte-identical copy of one of this photo's files. */
+  duplicates: PhotoSummary[];
+  /** Other photos that look like the other half of a RAW+JPEG pair with this one. */
+  pairCandidates: PhotoSummary[];
+}
+
+/** Folds another photo into this one (`POST /photos/:id/merge`). */
+export interface MergeRequest {
+  photoId: PhotoId;
+}
+
+/** Moves one original out of a photo into a new photo (`POST /photos/:id/split`). */
+export interface SplitRequest {
+  assetId: AssetId;
+}
+
 /** Fields an inspector edit may change. Absent fields are left as they are. */
 export interface PhotoPatch {
   title?: string | null;
@@ -257,6 +275,11 @@ export interface UploadOptions {
   visibility?: Visibility;
   tagIds?: TagId[];
   albumId?: AlbumId;
+  /**
+   * Whether a RAW and a JPEG with the same name, captured together, become one photo (default
+   * true). NAS files must also share a folder.
+   */
+  pairRawJpeg?: boolean;
 }
 
 /** A batch of files to upload. */
@@ -301,6 +324,11 @@ export interface ImportOptions {
   visibility?: Visibility;
   tagIds?: TagId[];
   albumId?: AlbumId;
+  /**
+   * Whether a RAW and a JPEG with the same name, captured together, become one photo (default
+   * true). NAS files must also share a folder.
+   */
+  pairRawJpeg?: boolean;
 }
 
 /** Where an import job stands. */

@@ -206,3 +206,15 @@ export async function searchPhotos(
     nextCursor: results.length > limit && last ? encodeCursor([last[column], last.id]) : null,
   };
 }
+
+/** Summaries of the given live photos, in the order given; missing or trashed ones are skipped. */
+export async function summariesByIds(
+  db: D1Database, ids: PhotoId[], thumbnailUrl: ThumbnailUrlFor,
+): Promise<PhotoSummary[]> {
+  if (!ids.length) return [];
+  const { results } = await db.prepare(`SELECT ${SUMMARY_COLUMNS} FROM photos p
+      WHERE p.id IN (SELECT value FROM json_each(?)) AND p.deleted_at IS NULL`)
+    .bind(JSON.stringify(ids)).all<SummaryRow>();
+  const byId = new Map(results.map((row) => [row.id, row]));
+  return Promise.all(ids.flatMap((id) => byId.get(id) ?? []).map((row) => toSummary(row, thumbnailUrl)));
+}

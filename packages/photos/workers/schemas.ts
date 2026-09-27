@@ -2,11 +2,11 @@ import { z } from "zod";
 import {
   BULK_EDIT_LIMIT, STORAGE_ROLES, UPLOAD_BATCH_LIMIT, type AlbumPatch, type BulkPhotoEdit,
   type DownloadVariant, type PhotoPatch, type PhotographerInput, type StorageConnectionInput,
-  type ImportOptions, type StorageConnectionPatch, type UploadRequest,
+  type ImportOptions, type MergeRequest, type SplitRequest, type StorageConnectionPatch, type UploadRequest,
 } from "../shared/api-types";
 import type { NormalizedExif } from "../shared/exif";
 import {
-  ID_PREFIX, isId, type AlbumId, type PhotoId, type PhotographerId, type StorageConnectionId,
+  ID_PREFIX, isId, type AlbumId, type AssetId, type PhotoId, type PhotographerId, type StorageConnectionId,
   type TagId,
 } from "../shared/ids";
 import { NUMERIC_FIELDS, NUMERIC_OPS, type SearchQuery } from "../shared/search-query";
@@ -122,6 +122,12 @@ export const albumCreate = albumPatch.extend({ title: text(200) });
 /** Validates photos being added to or removed from an album. */
 export const albumPhotos = z.object({ photoIds: z.array(photoId).min(1).max(BULK_EDIT_LIMIT) }).strict();
 
+/** Validates a merge request. */
+export const mergeRequest = z.object({ photoId }).strict() satisfies z.ZodType<MergeRequest>;
+
+/** Validates a split request. */
+export const splitRequest = z.object({ assetId: id(ID_PREFIX.asset) as z.ZodType<AssetId> }).strict() satisfies z.ZodType<SplitRequest>;
+
 /** Validates an album reorder. */
 export const albumOrder = z.object({ photoId, afterPhotoId: photoId.nullable() }).strict();
 
@@ -201,6 +207,7 @@ export const uploadRequest = z.object({
     visibility: visibility.optional(),
     tagIds: idList(tagId).optional(),
     albumId: albumId.optional(),
+    pairRawJpeg: z.boolean().optional(),
   }).strict(),
 }).strict() satisfies z.ZodType<UploadRequest>;
 
@@ -251,6 +258,7 @@ export const importOptions = z.object({
   visibility: visibility.optional(),
   tagIds: idList(tagId).optional(),
   albumId: albumId.optional(),
+  pairRawJpeg: z.boolean().optional(),
 }).strict().refine((options) => options.mode === "reference" || options.replicaConnectionId,
   "copy and move need a replica destination") satisfies z.ZodType<ImportOptions>;
 

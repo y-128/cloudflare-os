@@ -173,6 +173,28 @@ describe("uploads", () => {
     expect(await announce({ bytes, filename: "copy.jpg" }, connection)).toEqual({ clientId: "c1", status: "duplicate", photoId });
   });
 
+  it("joins a RAW to the JPEG shot with it, unless asked not to", async () => {
+    const connection = await r2Connection();
+    const exif = { takenAt: 1_750_000_000_000, model: "ILCE-7M4" };
+    const upload = async (filename: string, content: string, pairRawJpeg?: boolean) => {
+      const bytes = new TextEncoder().encode(content);
+      const [slot] = await callJson<UploadSlot[]>("POST", "/uploads", {
+        files: [{ clientId: "c1", filename, mimeType: "image/jpeg", formatFamily: filename.endsWith(".ARW") ? "raw" : "jpeg",
+          size: bytes.byteLength, sha256: await sha256(bytes), exif }],
+        options: { originalConnectionId: connection, derivativeConnectionId: connection, pairRawJpeg },
+      });
+      if (slot.status !== "upload") throw new Error("expected an upload");
+      await put(slot.original, bytes);
+      return (await callJson<{ photoId: string }>("POST", `/uploads/${slot.sessionId}/complete`)).photoId;
+    };
+    const jpeg = await upload("DSC00007.JPG", "jpeg");
+    expect(await upload("DSC00007.ARW", "raw")).toBe(jpeg);
+    const detail = await callJson<PhotoDetail>("GET", `/photos/${jpeg}`);
+    expect(detail.assets.filter((a) => a.role === "original").map((a) => [a.formatFamily, a.isPrimary]))
+      .toEqual([["jpeg", true], ["raw", false]]);
+    expect(await upload("DSC00008.JPG", "second jpeg")).not.toBe(await upload("DSC00008.ARW", "second raw", false));
+  });
+
   it("refuses writes without a valid grant", async () => {
     const ctx = createExecutionContext();
     const response = await app.fetch(new Request("https://cfos.example/api/photos/v1/upload/abc.def", { method: "PUT", body: "x" }), env, ctx);

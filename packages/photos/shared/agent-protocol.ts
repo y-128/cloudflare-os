@@ -62,7 +62,7 @@ export type AgentMessage =
   | { type: "ack"; seq: number }
   | { type: "scan-result"; eventId: string; jobId: JobId; files: AgentFile[]; done: boolean }
   | { type: "file-discovered"; eventId: string; file: AgentFile }
-  | { type: "derived"; eventId: string; jobId: JobId; photoId: PhotoId; preview: DerivedFile | null; thumbnail: DerivedFile | null }
+  | { type: "derived"; eventId: string; jobId: JobId; photoId: PhotoId; path: string; preview: DerivedFile | null; thumbnail: DerivedFile | null }
   | { type: "replicated"; eventId: string; jobId: JobId; assetId: AssetId }
   | { type: "deleted"; eventId: string; jobId: JobId; assetId: AssetId }
   | { type: "failed"; eventId: string; jobId: JobId; seq: number; error: string };
