@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Button, Input, Loader, Switch, Textarea } from '@cloudflare/kumo'
-import { ArrowCounterClockwise, Circle, Star, Trash, X } from '@phosphor-icons/react'
+import { ArrowCounterClockwise, Circle, DownloadSimple, Star, Trash, X } from '@phosphor-icons/react'
 import { useTranslation } from '@gadgets/i18n'
 import type {
-  AlbumView, PhotoDetail, PhotoPatch, PhotographerView, TagView,
+  AlbumView, DownloadTargetView, DownloadVariant, PhotoDetail, PhotoPatch, PhotographerView, TagView,
 } from '../../../../photos/shared/api-types'
 import { formatExposureTime } from '../../../../photos/shared/exif'
 import type { AlbumId, PhotoId, PhotographerId, TagId } from '../../../../photos/shared/ids'
@@ -41,6 +41,15 @@ export function exposureSummary(exif: NonNullable<PhotoDetail['exif']>): string 
   ].filter(Boolean).join('  ')
 }
 
+/** The downloads a photo offers: RAW and JPEG separately when it has both. */
+export function downloadVariants(photo: Pick<PhotoDetail, 'assets'>): DownloadVariant[] {
+  const originals = photo.assets.filter(asset => asset.role === 'original' || asset.role === 'replica')
+  const has = (family: string) => originals.some(asset => asset.formatFamily === family)
+  const variants: DownloadVariant[] = has('raw') && has('jpeg') ? ['jpeg', 'raw'] : originals.length ? ['original'] : []
+  if (photo.assets.some(asset => asset.role === 'preview')) variants.push('preview')
+  return variants
+}
+
 /** Details and edits for one photo. Every change is saved as it is made. */
 export function Inspector({ photoId, albums, tags, photographers, onChanged, onClose }: {
   photoId: PhotoId
@@ -70,13 +79,21 @@ export function Inspector({ photoId, albums, tags, photographers, onChanged, onC
       setRevision(value => value + 1)
       onChanged()
     } catch (err) {
-      setError(photosErrorMessage(err))
+      setError(err instanceof Error && !(err instanceof TypeError) && !('status' in err) ? err.message : photosErrorMessage(err))
     } finally {
       setBusy(false)
     }
   }
   const patch = (change: PhotoPatch) => run(async () => {
     setPhoto(await photosApi<PhotoDetail>(`/photos/${photoId}`, jsonRequest('PATCH', change)))
+  })
+  const download = (variant: DownloadVariant) => run(async () => {
+    const target = await photosApi<DownloadTargetView>(`/photos/${photoId}/download`, jsonRequest('POST', { variant }))
+    if (target.kind === 'unavailable') throw new Error(t(`workshop-frontend.Photos.download_${target.reason}`))
+    const link = document.createElement('a')
+    link.href = target.url
+    link.rel = 'noopener'
+    link.click()
   })
   const bulk = (change: { addTagIds?: TagId[]; removeTagIds?: TagId[]; addToAlbumIds?: AlbumId[]; removeFromAlbumIds?: AlbumId[] }) =>
     run(() => photosApi('/photos/bulk', jsonRequest('POST', { photoIds: [photoId], ...change })))
@@ -203,6 +220,16 @@ export function Inspector({ photoId, albums, tags, photographers, onChanged, onC
           <Switch checked={photo.downloadAllowed} disabled={busy} size="sm" aria-label={t('workshop-frontend.Photos.allow_download')}
             onCheckedChange={downloadAllowed => void patch({ downloadAllowed })} />
         </label>
+
+        <Field label={t('workshop-frontend.Photos.download')}>
+          <div className="flex flex-wrap gap-1">
+            {downloadVariants(photo).map(variant => (
+              <Button key={variant} variant="secondary" size="sm" disabled={busy} onClick={() => void download(variant)}>
+                <DownloadSimple size={12} />{t(`workshop-frontend.Photos.download_${variant}`)}
+              </Button>
+            ))}
+          </div>
+        </Field>
 
         <Field label={t('workshop-frontend.Photos.storage')}>
           <ul className="grid gap-1 text-xs">
