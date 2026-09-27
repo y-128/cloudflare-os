@@ -51,6 +51,7 @@ export class PhotoJobsDO extends DurableObject<PhotosEnv> {
       createUploads: (sessions) => this.createUploads(sessions),
       finishUpload: (id) => this.finishUpload(id),
       parts: (id) => this.parts(id),
+      exclusive: (fn) => this.ctx.blockConcurrencyWhile(fn),
     });
   }
 

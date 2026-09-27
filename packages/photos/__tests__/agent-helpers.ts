@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import {
   AGENT_PROTOCOL_VERSION, helloMessage, type AgentMessage, type WorkerMessage,
@@ -80,6 +81,14 @@ export async function onlineAgent() {
     /** Commands received so far of one type. */
     commands<T extends WorkerMessage["type"]>(type: T) {
       return channel.received.filter((m): m is Extract<WorkerMessage, { type: T }> => m.type === type);
+    },
+    /** Waits until at least `count` commands of one type have arrived, and returns them. */
+    async awaitCommands<T extends WorkerMessage["type"]>(type: T, count = 1) {
+      return vi.waitFor(() => {
+        const found = this.commands(type);
+        if (found.length < count) throw new Error(`waiting for ${count} ${type} command(s), have ${found.length}`);
+        return found;
+      }, { timeout: 2000, interval: 10 });
     },
   };
 }

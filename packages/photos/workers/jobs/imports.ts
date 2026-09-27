@@ -8,6 +8,7 @@ import {
   ID_PREFIX, newId, type AssetId, type JobId, type PhotoId, type StorageConnectionId,
 } from "../../shared/ids";
 import { getConnectionRow } from "../db/storage-connections";
+import type { NewAgentCommand } from "../durableObject/nas-agent";
 import { createPhotoRecord } from "../db/photos";
 import type { UploadSession } from "../durableObject/photo-jobs";
 import type { PhotosEnv } from "../env";
@@ -101,6 +102,8 @@ export interface ImportHost {
   createUploads(sessions: UploadSession[]): Promise<void>;
   finishUpload(id: string): Promise<void>;
   parts(id: string): Promise<R2UploadedPart[]>;
+  /** Runs `fn` with no other event delivered to the object until it settles. */
+  exclusive<T>(fn: () => Promise<T>): Promise<T>;
 }
 
 /**
@@ -142,6 +145,18 @@ export class ImportJobs {
 
   private nas(connectionId: string) {
     return this.env.NAS_AGENT.getByName(connectionId);
+  }
+
+  /**
+   * Sends a command and records it on the item before any other event is let in: the agent can
+   * answer while the send is still awaited, and its answer must find the item already waiting.
+   */
+  private async dispatch(item: ItemRow, connectionId: string, command: NewAgentCommand,
+    changes: Partial<ItemRow>): Promise<void> {
+    await this.host.exclusive(async () => {
+      const seq = await this.nas(connectionId).send(command);
+      this.setItem(item, { ...changes, command_seq: seq });
+    });
   }
 
   /** Starts a job by asking the agent to scan a folder. */
@@ -342,12 +357,11 @@ export class ImportJobs {
     const sessionId = newId(ID_PREFIX.upload);
     const keys = { original: null, preview: `derived/${sessionId}/preview.jpg`, thumbnail: `derived/${sessionId}/thumbnail.webp` };
     await this.host.createUploads([this.session(job, sessionId, keys, options.derivativeConnectionId, item, "image/jpeg")]);
-    const seq = await this.nas(job.connection_id).send({
-      type: "derive", jobId: job.id, photoId: item.photo_id!, path: item.path,
-      preview: await provider.createUpload(keys.preview, 0, "image/jpeg", { sessionId, slot: "preview", ttlMs: AGENT_UPLOAD_TTL_MS }),
-      thumbnail: await provider.createUpload(keys.thumbnail, 0, "image/webp", { sessionId, slot: "thumbnail", ttlMs: AGENT_UPLOAD_TTL_MS }),
-    });
-    this.setItem(item, { state: "deriving", session_id: sessionId, command_seq: seq });
+    const preview = await provider.createUpload(keys.preview, 0, "image/jpeg", { sessionId, slot: "preview", ttlMs: AGENT_UPLOAD_TTL_MS });
+    const thumbnail = await provider.createUpload(keys.thumbnail, 0, "image/webp", { sessionId, slot: "thumbnail", ttlMs: AGENT_UPLOAD_TTL_MS });
+    await this.dispatch(item, job.connection_id, {
+      type: "derive", jobId: job.id, photoId: item.photo_id!, path: item.path, preview, thumbnail,
+    }, { state: "deriving", session_id: sessionId });
   }
 
   private session(job: JobRow, id: string, keys: UploadSession["keys"], connectionId: StorageConnectionId,
@@ -414,10 +428,9 @@ export class ImportJobs {
       : null;
     await this.host.createUploads([this.session(job, sessionId, { original: key, preview: null, thumbnail: null },
       connectionId, item, mimeType, multipart)]);
-    const seq = await this.nas(job.connection_id).send({
+    await this.dispatch(item, job.connection_id, {
       type: "replicate", jobId: job.id, assetId: item.original_asset_id!, path: item.path, upload,
-    });
-    this.setItem(item, { state: "replicating", session_id: sessionId, command_seq: seq });
+    }, { state: "replicating", session_id: sessionId });
   }
 
   private async onReplicated(jobId: JobId, assetId: AssetId): Promise<void> {
@@ -453,10 +466,9 @@ export class ImportJobs {
       return;
     }
     // Move: the agent re-hashes the original and deletes it only if it still matches.
-    const seq = await this.nas(job.connection_id).send({
+    await this.dispatch(item, job.connection_id, {
       type: "delete-after-verify", jobId, assetId, path: item.path, expectedSha256: item.sha256,
-    });
-    this.setItem(item, { state: "deleting", session_id: null, command_seq: seq });
+    }, { state: "deleting", session_id: null });
   }
 
   private async onDeleted(jobId: JobId, assetId: AssetId): Promise<void> {

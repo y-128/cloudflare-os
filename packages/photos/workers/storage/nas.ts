@@ -60,7 +60,12 @@ export class NasProvider implements StorageProvider {
       headers.set("CF-Access-Client-Id", this.secret.accessClientId);
       headers.set("CF-Access-Client-Secret", this.secret.accessClientSecret);
     }
-    return this.fetcher(`${this.config.tunnelUrl.replace(/\/+$/, "")}${pathAndQuery}`, { method, headers, redirect: "manual" });
+    try {
+      return await this.fetcher(`${this.config.tunnelUrl.replace(/\/+$/, "")}${pathAndQuery}`, { method, headers, redirect: "manual" });
+    } catch {
+      // Powered off, asleep, or the tunnel is down: the caller says so rather than failing blindly.
+      throw new HttpError(503, "nas_unreachable");
+    }
   }
 
   async testConnection(): Promise<{ status: ConnectionStatus; detail?: string }> {
@@ -99,7 +104,7 @@ export class NasProvider implements StorageProvider {
   async list(folder: string): Promise<AgentListEntry[]> {
     const response = await this.request("GET", `/v1/list?path=${encodeURIComponent(folder)}`);
     if (response.status === 404) throw new HttpError(404, "folder_not_found");
-    if (!response.ok) throw new Error(`agent list failed with ${response.status}`);
+    if (!response.ok) throw new HttpError(503, "nas_unreachable");
     return await response.json() as AgentListEntry[];
   }
 

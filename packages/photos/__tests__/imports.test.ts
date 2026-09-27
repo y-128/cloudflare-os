@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentFile } from "../shared/agent-protocol";
 import type {
   ImportJobView, ImportOptions, PhotoDetail, StorageConnectionView,
@@ -23,7 +23,7 @@ async function scanned(files: AgentFile[]) {
   const agent = await onlineAgent();
   const job = await callJson<ImportJobView>("POST", "/imports/scan", { connectionId: agent.id, folder: "2026/Event-A" });
   await settle();
-  const [scan] = agent.commands("scan");
+  const [scan] = await agent.awaitCommands("scan");
   expect(scan).toMatchObject({ jobId: job.id, folder: "2026/Event-A" });
   await agent.emit({ type: "scan-result", jobId: job.id, files, done: true });
   agent.socket.send(JSON.stringify({ type: "ack", seq: scan.seq }));
@@ -31,8 +31,8 @@ async function scanned(files: AgentFile[]) {
 }
 
 /** Plays the agent's part for every derive command it has received. */
-async function deriveAll(agent: Awaited<ReturnType<typeof onlineAgent>>) {
-  for (const command of agent.commands("derive")) {
+async function deriveAll(agent: Awaited<ReturnType<typeof onlineAgent>>, count = 1) {
+  for (const command of await agent.awaitCommands("derive", count)) {
     const preview = new TextEncoder().encode(`preview of ${command.path}`);
     const thumbnail = new TextEncoder().encode("thumb");
     expect((await putTarget(command.preview, preview)).status).toBe(204);
@@ -62,11 +62,11 @@ describe("NAS imports", () => {
     const running = await start(job.id, { mode: "reference", derivativeConnectionId: cache, visibility: "unlisted" });
     expect(running.state).toBe("running");
     await settle();
-    expect(agent.commands("derive").map((c) => c.path)).toEqual(["2026/Event-A/DSC1.JPG", "2026/Event-A/DSC2.ARW"]);
+    expect((await agent.awaitCommands("derive", 2)).map((c) => c.path)).toEqual(["2026/Event-A/DSC1.JPG", "2026/Event-A/DSC2.ARW"]);
 
-    await deriveAll(agent);
-    const done = await callJson<ImportJobView>("GET", `/imports/${job.id}`);
-    expect(done).toMatchObject({ state: "succeeded", done: 2, failed: 0 });
+    await deriveAll(agent, 2);
+    await vi.waitFor(async () => expect(await callJson<ImportJobView>("GET", `/imports/${job.id}`))
+      .toMatchObject({ state: "succeeded", done: 2, failed: 0 }));
 
     const photoId = agent.commands("derive")[1].photoId;
     const detail = await callJson<PhotoDetail>("GET", `/photos/${photoId}`);
@@ -84,23 +84,24 @@ describe("NAS imports", () => {
       await start(job.id, { mode, derivativeConnectionId: cache, replicaConnectionId: cache });
       await settle();
       await deriveAll(agent);
-      const [replicate] = agent.commands("replicate");
+      const [replicate] = await agent.awaitCommands("replicate");
       expect(replicate.path).toBe(`2026/${mode}.JPG`);
       expect((await putTarget(replicate.upload, new TextEncoder().encode(bytes))).status).toBe(204);
       await agent.emit({ type: "replicated", jobId: job.id, assetId: replicate.assetId });
 
       const photoId = agent.commands("derive")[0].photoId;
+      if (mode === "copy") {
+        await vi.waitFor(async () => expect((await callJson<ImportJobView>("GET", `/imports/${job.id}`)).state).toBe("succeeded"));
+        expect(agent.commands("delete-after-verify")).toEqual([]);
+      }
       let detail = await callJson<PhotoDetail>("GET", `/photos/${photoId}`);
       expect(detail.assets.find((a) => a.role === "replica")).toMatchObject({ connection: { kind: "r2-binding" } });
+      if (mode === "copy") continue;
 
-      if (mode === "copy") {
-        expect(agent.commands("delete-after-verify")).toEqual([]);
-        expect((await callJson<ImportJobView>("GET", `/imports/${job.id}`)).state).toBe("succeeded");
-        continue;
-      }
-      const [remove] = agent.commands("delete-after-verify");
+      const [remove] = await agent.awaitCommands("delete-after-verify");
       expect(remove).toMatchObject({ path: "2026/move.JPG", expectedSha256: file("", bytes).sha256 });
       await agent.emit({ type: "deleted", jobId: job.id, assetId: remove.assetId });
+      await vi.waitFor(async () => expect((await callJson<ImportJobView>("GET", `/imports/${job.id}`)).state).toBe("succeeded"));
       detail = await callJson<PhotoDetail>("GET", `/photos/${photoId}`);
       const originals = detail.assets.filter((a) => a.role === "original");
       expect(originals).toHaveLength(1);
@@ -120,8 +121,8 @@ describe("NAS imports", () => {
     // A short write is refused outright; one that never happens fails the check on report.
     expect((await putTarget(replicate.upload, new TextEncoder().encode("short"))).status).toBe(400);
     await agent.emit({ type: "replicated", jobId: job.id, assetId: replicate.assetId });
-    const view = await callJson<ImportJobView>("GET", `/imports/${job.id}`);
-    expect(view).toMatchObject({ failed: 1, failures: [{ path: "a.JPG", error: "replica_mismatch" }] });
+    await vi.waitFor(async () => expect(await callJson<ImportJobView>("GET", `/imports/${job.id}`))
+      .toMatchObject({ failed: 1, failures: [{ path: "a.JPG", error: "replica_mismatch" }] }));
   });
 
   it("records agent failures and retries them", async () => {
@@ -129,14 +130,14 @@ describe("NAS imports", () => {
     const { agent, job } = await scanned([file("broken.JPG", "x")]);
     await start(job.id, { mode: "reference", derivativeConnectionId: cache });
     await settle();
-    const [derive] = agent.commands("derive");
+    const [derive] = await agent.awaitCommands("derive");
     await agent.emit({ type: "failed", jobId: job.id, seq: derive.seq, error: "unsupported image" });
-    expect(await callJson<ImportJobView>("GET", `/imports/${job.id}`)).toMatchObject({
+    await vi.waitFor(async () => expect(await callJson<ImportJobView>("GET", `/imports/${job.id}`)).toMatchObject({
       state: "succeeded", failed: 1, failures: [{ path: "broken.JPG", error: "unsupported image" }],
-    });
+    }));
     await call("POST", `/imports/${job.id}/retry`);
     await settle();
-    expect(agent.commands("derive")).toHaveLength(2);
+    expect(await agent.awaitCommands("derive", 2)).toHaveLength(2);
     expect((await callJson<ImportJobView>("GET", `/imports/${job.id}`)).state).toBe("running");
   });
 
@@ -149,9 +150,9 @@ describe("NAS imports", () => {
     await callJson("PATCH", `/storage/${agent.id}`, { autoImport: { mode: "reference", derivativeConnectionId: cache, tagIds: [] } });
     await agent.emit({ type: "file-discovered", file: file("Incoming/new.JPG", "b") });
     await agent.emit({ type: "file-discovered", file: file("Incoming/new-again.JPG", "b") });
-    expect(agent.commands("derive").map((c) => c.path)).toEqual(["Incoming/new.JPG"]);
-    const [job] = await callJson<ImportJobView[]>("GET", "/imports");
-    expect(job).toMatchObject({ automatic: true, state: "running", found: 2, duplicates: 1 });
+    expect((await agent.awaitCommands("derive")).map((c) => c.path)).toEqual(["Incoming/new.JPG"]);
+    await vi.waitFor(async () => expect((await callJson<ImportJobView[]>("GET", "/imports"))[0])
+      .toMatchObject({ automatic: true, state: "running", found: 2, duplicates: 1 }));
     agent.socket.close(1000, "done");
     await settle(200);
   });
