@@ -19,6 +19,7 @@ import { Route as GatekeepersRouteImport } from './routes/gatekeepers'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as LinksRouteImport } from './routes/links'
 import { Route as OutputsRouteImport } from './routes/outputs'
+import { Route as PhotosRouteImport } from './routes/photos'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as SearchRouteImport } from './routes/search'
@@ -80,6 +81,11 @@ const LinksRoute = LinksRouteImport.update({
 const OutputsRoute = OutputsRouteImport.update({
   id: '/outputs',
   path: '/outputs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PhotosRoute = PhotosRouteImport.update({
+  id: '/photos',
+  path: '/photos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/links': typeof LinksRoute
   '/outputs': typeof OutputsRoute
+  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/providers': typeof ProvidersRoute
   '/search': typeof SearchRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/links': typeof LinksRoute
   '/outputs': typeof OutputsRoute
+  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/providers': typeof ProvidersRoute
   '/search': typeof SearchRoute
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/links': typeof LinksRoute
   '/outputs': typeof OutputsRoute
+  '/photos': typeof PhotosRoute
   '/profile': typeof ProfileRoute
   '/providers': typeof ProvidersRoute
   '/search': typeof SearchRoute
@@ -229,6 +238,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/links'
     | '/outputs'
+    | '/photos'
     | '/profile'
     | '/providers'
     | '/search'
@@ -253,6 +263,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/links'
     | '/outputs'
+    | '/photos'
     | '/profile'
     | '/providers'
     | '/search'
@@ -277,6 +288,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/links'
     | '/outputs'
+    | '/photos'
     | '/profile'
     | '/providers'
     | '/search'
@@ -302,6 +314,7 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   LinksRoute: typeof LinksRoute
   OutputsRoute: typeof OutputsRoute
+  PhotosRoute: typeof PhotosRoute
   ProfileRoute: typeof ProfileRoute
   ProvidersRoute: typeof ProvidersRoute
   SearchRoute: typeof SearchRoute
@@ -386,6 +399,13 @@ declare module '@tanstack/react-router' {
       path: '/outputs'
       fullPath: '/outputs'
       preLoaderRoute: typeof OutputsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/photos': {
+      id: '/photos'
+      path: '/photos'
+      fullPath: '/photos'
+      preLoaderRoute: typeof PhotosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -486,6 +506,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   LinksRoute: LinksRoute,
   OutputsRoute: OutputsRoute,
+  PhotosRoute: PhotosRoute,
   ProfileRoute: ProfileRoute,
   ProvidersRoute: ProvidersRoute,
   SearchRoute: SearchRoute,

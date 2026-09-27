@@ -13,6 +13,7 @@ import {
   House,
   LinkSimple,
   Envelope,
+  Images,
   MagnifyingGlass,
   SidebarSimple,
   SquaresFour,
@@ -115,6 +116,7 @@ export default function Sidebar({
           <SidebarItem to="/" label={t('workshop-frontend.Sidebar.home')} icon={<House size={14} />} collapsed={collapsed} />
           <SidebarItem to="/today" label={t('workshop-frontend.WorkHub.today')} icon={<CalendarBlank size={14} />} collapsed={collapsed} />
           <SidebarItem to="/inbox" label={t('workshop-frontend.Sidebar.inbox')} icon={<Envelope size={14} />} collapsed={collapsed} />
+          <SidebarItem to="/photos" label={t('workshop-frontend.Sidebar.photos')} icon={<Images size={14} />} collapsed={collapsed} />
           <SidebarItem to="/activity" label={t('workshop-frontend.WorkHub.activity')} icon={<Bell size={14} />} collapsed={collapsed} />
         </nav>
         <div className="sidebar-scroll min-h-0 flex-1 overflow-y-auto border-t border-kumo-line">
