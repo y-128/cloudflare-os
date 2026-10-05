@@ -51,6 +51,8 @@ type GatewayMetadataContext = {
 
 type ModelRoutingOptions = {
   sessionAffinity?: string;
+  /** OAuth access token authorized for ChatGPT-plan direct inference. */
+  chatGptPlanAccessToken?: string;
   userGateway?: UserGatewayRouting;
   metadata?: GatewayMetadataContext;
 };
