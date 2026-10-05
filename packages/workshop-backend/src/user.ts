@@ -82,6 +82,12 @@ export type UserChatContext = {
   quickModel?: AiModelConfig;
 }
 
+type ChatGptPlanHandoffRecord = {
+  codeHash: string;
+  createdAt: number;
+  expiresAt: number;
+};
+
 type LoginSessionRecord = {
   tokenId: string,  // sha256 hash of token, hex-formatted
   created: Date,
@@ -187,6 +193,9 @@ function makeUserStorage(storage: DurableObjectStorage) {
       }),
       sessions: collection<LoginSessionRecord>()({
         primaryKey: "tokenId",
+      }),
+      chatGptPlanHandoffs: collection<ChatGptPlanHandoffRecord>()({
+        primaryKey: "codeHash",
       }),
       blueprints: collection<BlueprintUserRecord>()({
         primaryKey: "id",
@@ -471,7 +480,26 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
 
   async whoami(): Promise<AiChatAuthorInfo> {
     return this.storage.profile.get();
-  }\n\n  async getChatGptPlanConnection() {
+  }\n\n  async createChatGptPlanHandoff(): Promise<string> {
+    const raw = new Uint8Array(32);
+    crypto.getRandomValues(raw);
+    const code = raw.toBase64({alphabet: "base64url", omitPadding: true});
+    const codeHash = new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code))).toHex();
+    const now = Date.now();
+    // Keep at most a tiny number of outstanding handoffs per user and discard expired entries.
+    for (const record of this.storage.chatGptPlanHandoffs.list()) {
+      if (record.expiresAt <= now) this.storage.chatGptPlanHandoffs.delete(record.codeHash);
+    }
+    this.storage.chatGptPlanHandoffs.put({
+      codeHash,
+      createdAt: now,
+      expiresAt: now + 5 * 60 * 1000,
+    });
+    return code;
+  }
+
+  async getChatGptPlanConnection() {
     const credential = this.storage.chatGptPlanCredential.get();
     if (!credential) return {connected: false};
     return {
