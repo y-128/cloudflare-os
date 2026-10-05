@@ -2,6 +2,8 @@ import { authorizeInboxRequest } from "./inbox-auth";
 import { LinkDirectoryApiImpl } from "./link-directory";
 import type { LinkDirectoryApi } from "@gadgets/workshop-shared/api";
 export { LinkDirectoryDurableObject } from "./link-directory";
+import { ChatGptPlanHandoffDirectory, handoffDirectory } from "./chatgpt-plan-handoff";
+export { ChatGptPlanHandoffDirectory };
 import { RpcStub, RpcTarget, newHttpBatchRpcResponse, newWebSocketRpcSession, RpcSessionOptions } from "capnweb";
 import { validateRpc } from "capnweb-validate";
 import type { JWTPayload } from "jose";
@@ -87,11 +89,13 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
     this.overseers = this.ctx.exports.OverseerDurableObject;
     this.adminSettings = this.ctx.exports.AdminSettings;
     this.users = this.ctx.exports.UserDurableObject;
+    this.chatGptHandoffs = this.ctx.exports.ChatGptPlanHandoffDirectory;
   }
 
   private overseers: DurableObjectNamespace<OverseerDurableObject>;
   private adminSettings: DurableObjectNamespace<AdminSettings>;
   private users: DurableObjectNamespace<UserDurableObject>;
+  private chatGptHandoffs: DurableObjectNamespace<ChatGptPlanHandoffDirectory>;
 
   #userId: DurableObjectId;
 
@@ -128,8 +132,11 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
   whoami(): Promise<AiChatAuthorInfo> {
     // Pure-read delegations retry once across a user-DO reset (see retryOnDoReset); writes never do.
     return retryOnDoReset(() => this.#user.whoami());
-  }\n  createChatGptPlanHandoff(): Promise<{code: string; locator: string}> {
-    return this.#user.createChatGptPlanHandoff();
+  }\n  async createChatGptPlanHandoff(): Promise<{code: string; locator: string}> {
+    const handoff = await this.#user.createChatGptPlanHandoff();
+    await handoffDirectory(this.chatGptHandoffs).register(
+        handoff.locator, this.#userId.toString(), Date.now() + 5 * 60 * 1000);
+    return handoff;
   }
   getChatGptPlanConnection() {
     return retryOnDoReset(() => this.#user.getChatGptPlanConnection());
