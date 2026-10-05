@@ -88,7 +88,33 @@ const server = createServer(async (req, res) => {
 
   // Keep credentials only in memory. A later server-side handoff exchanges
   // them without exposing them to the browser or command-line output.
-  await tokenResponse.json();
+  const token = await tokenResponse.json();
+  if (host && handoff && locator) {
+    const upload = await fetch(new URL("/api/chatgpt-plan/handoff", host), {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({
+        locator,
+        handoff,
+        credential: {
+          clientId,
+          extAgentHostId,
+          subject: "oauth-user",
+          accessToken: token.access_token,
+          refreshToken: token.refresh_token,
+          idToken: token.id_token,
+          tokenType: token.token_type,
+          expiresAt: Date.now() + Number(token.expires_in) * 1000,
+          scopes: String(token.scope ?? "").split(/\\s+/).filter(Boolean),
+        },
+      }),
+    });
+    if (!upload.ok) {
+      res.writeHead(502).end("Cloudflare OS rejected the connection.");
+      server.close();
+      return;
+    }
+  }
   res.writeHead(200, {"content-type": "text/plain; charset=utf-8"});
   res.end("ChatGPT authorization completed. You can close this tab.");
   console.log("ChatGPT authorization completed locally.");
