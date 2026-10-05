@@ -128,7 +128,16 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
   whoami(): Promise<AiChatAuthorInfo> {
     // Pure-read delegations retry once across a user-DO reset (see retryOnDoReset); writes never do.
     return retryOnDoReset(() => this.#user.whoami());
+  }\n  getChatGptPlanConnection() {
+    return retryOnDoReset(() => this.#user.getChatGptPlanConnection());
   }
+  listChatGptPlanModels() {
+    return retryOnDoReset(() => this.#user.listChatGptPlanModels());
+  }
+  disconnectChatGptPlan(): Promise<void> {
+    return this.#user.disconnectChatGptPlan();
+  }
+
   setOwnDisplayName(name: string): Promise<void> {
     return this.#user.setOwnDisplayName(name);
   }
