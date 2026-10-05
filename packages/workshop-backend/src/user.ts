@@ -333,12 +333,6 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
     this.vendors = buildGatekeeperVendorMap(env);
   }
 
-  async consumeChatGptPlanHandoffWithSession(
-      sessionToken: string, code: string, credential: ChatGptPlanCredentialRecord): Promise<void> {
-    await this.authenticate(sessionToken);
-    return this.consumeChatGptPlanHandoff(code, credential);
-  }
-
   async authenticate(token: string): Promise<void> {
     let tokenBytes: Uint8Array;
     try {
