@@ -508,6 +508,14 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
     return {code, locator};
   }
 
+  async consumeChatGptPlanHandoffByLocator(
+      locator: string, code: string, credential: ChatGptPlanCredentialRecord): Promise<boolean> {
+    const handoff = this.storage.chatGptPlanHandoffs.getByIndex("byLocator", locator);
+    if (!handoff) return false;
+    await this.consumeChatGptPlanHandoff(code, credential);
+    return true;
+  }
+
   async consumeChatGptPlanHandoff(
       code: string, credential: ChatGptPlanCredentialRecord): Promise<void> {
     const codeHash = new Uint8Array(
