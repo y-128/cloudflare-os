@@ -813,6 +813,26 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext) {
     let url = new URL(req.url);
 
+    if (url.pathname === "/chatgpt-plan/connect") {
+      // Open-source Sign in with ChatGPT requires an OAuth loopback callback on the user's
+      // machine. A hosted Worker cannot impersonate that callback. Keep the hosted endpoint
+      // intentionally credential-free and explain how the local helper completes the handshake.
+      return new Response(`<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Connect ChatGPT</title></head>
+<body style="font-family:system-ui;max-width:680px;margin:64px auto;padding:0 24px;line-height:1.5">
+<h1>Connect ChatGPT</h1>
+<p>ChatGPT plan authorization is completed on this device using the Cloudflare OS local helper.</p>
+<p>The helper opens the official OpenAI sign-in page, receives the loopback callback locally, and
+then securely attaches the resulting connection to this Cloudflare OS account.</p>
+<p><strong>No API key is required.</strong></p>
+<p>Return to AI Providers after the helper reports that the connection is complete.</p>
+<p><a href="/providers">Back to AI Providers</a></p>
+</body></html>`, {
+        headers: {"content-type": "text/html; charset=utf-8", "cache-control": "no-store"},
+      });
+    }
+
     if (url.pathname === SITE_LOGO_PATH) {
       return serveSiteLogo(req, env.BLUEPRINT_CONTENT);
     }
