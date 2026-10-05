@@ -7024,10 +7024,20 @@ class OverseerImpl implements AgentHooks {
       }
 
       let sessionAffinity = await computeSessionAffinity(this.ctx.id.toString(), chatId);
+
+      // A ChatGPT-plan connection belongs to the workspace owner. When the selected model is
+      // OpenAI, prefer that subscription credential over API-key / AI-Gateway billing.
+      let chatGptPlanAccessToken: string | undefined;
+      if (aiModel.config.provider === "openai" && this.ownerId) {
+        const ownerStub = this.users.get(this.users.idFromString(this.ownerId));
+        chatGptPlanAccessToken = (await ownerStub.getChatGptPlanAccessToken()) ?? undefined;
+      }
+
       let chosenModel = getModel(
           this.env, aiModel.config, initiator, {
             sessionAffinity,
-            userGateway: byokRouting,
+            chatGptPlanAccessToken,
+            userGateway: chatGptPlanAccessToken ? undefined : byokRouting,
             metadata: { source: "chat", gadgetId: this.ctx.id.toString(), chatId },
           });
 
