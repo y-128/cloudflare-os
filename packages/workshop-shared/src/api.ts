@@ -459,7 +459,16 @@ export interface AuthenticatedApi extends RpcTarget {
   getLinkDirectory(): Promise<LinkDirectoryApi>;
 
   /** Get profile info for the user who is logged in. */
-  whoami(): Promise<AiChatAuthorInfo>;
+  whoami(): Promise<AiChatAuthorInfo>;\n\n  /** Redacted status for the user's ChatGPT-plan connection. */
+  getChatGptPlanConnection(): Promise<ChatGptPlanConnectionInfo>;
+
+  /** Models currently exposed to this user's ChatGPT plan. */
+  listChatGptPlanModels(): Promise<ChatGptPlanModelInfo[]>;
+
+  /** Disconnect ChatGPT plan and erase its OAuth credentials. */
+  disconnectChatGptPlan(): Promise<void>;
+
+
 
   /** Set the user's own display name, seen in chats, etc. */
   setOwnDisplayName(name: string): Promise<void>;
@@ -1236,6 +1245,17 @@ export type CloudflareUsageInfo = {
 export type CloudflareAccountOption = {
   accountId: string;
   accountName: string;
+};
+
+export type ChatGptPlanConnectionInfo = {
+  connected: boolean;
+  email?: string;
+  expiresAt?: number;
+};
+
+export type ChatGptPlanModelInfo = {
+  id: string;
+  name: string;
 };
 
 /** Supported AI providers. */
