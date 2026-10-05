@@ -858,11 +858,34 @@ then securely attaches the resulting connection to this Cloudflare OS account.</
     // hosts /auth/* callbacks.
 
     if (url.pathname === "/api/chatgpt-plan/handoff" && req.method === "POST") {
-      // Hosted handoff is fail-closed until an opaque locator directory can route to the
-      // originating User DO without exposing user identity or browser session credentials.
-      return new Response("ChatGPT plan hosted handoff is not enabled on this deployment.", {
-        status: 503, headers: {"cache-control": "no-store"},
-      });
+      let body: {locator?: string; handoff?: string; credential?: unknown};
+      try {
+        body = await req.json();
+      } catch {
+        return new Response("Invalid request.", {status: 400});
+      }
+      if (!body.locator || !body.handoff || !body.credential) {
+        return new Response("Invalid request.", {status: 400});
+      }
+      const directory = handoffDirectory(ctx.exports.ChatGptPlanHandoffDirectory);
+      // Consume the locator first. Any attempt, including a malformed credential, makes this
+      // public locator unusable. The independent handoff code is still checked inside User DO.
+      const userId = await directory.consume(body.locator);
+      if (!userId) return new Response("Handoff expired.", {status: 410});
+      try {
+        const user = ctx.exports.UserDurableObject.get(
+            ctx.exports.UserDurableObject.idFromString(userId));
+        await user.consumeChatGptPlanHandoff(body.handoff, body.credential);
+        return new Response(null, {
+          status: 204,
+          headers: {"cache-control": "no-store"},
+        });
+      } catch {
+        return new Response("Handoff rejected.", {
+          status: 403,
+          headers: {"cache-control": "no-store"},
+        });
+      }
     }
 
     if (url.pathname === "/api/inbox-auth") {
