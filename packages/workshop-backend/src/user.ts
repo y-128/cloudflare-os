@@ -132,6 +132,20 @@ type OutputRecord = WorkspaceOutputEntry & {
 // AI Gateway billing state for the optional top-up flow: which Cloudflare account to bill and a
 // cached credit balance. The OAuth tokens themselves live in the connected Cloudflare *gatekeeper*
 // account (vendorId "cloudflare"); billing reads a usable token from there via getUsableAccessToken.
+type ChatGptPlanCredentialRecord = {
+  clientId: string;
+  extAgentHostId: string;
+  subject: string;
+  email?: string;
+  accessToken: string;
+  refreshToken: string;
+  idToken: string;
+  tokenType: string;
+  expiresAt: number;
+  earliestRefreshAt?: number;
+  scopes: string[];
+};
+
 type CloudflareBilling = {
   // Selected account, once chosen (auto-selected when the grant sees exactly one).
   accountId?: string;
@@ -190,6 +204,10 @@ function makeUserStorage(storage: DurableObjectStorage) {
       // AI Gateway billing state (selected account + cached balance) for the optional top-up flow;
       // null until a Cloudflare account is connected and resolved.
       cloudflareBilling: <CloudflareBilling | null>null,
+
+      // Per-user ChatGPT-plan OAuth credentials. These never cross the authenticated RPC surface
+      // as raw tokens; callers receive only redacted connection metadata.
+      chatGptPlanCredential: <ChatGptPlanCredentialRecord | null>null,
 
       created: false,
       profile: <AiChatAuthorInfo>{
