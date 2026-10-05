@@ -459,7 +459,10 @@ export interface AuthenticatedApi extends RpcTarget {
   getLinkDirectory(): Promise<LinkDirectoryApi>;
 
   /** Get profile info for the user who is logged in. */
-  whoami(): Promise<AiChatAuthorInfo>;\n\n  /** Redacted status for the user's ChatGPT-plan connection. */
+  whoami(): Promise<AiChatAuthorInfo>;\n\n  /** Create a five-minute, single-purpose code for the local ChatGPT OAuth helper. */
+  createChatGptPlanHandoff(): Promise<string>;
+
+  /** Redacted status for the user's ChatGPT-plan connection. */
   getChatGptPlanConnection(): Promise<ChatGptPlanConnectionInfo>;
 
   /** Models currently exposed to this user's ChatGPT plan. */
