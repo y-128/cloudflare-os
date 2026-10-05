@@ -39,6 +39,11 @@ const SCOPES = [
 ];
 
 const b64url = (b) => Buffer.from(b).toString("base64url");
+const decodeJwtPayload = (jwt) => {
+  const parts = String(jwt ?? "").split(".");
+  if (parts.length !== 3) throw new Error("Invalid OpenAI ID token.");
+  return JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+};
 const verifier = b64url(randomBytes(48));
 const challenge = b64url(createHash("sha256").update(verifier).digest());
 const state = b64url(randomBytes(32));
@@ -89,6 +94,12 @@ const server = createServer(async (req, res) => {
   // Keep credentials only in memory. A later server-side handoff exchanges
   // them without exposing them to the browser or command-line output.
   const token = await tokenResponse.json();
+  const idPayload = decodeJwtPayload(token.id_token);
+  if (idPayload.nonce !== nonce || typeof idPayload.sub !== "string") {
+    res.writeHead(403).end("OpenAI identity validation failed.");
+    server.close();
+    return;
+  }
   if (host && handoff && locator) {
     const upload = await fetch(new URL("/api/chatgpt-plan/handoff", host), {
       method: "POST",
@@ -99,7 +110,8 @@ const server = createServer(async (req, res) => {
         credential: {
           clientId,
           extAgentHostId,
-          subject: "oauth-user",
+          subject: idPayload.sub,
+          ...(typeof idPayload.email === "string" ? {email: idPayload.email} : {}),
           accessToken: token.access_token,
           refreshToken: token.refresh_token,
           idToken: token.id_token,
