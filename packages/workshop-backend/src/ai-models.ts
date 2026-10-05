@@ -358,6 +358,16 @@ function makeHandle(args: HandleArgs): ModelHandle {
 export function getModel(env: Cloudflare.Env, config: AiModelConfig,
                          initiator: AiChatAuthorInfo,
                          options: ModelRoutingOptions = {}): ModelHandle {
+  // ChatGPT-plan OAuth is direct OpenAI billing. Never send this bearer token through
+  // Cloudflare AI Gateway, where it could be interpreted as provider BYOK credentials.
+  if (options.chatGptPlanAccessToken) {
+    if (config.provider !== "openai") {
+      throw new Error("ChatGPT plan credentials can only be used with OpenAI models.");
+    }
+    return getModelViaChatGptPlan(
+        config, options.chatGptPlanAccessToken, options.sessionAffinity);
+  }
+
   // BYOK: a connected user's own Cloudflare account pays for everything (all providers, including
   // Workers AI), routed through the user's own AI Gateway with unified billing. Honored regardless
   // of whether a platform AI Gateway is configured, so connected users are always billed correctly.
