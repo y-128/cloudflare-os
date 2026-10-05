@@ -387,6 +387,32 @@ export function getModel(env: Cloudflare.Env, config: AiModelConfig,
   return getModelDirect(config, options.sessionAffinity);
 }
 
+function getModelViaChatGptPlan(
+  config: AiModelConfig,
+  accessToken: string,
+  sessionAffinity?: string,
+): ModelHandle {
+  const catalog = catalogModel("openai", config.model);
+  const window = modelTokenWindow(config, catalog);
+  return makeHandle({
+    model: {
+      id: config.model,
+      name: catalog?.name ?? config.model,
+      api: "openai-responses",
+      provider: "openai",
+      baseUrl: "https://api.openai.com/v1",
+      reasoning: catalog?.reasoning ?? true,
+      input: catalog?.input ?? ["text", "image"],
+      cost: ZERO_COST,
+      ...window,
+      thinkingLevelMap: catalog?.thinkingLevelMap,
+      compat: catalog?.compat,
+    },
+    apiKey: accessToken,
+    sessionAffinity,
+  });
+}
+
 // Route inference through the user's own account (unified billing) via their account's default AI
 // Gateway. Supports every provider AI Gateway serves, including Workers AI. Billed to the
 // user's Cloudflare credits; no provider API key required.
