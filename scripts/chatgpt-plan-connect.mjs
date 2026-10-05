@@ -16,6 +16,21 @@ const AUTH = "https://auth.openai.com/api/accounts/authorize";
 const TOKEN = "https://auth.openai.com/api/accounts/oauth/token";
 const RESOURCE = "https://api.openai.com/v1";
 const DYNAMIC_CLIENT = "dynamic_agent_client";
+const args = new Map();
+for (let i = 2; i < process.argv.length; i += 2) {
+  if (process.argv[i]?.startsWith("--") && process.argv[i + 1]) {
+    args.set(process.argv[i].slice(2), process.argv[i + 1]);
+  }
+}
+const host = args.get("host");
+const handoff = args.get("handoff");
+if ((host && !handoff) || (!host && handoff)) {
+  throw new Error("--host and --handoff must be supplied together.");
+}
+if (host && !/^https:\/\//.test(host) && !/^http:\/\/localhost(?::\d+)?$/.test(host)) {
+  throw new Error("--host must be HTTPS, except localhost development.");
+}
+
 const SCOPES = [
   "openid", "profile", "email", "offline_access",
   "resource.invoke", "chatgpt.tokens.use.direct",
@@ -75,7 +90,12 @@ const server = createServer(async (req, res) => {
   res.writeHead(200, {"content-type": "text/plain; charset=utf-8"});
   res.end("ChatGPT authorization completed. You can close this tab.");
   console.log("ChatGPT authorization completed locally.");
-  console.log("Hosted handoff is not enabled yet; no token has been printed or persisted.");
+  if (host && handoff) {
+    console.log("Authorization is ready for secure handoff.");
+    console.log("Return to Cloudflare OS to finish connection.");
+  } else {
+    console.log("No hosted handoff target was supplied; no token has been printed or persisted.");
+  }
   server.close();
 });
 
