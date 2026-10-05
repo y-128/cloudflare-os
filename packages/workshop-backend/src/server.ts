@@ -851,23 +851,9 @@ then securely attaches the resulting connection to this Cloudflare OS account.</
     // hosts /auth/* callbacks.
 
     if (url.pathname === "/api/chatgpt-plan/handoff" && req.method === "POST") {
-      let payload: {locator?: string; handoff?: string; credential?: unknown};
-      try {
-        payload = await req.json();
-      } catch {
-        return new Response("Invalid request.", {status: 400});
-      }
-      if (!payload.locator || !payload.handoff || !payload.credential) {
-        return new Response("Invalid request.", {status: 400});
-      }
-      // The opaque locator selects only the intended User DO; the independent 256-bit handoff
-      // secret authorizes one write and is stored there only as a hash. Neither value identifies
-      // the user. The DO deletes the capability before credential validation, preventing replay.
-      const users = ctx.exports.UserDurableObject;
-      const id = users.idFromName(`chatgpt-handoff:${payload.locator}`);
-      // A locator cannot derive the real user DO id, so hosted completion requires a directory.
-      // Until that directory is available, reject rather than weakening the capability boundary.
-      return new Response("Handoff directory unavailable.", {
+      // Hosted handoff is fail-closed until an opaque locator directory can route to the
+      // originating User DO without exposing user identity or browser session credentials.
+      return new Response("ChatGPT plan hosted handoff is not enabled on this deployment.", {
         status: 503, headers: {"cache-control": "no-store"},
       });
     }
