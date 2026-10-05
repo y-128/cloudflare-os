@@ -7,6 +7,8 @@ import {
   AiChatAuthorInfo,
   AiGatewayInfo,
   AiModelProvider,
+  ChatGptPlanConnectionInfo,
+  ChatGptPlanModelInfo,
   SUGGESTED_MODELS,
 } from '@gadgets/workshop-shared/api'
 import {
@@ -142,18 +144,27 @@ function ProvidersPage() {
   const [loadError, setLoadError] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [chatGptPlan, setChatGptPlan] = useState<ChatGptPlanConnectionInfo>({connected: false})
+  const [chatGptModels, setChatGptModels] = useState<ChatGptPlanModelInfo[]>([])
 
   const fetchAll = async () => {
     setLoadError(false)
     try {
-      const [modelList, qm, cfg] = await Promise.all([
+      const [modelList, qm, cfg, plan] = await Promise.all([
         authenticatedApi.listModels(),
         authenticatedApi.getQuickModel(),
         authenticatedApi.getAiConfig(),
+        authenticatedApi.getChatGptPlanConnection(),
       ])
       setModels(modelList)
       setQuickModel(qm)
       setAiConfig(cfg)
+      setChatGptPlan(plan)
+      if (plan.connected) {
+        setChatGptModels(await authenticatedApi.listChatGptPlanModels())
+      } else {
+        setChatGptModels([])
+      }
     } catch (err) {
       console.error('Failed to load providers:', err)
       setLoadError(true)
@@ -222,6 +233,34 @@ function ProvidersPage() {
         <button type="button" onClick={() => setSheetOpen(true)} className={`${PRIMARY_BTN} h-11 justify-center text-[14px] sm:h-9 sm:text-[13px]`}>
           <Plus size={14} weight="bold" />{t("workshop-frontend.providers.add_provider")}</button>
       </header>
+
+      <div className="px-3 pb-3">
+        <div className="rounded-xl border border-kumo-line bg-kumo-base px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-kumo-default">ChatGPT plan</p>
+              <p className="mt-0.5 text-[12px] text-kumo-subtle">
+                {chatGptPlan.connected
+                  ? `Connected${chatGptPlan.email ? ` as ${chatGptPlan.email}` : ''} · ${chatGptModels.length} models available`
+                  : 'Use your ChatGPT subscription for OpenAI agent turns.'}
+              </p>
+            </div>
+            {chatGptPlan.connected ? (
+              <button type="button" className="press h-9 rounded-lg border border-kumo-line px-3 text-[13px] text-kumo-default"
+                onClick={async () => {
+                  await authenticatedApi.disconnectChatGptPlan()
+                  await fetchAll()
+                }}>
+                Disconnect
+              </button>
+            ) : (
+              <a href="/chatgpt-plan/connect" className={PRIMARY_BTN}>
+                Continue with ChatGPT
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Search — hidden when the user has no models */}
       {!loading && !loadError && models.length > 0 && (
