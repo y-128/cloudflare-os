@@ -117,13 +117,9 @@ const server = createServer(async (req, res) => {
   }
   res.writeHead(200, {"content-type": "text/plain; charset=utf-8"});
   res.end("ChatGPT authorization completed. You can close this tab.");
-  console.log("ChatGPT authorization completed locally.");
-  if (host && handoff && locator) {
-    console.log("Authorization is ready for secure handoff.");
-    console.log("Return to Cloudflare OS to finish connection.");
-  } else {
-    console.log("No hosted handoff target was supplied; no token has been printed or persisted.");
-  }
+  console.log(host && handoff && locator
+    ? "ChatGPT is connected to Cloudflare OS. No token was printed or persisted locally."
+    : "ChatGPT authorization completed locally. No token was printed or persisted.");
   server.close();
 });
 
