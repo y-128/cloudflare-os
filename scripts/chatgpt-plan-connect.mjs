@@ -24,8 +24,10 @@ for (let i = 2; i < process.argv.length; i += 2) {
 }
 const host = args.get("host");
 const handoff = args.get("handoff");
-if ((host && !handoff) || (!host && handoff)) {
-  throw new Error("--host and --handoff must be supplied together.");
+const locator = args.get("locator");
+if ([host, handoff, locator].filter(Boolean).length !== 0 &&
+    [host, handoff, locator].filter(Boolean).length !== 3) {
+  throw new Error("--host, --locator and --handoff must be supplied together.");
 }
 if (host && !/^https:\/\//.test(host) && !/^http:\/\/localhost(?::\d+)?$/.test(host)) {
   throw new Error("--host must be HTTPS, except localhost development.");
@@ -90,7 +92,7 @@ const server = createServer(async (req, res) => {
   res.writeHead(200, {"content-type": "text/plain; charset=utf-8"});
   res.end("ChatGPT authorization completed. You can close this tab.");
   console.log("ChatGPT authorization completed locally.");
-  if (host && handoff) {
+  if (host && handoff && locator) {
     console.log("Authorization is ready for secure handoff.");
     console.log("Return to Cloudflare OS to finish connection.");
   } else {
