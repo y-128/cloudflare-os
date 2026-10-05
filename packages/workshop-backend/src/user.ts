@@ -499,6 +499,28 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
     return code;
   }
 
+  async consumeChatGptPlanHandoff(
+      code: string, credential: ChatGptPlanCredentialRecord): Promise<void> {
+    const codeHash = new Uint8Array(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code))).toHex();
+    const handoff = this.storage.chatGptPlanHandoffs.get(codeHash);
+    // Delete before validating the credential: even a malformed submission burns the code and
+    // cannot be replayed with a different payload.
+    if (handoff) this.storage.chatGptPlanHandoffs.delete(codeHash);
+    if (!handoff || handoff.expiresAt <= Date.now()) {
+      throw new Error("ChatGPT plan handoff code is invalid or expired.");
+    }
+    if (!credential.scopes.includes("chatgpt.tokens.use.direct")) {
+      throw new Error("ChatGPT plan usage was not authorized.");
+    }
+    if (!credential.clientId || !credential.extAgentHostId || !credential.subject ||
+        !credential.accessToken || !credential.refreshToken || !credential.idToken ||
+        credential.expiresAt <= Date.now()) {
+      throw new Error("ChatGPT plan credential is incomplete or expired.");
+    }
+    this.storage.chatGptPlanCredential.put(credential);
+  }
+
   async getChatGptPlanConnection() {
     const credential = this.storage.chatGptPlanCredential.get();
     if (!credential) return {connected: false};
