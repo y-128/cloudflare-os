@@ -254,9 +254,12 @@ function ProvidersPage() {
                 Disconnect
               </button>
             ) : (
-              <a href="/chatgpt-plan/connect" className={PRIMARY_BTN}>
+              <button type="button" className={PRIMARY_BTN}
+                onClick={() => {
+                  window.location.href = '/chatgpt-plan/connect'
+                }}>
                 Continue with ChatGPT
-              </a>
+              </button>
             )}
           </div>
         </div>
