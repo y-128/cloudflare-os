@@ -257,7 +257,7 @@ function ProvidersPage() {
               <button type="button" className={PRIMARY_BTN}
                 onClick={async () => {
                   const handoff = await authenticatedApi.createChatGptPlanHandoff()
-                  const command = `pnpm chatgpt:connect -- --host ${window.location.origin} --handoff ${handoff}`
+                  const command = `pnpm chatgpt:connect -- --host ${window.location.origin} --locator ${handoff.locator} --handoff ${handoff.code}`
                   await navigator.clipboard.writeText(command)
                   toasts.add({ title: 'Connection command copied', variant: 'success' })
                   window.location.href = '/chatgpt-plan/connect'
