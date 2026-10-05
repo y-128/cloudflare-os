@@ -7,6 +7,11 @@ import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 import { createTypedStorage, collection } from "@gadgets/typed-storage";
 import { createWorkshopLogger } from "./observability";
 import { getAiGatewayConfig } from "./ai-gateway.js";
+import {
+  listChatGptPlanModels as fetchChatGptPlanModels,
+  refreshChatGptPlanCredential,
+  shouldRefreshChatGptPlanCredential,
+} from "./chatgpt-plan.js";
 import { utcDayKey, nextUtcMidnightIso, DailyQuotaResult } from "./ai-gateway-billing/limits/config.js";
 import type { AdminSettings } from "./admin-settings.js";
 import { isReservedBlueprintKey, readBlueprintKvRecord } from "./blueprint-archive.js";
@@ -466,7 +471,38 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
 
   async whoami(): Promise<AiChatAuthorInfo> {
     return this.storage.profile.get();
+  }\n\n  async getChatGptPlanConnection() {
+    const credential = this.storage.chatGptPlanCredential.get();
+    if (!credential) return {connected: false};
+    return {
+      connected: true,
+      ...(credential.email ? {email: credential.email} : {}),
+      expiresAt: credential.expiresAt,
+    };
   }
+
+  async disconnectChatGptPlan(): Promise<void> {
+    this.storage.chatGptPlanCredential.put(null);
+  }
+
+  async getChatGptPlanAccessToken(): Promise<string | null> {
+    let credential = this.storage.chatGptPlanCredential.get();
+    if (!credential) return null;
+    if (shouldRefreshChatGptPlanCredential(credential)) {
+      credential = await refreshChatGptPlanCredential(credential);
+      this.storage.chatGptPlanCredential.put(credential);
+    }
+    return credential.accessToken;
+  }
+
+  async listChatGptPlanModels() {
+    const token = await this.getChatGptPlanAccessToken();
+    if (!token) return [];
+    const models = await fetchChatGptPlanModels(token);
+    return models.map(model => ({id: model.slug, name: model.displayName}));
+  }
+
+
 
   /** Like whoami(), but returns null if the account was never initialized. */
   async whoamiIfExists(): Promise<AiChatAuthorInfo | null> {
