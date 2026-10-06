@@ -1237,6 +1237,12 @@
             "LinkDirectoryDurableObject"
           ],
           "tag": "v3"
+        },
+        {
+          "new_sqlite_classes": [
+            "ChatGptPlanHandoffDirectory"
+          ],
+          "tag": "v4"
         }
       ],
       "modules": [

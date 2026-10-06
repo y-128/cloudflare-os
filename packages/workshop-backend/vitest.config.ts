@@ -43,6 +43,8 @@ export default defineConfig({
         compatibilityDate: '2026-09-04',
         compatibilityFlags: ['experimental', 'nodejs_compat'],
         durableObjects: {
+          TEST_USER: { className: 'UserDurableObject', useSQLite: true },
+          TEST_CHATGPT_HANDOFF: { className: 'ChatGptPlanHandoffDirectory', useSQLite: true },
           TEST_LINK_DIRECTORY: { className: 'LinkDirectoryDurableObject', useSQLite: true },
           TEST_OVERSEER: { className: 'OverseerDurableObject', useSQLite: true },
         },

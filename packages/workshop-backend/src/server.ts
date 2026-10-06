@@ -2,7 +2,8 @@ import { authorizeInboxRequest } from "./inbox-auth";
 import { LinkDirectoryApiImpl } from "./link-directory";
 import type { LinkDirectoryApi } from "@gadgets/workshop-shared/api";
 export { LinkDirectoryDurableObject } from "./link-directory";
-import { ChatGptPlanHandoffDirectory, handoffDirectory } from "./chatgpt-plan-handoff";
+import type { ChatGptPlanHandoff } from "@gadgets/workshop-shared/api";
+import { ChatGptPlanHandoffDirectory, handoffDirectory, handleChatGptPlanHandoff } from "./chatgpt-plan-handoff";
 export { ChatGptPlanHandoffDirectory };
 import { RpcStub, RpcTarget, newHttpBatchRpcResponse, newWebSocketRpcSession, RpcSessionOptions } from "capnweb";
 import { validateRpc } from "capnweb-validate";
@@ -132,19 +133,20 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
   whoami(): Promise<AiChatAuthorInfo> {
     // Pure-read delegations retry once across a user-DO reset (see retryOnDoReset); writes never do.
     return retryOnDoReset(() => this.#user.whoami());
-  }\n  async createChatGptPlanHandoff(): Promise<{code: string; locator: string}> {
+  }
+  async createChatGptPlanHandoff(): Promise<ChatGptPlanHandoff> {
     const handoff = await this.#user.createChatGptPlanHandoff();
     await handoffDirectory(this.chatGptHandoffs).register(
-        handoff.locator, this.#userId.toString(), Date.now() + 5 * 60 * 1000);
+        handoff.locator, this.#userId.toString(), handoff.expiresAt);
     return handoff;
   }
   getChatGptPlanConnection() {
     return retryOnDoReset(() => this.#user.getChatGptPlanConnection());
   }
   listChatGptPlanModels() {
-    return retryOnDoReset(() => this.#user.listChatGptPlanModels());
+    return this.#user.listChatGptPlanModels();
   }
-  disconnectChatGptPlan(): Promise<void> {
+  disconnectChatGptPlan(): Promise<{revoked: boolean}> {
     return this.#user.disconnectChatGptPlan();
   }
 
@@ -823,26 +825,6 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext) {
     let url = new URL(req.url);
 
-    if (url.pathname === "/chatgpt-plan/connect") {
-      // Open-source Sign in with ChatGPT requires an OAuth loopback callback on the user's
-      // machine. A hosted Worker cannot impersonate that callback. Keep the hosted endpoint
-      // intentionally credential-free and explain how the local helper completes the handshake.
-      return new Response(`<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Connect ChatGPT</title></head>
-<body style="font-family:system-ui;max-width:680px;margin:64px auto;padding:0 24px;line-height:1.5">
-<h1>Connect ChatGPT</h1>
-<p>ChatGPT plan authorization is completed on this device using the Cloudflare OS local helper.</p>
-<p>The helper opens the official OpenAI sign-in page, receives the loopback callback locally, and
-then securely attaches the resulting connection to this Cloudflare OS account.</p>
-<p><strong>No API key is required.</strong></p>
-<p>Return to AI Providers after the helper reports that the connection is complete.</p>
-<p><a href="/providers">Back to AI Providers</a></p>
-</body></html>`, {
-        headers: {"content-type": "text/html; charset=utf-8", "cache-control": "no-store"},
-      });
-    }
-
     if (url.pathname === SITE_LOGO_PATH) {
       return serveSiteLogo(req, env.BLUEPRINT_CONTENT);
     }
@@ -857,35 +839,9 @@ then securely attaches the resulting connection to this Cloudflare OS account.</
     // browser via the `attempt` stub from PublicApi.startGatekeeperLogin(). So the backend no longer
     // hosts /auth/* callbacks.
 
-    if (url.pathname === "/api/chatgpt-plan/handoff" && req.method === "POST") {
-      let body: {locator?: string; handoff?: string; credential?: unknown};
-      try {
-        body = await req.json();
-      } catch {
-        return new Response("Invalid request.", {status: 400});
-      }
-      if (!body.locator || !body.handoff || !body.credential) {
-        return new Response("Invalid request.", {status: 400});
-      }
-      const directory = handoffDirectory(ctx.exports.ChatGptPlanHandoffDirectory);
-      // Consume the locator first. Any attempt, including a malformed credential, makes this
-      // public locator unusable. The independent handoff code is still checked inside User DO.
-      const userId = await directory.consume(body.locator);
-      if (!userId) return new Response("Handoff expired.", {status: 410});
-      try {
-        const user = ctx.exports.UserDurableObject.get(
-            ctx.exports.UserDurableObject.idFromString(userId));
-        await user.consumeChatGptPlanHandoff(body.handoff, body.credential);
-        return new Response(null, {
-          status: 204,
-          headers: {"cache-control": "no-store"},
-        });
-      } catch {
-        return new Response("Handoff rejected.", {
-          status: 403,
-          headers: {"cache-control": "no-store"},
-        });
-      }
+    if (url.pathname === "/api/chatgpt-plan/handoff") {
+      return handleChatGptPlanHandoff(req, ctx.exports.UserDurableObject,
+          ctx.exports.ChatGptPlanHandoffDirectory);
     }
 
     if (url.pathname === "/api/inbox-auth") {

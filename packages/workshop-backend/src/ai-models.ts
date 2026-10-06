@@ -360,7 +360,8 @@ export function getModel(env: Cloudflare.Env, config: AiModelConfig,
                          options: ModelRoutingOptions = {}): ModelHandle {
   // ChatGPT-plan OAuth is direct OpenAI billing. Never send this bearer token through
   // Cloudflare AI Gateway, where it could be interpreted as provider BYOK credentials.
-  if (options.chatGptPlanAccessToken) {
+  if (config.billing === "chatgpt-plan") {
+    if (!options.chatGptPlanAccessToken) throw new Error("Reconnect your ChatGPT plan before using this model.");
     if (config.provider !== "openai") {
       throw new Error("ChatGPT plan credentials can only be used with OpenAI models.");
     }
