@@ -21,7 +21,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "jsonc-parser";
 import { resolveBinEntry } from "./bin-entry.ts";
-import { getDevServerConfig, getInboxDevConfig } from "./dev-server-config.ts";
+import { getDevServerConfig, getInboxDevConfig, getPhotosDevConfig } from "./dev-server-config.ts";
 import { killProcessTree } from "./kill-process-tree.ts";
 import { pnpmCommand } from "./pnpm-command.ts";
 import type { ServiceBinding, WranglerBuild, WranglerConfig } from "./release/manifest-lib.ts";
@@ -32,6 +32,7 @@ const ROOT = join(SCRIPTS_DIR, "..");
 const PACKAGES_DIR = join(ROOT, "packages");
 const WORKSHOP_BACKEND_DIR = join(PACKAGES_DIR, "workshop-backend");
 const INBOX_DIR = join(PACKAGES_DIR, "inbox");
+const PHOTOS_DIR = join(PACKAGES_DIR, "photos");
 
 /** A gatekeeper package as {@link findGatekeepers} discovers it. */
 interface Gatekeeper {
@@ -458,6 +459,23 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// Generate the Photos config. Like inbox it keeps WORKSHOP_AUTH, so local access still requires
+// a Workshop administrator; its D1 database is local to wrangler dev.
+// ---------------------------------------------------------------------------
+const photosConfigPath = join(PHOTOS_DIR, "wrangler.dev.jsonc");
+let photosConfig: WranglerConfig;
+try {
+  photosConfig = getPhotosDevConfig(
+      parse(readFileSync(join(PHOTOS_DIR, "wrangler.jsonc"), "utf8")), process.env);
+  if (!photosConfig.name) throw new Error("Photos wrangler.jsonc must declare a service name.");
+  writeFileSync(photosConfigPath, JSON.stringify(photosConfig, null, 2) + "\n");
+  console.log(`generated: ${photosConfigPath}`);
+} catch (err) {
+  console.error("[generatePhotosDevConfig] failed", { context: { package: "photos" }, err });
+  throw err;
+}
+
+// ---------------------------------------------------------------------------
 // Generate wrangler.dev.jsonc (dev-router with inbox and gatekeeper service bindings).
 // ---------------------------------------------------------------------------
 {
@@ -466,6 +484,7 @@ try {
 
   config.services = config.services || [];
   config.services.push({ binding: "MAIL_INBOX", service: inboxConfig.name });
+  config.services.push({ binding: "PHOTOS", service: photosConfig.name });
   for (const gk of gatekeepers) {
     config.services.push({ binding: bindingName(gk), service: gk.name });
   }
@@ -620,6 +639,7 @@ const configs = [
   "wrangler.dev.jsonc",
   join("packages", "workshop-backend", "wrangler.dev.jsonc"),
   inboxConfigPath,
+  photosConfigPath,
   ...gatekeepers.map(gk => join(gk.dir, "wrangler.dev.jsonc")),
 ];
 

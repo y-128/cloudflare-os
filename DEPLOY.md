@@ -65,7 +65,7 @@ cp deploy.config.sample.json deploy.config.json
 
 1. Node 24 と pnpm の確認
 2. `pnpm build`
-3. **正しい順序**で4つの Worker をデプロイ(router は他を参照するので最後)
+3. **正しい順序**で5つの Worker をデプロイ(router は他を参照するので最後)
 4. デプロイ結果から**公開 URL を検出**
 5. 公開 URL のリダイレクト先から **Cloudflare Access のチーム URL と Application Audience を検出**
 6. secret を Worker ごとに振り分けて一括設定
@@ -156,9 +156,12 @@ cd /Users/y-128/Project/cfos
 export PATH="/usr/local/bin:$PATH"
 
 pnpm exec wrangler r2 bucket create inbox
+pnpm exec wrangler r2 bucket create photos
 ```
 
-添付ファイルの保存先です。バケット名 `inbox` は `packages/inbox/wrangler.jsonc` の `bucket_name` と一致している必要があります。
+`inbox` は添付ファイルの保存先です。バケット名は `packages/inbox/wrangler.jsonc` の `bucket_name` と一致している必要があります。
+`photos` は写真（Photos）の保存先で、`packages/photos/wrangler.jsonc` の `bucket_name` と一致している必要があります。
+Photos のメタデータ用 D1 データベース `photos` は、初回のデプロイで自動作成されるので手動の作成は不要です。
 
 ---
 

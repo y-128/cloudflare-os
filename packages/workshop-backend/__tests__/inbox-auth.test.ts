@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { JWTPayload } from 'jose'
-import { authorizeInboxRequest } from '../src/inbox-auth'
+import { authorizeInboxRequest, authorizePhotosRequest } from '../src/inbox-auth'
 
 const verify = vi.hoisted(() => vi.fn<() => Promise<JWTPayload | null>>())
 vi.mock('../src/access', () => ({ verifyCfAccessJwt: verify }))
@@ -38,6 +38,38 @@ describe('inbox reuses cfos authentication', () => {
     const response = await authorizeInboxRequest(request({ Origin: 'https://evil.example', Authorization: 'Bearer user:secret' }), {}, authenticate)
     expect(response.status).toBe(403)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(authenticate).not.toHaveBeenCalled()
+  })
+})
+
+/** Constructs a Photos request carrying its own request marker. */
+const photosRequest = (headers: Record<string, string> = {}) => new Request('https://cfos.example/api/photos-auth', { headers: { 'X-Photos-Request': '1', ...headers } })
+
+describe('photos reuses the same administrator check', () => {
+  it('names the verified administrator so Photos can record who edited what', async () => {
+    const authenticate = vi.fn<(credentials: { access?: JWTPayload; token?: string }) => Promise<boolean>>().mockResolvedValue(true)
+    const response = await authorizePhotosRequest(photosRequest({ Authorization: 'Bearer alice:secret' }), {}, authenticate)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+    expect(await response.json()).toEqual({ actor: 'alice' })
+    expect(authenticate).toHaveBeenCalledWith({ token: 'alice:secret' })
+  })
+  it('names the Access identity in Access mode', async () => {
+    const authenticate = vi.fn<(credentials: { access?: JWTPayload; token?: string }) => Promise<boolean>>().mockResolvedValue(true)
+    verify.mockResolvedValue({ email: 'admin@example.com' })
+    const env = { CF_ACCESS_AUD: 'shared-aud', CF_ACCESS_ISS: 'https://team.cloudflareaccess.com' }
+    expect(await (await authorizePhotosRequest(photosRequest(), env, authenticate)).json()).toEqual({ actor: 'admin@example.com' })
+  })
+  it('denies non-administrators without naming them', async () => {
+    const authenticate = vi.fn<(credentials: { access?: JWTPayload; token?: string }) => Promise<boolean>>().mockResolvedValue(false)
+    const response = await authorizePhotosRequest(photosRequest({ Authorization: 'Bearer bob:secret' }), {}, authenticate)
+    expect(response.status).toBe(403)
+    expect(await response.text()).toBe('')
+  })
+  it('does not accept the mailbox marker in place of its own', async () => {
+    const authenticate = vi.fn<(credentials: { access?: JWTPayload; token?: string }) => Promise<boolean>>().mockResolvedValue(true)
+    const crossed = new Request('https://cfos.example/api/photos-auth', { headers: { 'X-Inbox-Request': '1', Authorization: 'Bearer alice:secret' } })
+    expect((await authorizePhotosRequest(crossed, {}, authenticate)).status).toBe(403)
     expect(authenticate).not.toHaveBeenCalled()
   })
 })

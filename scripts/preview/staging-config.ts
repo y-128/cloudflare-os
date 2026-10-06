@@ -60,6 +60,8 @@ export interface PreviewOverrides {
   kv_namespaces?: BindingDecl[];
   /** R2 buckets to auto-provision per preview. */
   r2_buckets?: BindingDecl[];
+  /** D1 databases to auto-provision per preview. */
+  d1_databases?: BindingDecl[];
   /** Worker Loader bindings (the Gadget sandbox). */
   worker_loaders?: BindingDecl[];
   /** Workers AI binding. */
@@ -85,7 +87,7 @@ export interface StagingConfig extends WranglerConfig {
   preview_urls?: boolean;
   /** Zone routes. Always deleted — the preview account has no zone. */
   routes?: unknown[];
-  /** D1 bindings. None today; stripped alongside the other resource lists. */
+  /** D1 bindings (photos). Stripped alongside the other resource lists, provisioned per preview. */
   d1_databases?: BindingDecl[];
   /** Workers AI binding, injected for the backend. */
   ai?: BindingDecl;
@@ -349,6 +351,17 @@ function applyInbox(config: StagingConfig): void {
   };
 }
 
+/** Give Photos its own preview database, keeping its private core-service role like inbox. */
+function applyPhotos(config: StagingConfig): void {
+  config.previews = {
+    services: structuredClone(config.services),
+    observability: previewObservability(config),
+    vars: { ...config.vars },
+    d1_databases: previewResourceBindings(config.d1_databases),
+    r2_buckets: previewResourceBindings(config.r2_buckets),
+  };
+}
+
 function applyBackend(
   config: StagingConfig,
   { baseUrl, gatekeepers }: PreviewContext,
@@ -387,6 +400,7 @@ function applyRouter(config: StagingConfig, { gatekeepers }: PreviewContext): vo
   config.services = [
     { binding: "WORKSHOP_BACKEND", service: "workshop-backend" },
     { binding: "MAIL_INBOX", service: "inbox" },
+    { binding: "PHOTOS", service: "photos" },
     ...routerGatekeeperServices(gatekeepers),
   ];
   config.previews = {
@@ -448,6 +462,7 @@ export function buildPreviewConfigs({
     else if (pkg.name === "workshop-backend") applyBackend(config, context);
     else if (pkg.name === "router") applyRouter(config, context);
     else if (pkg.name === "inbox") applyInbox(config);
+    else if (pkg.name === "photos") applyPhotos(config);
     else throw new Error(`cannot build a preview config for package: ${pkg.name}`);
 
     configs.set(pkg.name, config);

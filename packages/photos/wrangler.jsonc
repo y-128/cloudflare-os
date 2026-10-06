@@ -1,0 +1,50 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "photos",
+  // Reached only through the router's PHOTOS service binding.
+  "workers_dev": false,
+  "preview_urls": false,
+
+  "compatibility_date": "2026-09-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "workers/app.ts",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": {
+      "invocation_logs": false,
+    },
+  },
+  "services": [{ "binding": "WORKSHOP_AUTH", "service": "workshop-backend" }],
+  // No database_id: `wrangler deploy` provisions the database by name on first deploy, so no
+  // account-specific id is committed. The worker applies its own schema (workers/db/migrate.ts).
+  "d1_databases": [
+    {
+      "binding": "PHOTOS_DB",
+      "database_name": "photos",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS_BUCKET",
+      "bucket_name": "photos",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "PHOTO_JOBS", "class_name": "PhotoJobsDO" },
+      { "name": "SCHEMA_MIGRATOR", "class_name": "SchemaMigratorDO" },
+      { "name": "NAS_AGENT", "class_name": "NasAgentDO" },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PhotoJobsDO", "SchemaMigratorDO"],
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["NasAgentDO"],
+    },
+  ],
+}

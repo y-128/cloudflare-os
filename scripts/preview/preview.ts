@@ -36,6 +36,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import {
   gatekeeperShortName, isGatekeeperPackage, type DeployablePackage,
 } from "../release/manifest-lib.ts";
@@ -563,6 +564,7 @@ function tiers(packages: readonly DeployablePackage[]): {
   gatekeepers: DeployablePackage[];
   backend: DeployablePackage;
   inbox: DeployablePackage;
+  photos: DeployablePackage;
   router: DeployablePackage;
 } {
   const byName = (name: string): DeployablePackage => {
@@ -575,6 +577,7 @@ function tiers(packages: readonly DeployablePackage[]): {
         .toSorted((a, b) => a.name.localeCompare(b.name)),
     backend: byName("workshop-backend"),
     inbox: byName("inbox"),
+    photos: byName("photos"),
     router: byName("router"),
   };
 }
@@ -587,7 +590,7 @@ async function deploy({ dryRun }: { dryRun: boolean }): Promise<void> {
   const secrets = backendSecrets();
   const oauthApps = resolveGatekeeperSecrets();
   const { previewName, workersDevHost, baseUrl, packages } = generatePreviewConfigs();
-  const { gatekeepers, backend, inbox, router } = tiers(packages);
+  const { gatekeepers, backend, inbox, photos, router } = tiers(packages);
 
   if (dryRun) {
     console.log(`\ndry-run plan for preview "${previewName}" at ${baseUrl}:`);
@@ -602,6 +605,7 @@ async function deploy({ dryRun }: { dryRun: boolean }): Promise<void> {
         `${baseUrl}/api), bound to the tier 1 previews, holding the ` +
         `${Object.keys(secrets).join(", ")} secrets`);
     console.log(`  tier 2: ${inbox.name} (private mailbox service)`);
+    console.log(`  tier 2: ${photos.name} (private photo library service)`);
     console.log(`  tier 3: ${router.name} -> ${baseUrl}, ` +
         "bound to every preview above");
     return;
@@ -640,9 +644,19 @@ async function deploy({ dryRun }: { dryRun: boolean }): Promise<void> {
     const inboxPreview = await deployPreview(inbox, previewName, wrangler.command);
     assertNoPreviewUrl(inbox, inboxPreview.url);
 
+    // A fresh key each run: it lands in the Previews settings every preview inherits, and a
+    // preview's database is as throwaway as the preview, so nothing encrypted under an older key
+    // needs to stay readable.
+    await uploadPreviewSecrets(photos, wrangler.command, {
+      PHOTOS_CREDENTIAL_KEY: randomBytes(32).toString("base64"),
+    });
+    const photosPreview = await deployPreview(photos, previewName, wrangler.command);
+    assertNoPreviewUrl(photos, photosPreview.url);
+
     patchPreviewServiceBindings(router, {
       [backend.name]: backendPreview.id,
       [inbox.name]: inboxPreview.id,
+      [photos.name]: photosPreview.id,
     });
     const routerPreview = await deployPreview(router, previewName, wrangler.command);
     assertRouterPreviewUrl(router, previewName, workersDevHost, routerPreview.url);
@@ -663,11 +677,11 @@ async function remove({ dryRun }: { dryRun: boolean }): Promise<void> {
   // Regenerate rather than assume: `delete` runs in its own CI job with a fresh checkout, and
   // wrangler needs a config to know which worker and account the preview belongs to.
   const { packages } = generatePreviewConfigs({ previewName });
-  const { gatekeepers, backend, inbox, router } = tiers(packages);
+  const { gatekeepers, backend, inbox, photos, router } = tiers(packages);
 
   if (dryRun) {
     console.log(`\ndry-run: would delete preview "${previewName}" for ` +
-        [router, backend, inbox, ...gatekeepers].map((pkg) => pkg.name).join(", "));
+        [router, backend, inbox, photos, ...gatekeepers].map((pkg) => pkg.name).join(", "));
     return;
   }
 

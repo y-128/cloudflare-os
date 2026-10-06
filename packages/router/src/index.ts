@@ -22,6 +22,8 @@ export interface Env {
   GATEKEEPER_EMAIL?: Service<EmailEntrypoint & GadgetEmailReceiver>;
   /** Static mailbox service; optional for legacy deployments and local development. */
   MAIL_INBOX?: Service<CloudflareWorkersModule.WorkerEntrypoint & EmailReceiver>;
+  /** The Photos library service; optional for deployments that predate it. */
+  PHOTOS?: Fetcher;
   [key: string]: unknown;
 }
 
@@ -40,11 +42,15 @@ export default {
         }
       }
 
-      // Gatekeeper routes above are disjoint; inbox MUST precede the generic /api route below.
-      // Otherwise /api/inbox/* would silently reach WORKSHOP_BACKEND instead of the mailbox.
+      // Gatekeeper routes above are disjoint; inbox and photos MUST precede the generic /api
+      // route below. Otherwise their paths would silently reach WORKSHOP_BACKEND instead.
       if (env.MAIL_INBOX && (url.pathname === "/api/inbox" ||
           url.pathname.startsWith("/api/inbox/"))) {
         return await env.MAIL_INBOX.fetch(req);
+      }
+      if (env.PHOTOS && (url.pathname === "/api/photos" ||
+          url.pathname.startsWith("/api/photos/"))) {
+        return await env.PHOTOS.fetch(req);
       }
 
       if (url.pathname === "/api" || url.pathname.startsWith("/api/") ||

@@ -1,0 +1,27 @@
+# Photo Storage Agent next to cloudflared on a NAS. Copy, fill in, and `docker compose up -d`.
+#
+# HDD sleep: nothing here polls the disks. Logs are discarded (a log file would keep waking them);
+# switch `logging` to the default driver while troubleshooting. Put ./config on SSD or flash if
+# the NAS has one.
+
+services:
+  photo-storage-agent:
+    image: photo-storage-agent:latest
+    restart: unless-stopped
+    volumes:
+      - ./config:/config
+      # Your photo library. Read-write only because "move" imports delete originals after they
+      # are verified on R2; mount it :ro if you never move.
+      - /volume1/Photos:/data
+    tmpfs:
+      - /tmp
+    logging:
+      driver: none
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    # Public hostname (Zero Trust > Networks > Tunnels): nas-agent.example.com -> http://photo-storage-agent:8080
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN}
+    logging:
+      driver: none

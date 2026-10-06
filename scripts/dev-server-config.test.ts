@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  DEV_PHOTOS_CREDENTIAL_KEY,
   getDevServerConfig,
   getInboxDevConfig,
+  getPhotosDevConfig,
   getWranglerPortFromBackendHost,
 } from "./dev-server-config.ts";
 
@@ -30,6 +32,20 @@ describe("getInboxDevConfig", () => {
     assert.equal(dev.vars?.EMAIL_ADDRESSES, '["admin@other.test"]');
     assert.deepEqual(dev.ai, config.ai);
     assert.equal(getInboxDevConfig(config, {}, false).vars?.DOMAINS, "configured.test");
+  });
+});
+
+describe("getPhotosDevConfig", () => {
+  it("boots with a well-formed key and direct sharing while retaining administrator authentication", () => {
+    const config = {
+      name: "photos", services: [{ binding: "WORKSHOP_AUTH", service: "workshop-backend" }],
+    };
+    const dev = getPhotosDevConfig(config, {});
+    assert.equal(Buffer.from(String(dev.vars?.PHOTOS_CREDENTIAL_KEY), "base64").length, 32);
+    assert.equal(dev.vars?.PHOTOS_CREDENTIAL_KEY, DEV_PHOTOS_CREDENTIAL_KEY);
+    assert.equal(dev.vars?.PHOTOS_DIRECT_SHARE, "1");
+    assert.deepEqual(dev.services, config.services);
+    assert.equal(getPhotosDevConfig(config, { PHOTOS_CREDENTIAL_KEY: "k" }).vars?.PHOTOS_CREDENTIAL_KEY, "k");
   });
 });
 

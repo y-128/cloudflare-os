@@ -13,7 +13,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { collectAssets, collectModules, stableStringify } from "./hash-lib.ts";
 import {
-  generateManifest, readDeployablePackages, readDeployInputs, releaseShortName,
+  buildWorkerEntry, generateManifest, readDeployablePackages, readDeployInputs, releaseShortName,
+  D1_MANIFEST_VERSION, type WorkerBuild,
 } from "./manifest-lib.ts";
 
 const RELEASE = dirname(fileURLToPath(import.meta.url));
@@ -23,7 +24,7 @@ const GOLDEN_PATH = join(TESTDATA, "golden-manifest.json");
 
 // Placeholder syntax the deploy-side renderer understands. Closed list — see manifest-lib.ts.
 const PLACEHOLDER_RE =
-    /^\$(ACCOUNT_ID|PUBLIC_BASE_URL|KV_[A-Z0-9_]+_ID|R2_[A-Z0-9_]+_NAME|WORKER_NAME\([a-z0-9-]+\)|SECRET\([A-Z0-9_]+\))/;
+    /^\$(ACCOUNT_ID|PUBLIC_BASE_URL|KV_[A-Z0-9_]+_ID|R2_[A-Z0-9_]+_NAME|D1_[A-Z0-9_]+_ID|WORKER_NAME\([a-z0-9-]+\)|SECRET\([A-Z0-9_]+\))/;
 
 function readTestWorkerBuilds() {
   return readDeployablePackages(join(ROOT, "packages")).map((pkg) => {
@@ -42,7 +43,7 @@ function readTestWorkerBuilds() {
   });
 }
 
-function buildTestManifest(workers = readTestWorkerBuilds()) {
+function buildTestManifest(workers: WorkerBuild[] = readTestWorkerBuilds()) {
   return generateManifest({
     releaseId: "r000000-fixture",
     commit: "0000000000000000000000000000000000000000",
@@ -325,7 +326,7 @@ test("a gatekeeper-prefixed library is not a deployable worker", () => {
 // Inbox is a required core service and must never be offered as an OAuth gatekeeper.
 test("inbox ships with its storage, mail, AI, and shared Workshop authentication contract", () => {
   const manifest = buildTestManifest();
-  assert.equal(manifest.manifestVersion, 2);
+  assert.ok(manifest.manifestVersion >= 2);
   const inbox = manifest.workers.inbox;
   assert.equal(inbox.kind, "inbox");
   assert.equal(inbox.shortName, undefined);
@@ -351,5 +352,50 @@ test("inbox ships with its storage, mail, AI, and shared Workshop authentication
   });
   assert.deepEqual(manifest.workers.router.bindings.find(binding => binding.name === "MAIL_INBOX"), {
     type: "service", name: "MAIL_INBOX", service: "$WORKER_NAME(inbox)",
+  });
+});
+
+// A synthetic photos build, so the D1 rendering is pinned independently of photos' real config.
+const photosBuild: WorkerBuild = {
+  pkgName: "photos",
+  config: {
+    name: "photos",
+    d1_databases: [{ binding: "PHOTOS_DB" }],
+    services: [{ binding: "WORKSHOP_AUTH", service: "workshop-backend" }],
+  },
+  mainModule: "index.js",
+  modules: [{ name: "index.js", type: "esm", sha256: "0".repeat(64), size: 1, bytes: Buffer.alloc(1) }],
+  deployInputs: [{ name: "PHOTOS_CREDENTIAL_KEY", kind: "secret", label: "Credential key" }],
+};
+
+test("D1 databases become deploy-time placeholders and photos is a core service", () => {
+  const photos = buildWorkerEntry(photosBuild);
+  assert.equal(photos.kind, "photos");
+  assert.equal(photos.shortName, undefined);
+  assert.equal(photos.vars.BASE_URL, undefined);
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_DB"), {
+    type: "d1", name: "PHOTOS_DB", id: "$D1_PHOTOS_DB_ID",
+  });
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_CREDENTIAL_KEY"), {
+    type: "secret_text", name: "PHOTOS_CREDENTIAL_KEY", text: "$SECRET(PHOTOS_CREDENTIAL_KEY)",
+  });
+  assert.ok(!photos.bindings.some(binding => binding.name === "CLIENT_SECRET"));
+});
+
+
+test("photos ships as a core service with its database, key and shared Workshop authentication", () => {
+  const manifest = buildTestManifest();
+  assert.equal(manifest.manifestVersion, D1_MANIFEST_VERSION);
+  const photos = manifest.workers.photos;
+  assert.equal(photos.kind, "photos");
+  assert.deepEqual(photos.inputs?.map(input => input.name), ["PHOTOS_CREDENTIAL_KEY"]);
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_DB"), {
+    type: "d1", name: "PHOTOS_DB", id: "$D1_PHOTOS_DB_ID",
+  });
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "PHOTOS_BUCKET"), {
+    type: "r2_bucket", name: "PHOTOS_BUCKET", bucket_name: "$R2_PHOTOS_BUCKET_NAME",
+  });
+  assert.deepEqual(photos.bindings.find(binding => binding.name === "WORKSHOP_AUTH"), {
+    type: "service", name: "WORKSHOP_AUTH", service: "$WORKER_NAME(workshop-backend)",
   });
 });

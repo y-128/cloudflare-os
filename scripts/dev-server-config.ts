@@ -70,6 +70,27 @@ export function getDevServerConfig(args: readonly string[], envBackendHost?: str
   };
 }
 
+/**
+ * A fixed, well-formed key for local development only: it encrypts nothing but throwaway local
+ * data, and a stable value keeps that data readable across dev-server restarts.
+ */
+export const DEV_PHOTOS_CREDENTIAL_KEY = "ZGV2LW9ubHktcGhvdG9zLWNyZWRlbnRpYWwta2V5ISE=";
+
+/**
+ * Give Photos its secrets as plain vars in the (gitignored) generated dev config, and allow
+ * direct share links since local dev has no Cloudflare Access in front of it.
+ */
+export function getPhotosDevConfig(config: WranglerConfig, env: NodeJS.ProcessEnv): WranglerConfig {
+  return {
+    ...config,
+    vars: {
+      ...config.vars,
+      PHOTOS_CREDENTIAL_KEY: env.PHOTOS_CREDENTIAL_KEY ?? DEV_PHOTOS_CREDENTIAL_KEY,
+      PHOTOS_DIRECT_SHARE: "1",
+    },
+  };
+}
+
 /** Keep inbox storage and mail delivery local; real AI requires the existing opt-in flag. */
 export function getInboxDevConfig(
   config: WranglerConfig, env: NodeJS.ProcessEnv, useWorkersAi: boolean,

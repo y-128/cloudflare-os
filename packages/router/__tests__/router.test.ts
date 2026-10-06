@@ -76,6 +76,17 @@ describe('router fetch', () => {
     expect(await route(env, '/inbox')).toBe('assets');
     expect(await route(makeEnv(), '/inbox/anything')).toBe('backend');
   });
+  it('routes the Photos API to its worker and the Photos UI to the SPA', async () => {
+    const env = makeEnv({ PHOTOS: stubFetcher('photos'), ASSETS: stubFetcher('assets') });
+    for (const path of ['/api/photos', '/api/photos/v1/photos/search']) {
+      expect(await route(env, path)).toBe('photos');
+    }
+    expect(await route(env, '/api/photoshop')).toBe('backend');
+    expect(await route(env, '/api/photos-auth')).toBe('backend');
+    expect(await route(env, '/photos')).toBe('assets');
+    expect(await route(makeEnv({ ASSETS: stubFetcher('assets') }), '/api/photos/v1/tags')).toBe('backend');
+  });
+
   it('routes /api and /blueprint-screenshot prefixes to the backend', async () => {
     const env = makeEnv({ ASSETS: stubFetcher('assets') });
     expect(await route(env, '/api')).toBe('backend');

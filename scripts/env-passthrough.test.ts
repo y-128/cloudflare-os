@@ -63,6 +63,10 @@ const EXPECTED: Record<string, ExpectedArea> = {
     injected: ["WORKSHOP_INTEGRATION_PREBUILT"],
     watch: ["FORMAT_BLUEPRINTS_DIR"],
   },
+  // The NAS agent reads its Node runtime configuration and logging defaults in test imports.
+  "packages/photo-storage-agent": {
+    forwarded: ["PHOTO_AGENT_CONFIG", "PHOTO_AGENT_LOG"],
+  },
   // `env: ['VITE_*']` — vite's `define` inlines any VITE_-prefixed variable, so the set this
   // package can depend on is open-ended and the wildcard is the only honest declaration.
   "packages/workshop-frontend": {

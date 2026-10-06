@@ -403,9 +403,9 @@ test("every gatekeeper is bound to the backend by RPC and to the router by HTTP"
   const router = previewsOf(configs, "router").services;
   assert.ok(router, "the router preview declares no service bindings");
   assert.deepEqual(router.map((service) => service.service),
-      ["workshop-backend", "inbox", ...gatekeepers],
-      "the router fronts the backend and every gatekeeper");
-  for (const [index, service] of router.slice(2).entries()) {
+      ["workshop-backend", "inbox", "photos", ...gatekeepers],
+      "the router fronts the backend, the core services and every gatekeeper");
+  for (const [index, service] of router.slice(3).entries()) {
     assert.equal(service.binding, gatekeeperBindingName(gatekeepers[index]));
     // The router forwards whole HTTP requests, so it binds the default entrypoint.
     assert.equal(service.entrypoint, undefined, service.service);
@@ -536,4 +536,21 @@ test("inbox has an isolated preview mailbox and a static router binding", () => 
   assert.equal(inbox.durable_objects?.bindings.length, 4);
   assert.ok(previewsOf(configs, "router").services?.some(service =>
     service.binding === "MAIL_INBOX" && service.service === "inbox"));
+});
+
+// Photos gets a fresh database per preview and, like inbox, stays private behind the router.
+test("photos has an isolated preview database and no hostname", () => {
+  const { configs } = buildAll();
+  const photos = configs.get("photos");
+  assert.ok(photos);
+  assert.equal(photos.workers_dev, false);
+  assert.equal(photos.preview_urls, false);
+  assert.deepEqual(photos.previews?.d1_databases, [{ binding: "PHOTOS_DB" }]);
+  assert.deepEqual(photos.previews?.r2_buckets, [{ binding: "PHOTOS_BUCKET" }]);
+  assert.ok(photos.previews?.services?.some(service =>
+    service.binding === "WORKSHOP_AUTH" && service.service === "workshop-backend"));
+  assert.ok(!(photos.d1_databases ?? []).some(db => "database_id" in db),
+      "a preview must never inherit another deployment's database");
+  assert.ok(previewsOf(configs, "router").services?.some(service =>
+    service.binding === "PHOTOS" && service.service === "photos"));
 });
