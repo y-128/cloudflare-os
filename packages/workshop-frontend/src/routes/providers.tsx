@@ -7,8 +7,6 @@ import {
   AiChatAuthorInfo,
   AiGatewayInfo,
   AiModelProvider,
-  ChatGptPlanConnectionInfo,
-  ChatGptPlanModelInfo,
   SUGGESTED_MODELS,
 } from '@gadgets/workshop-shared/api'
 import {
@@ -19,6 +17,7 @@ import {
   DotsThreeVertical,
 } from '@phosphor-icons/react'
 import AddModelModal from '../AddModelModal'
+import { ChatGptPlanCard } from '../features/chatgpt-plan/ChatGptPlanCard'
 import { useDocumentTitle } from '../useDocumentTitle'
 import { MENU_CONTENT, MENU_ITEM, MENU_ITEM_DANGER } from '../components/menuStyles'
 
@@ -144,27 +143,18 @@ function ProvidersPage() {
   const [loadError, setLoadError] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [chatGptPlan, setChatGptPlan] = useState<ChatGptPlanConnectionInfo>({connected: false})
-  const [chatGptModels, setChatGptModels] = useState<ChatGptPlanModelInfo[]>([])
 
   const fetchAll = async () => {
     setLoadError(false)
     try {
-      const [modelList, qm, cfg, plan] = await Promise.all([
+      const [modelList, qm, cfg] = await Promise.all([
         authenticatedApi.listModels(),
         authenticatedApi.getQuickModel(),
         authenticatedApi.getAiConfig(),
-        authenticatedApi.getChatGptPlanConnection(),
       ])
       setModels(modelList)
       setQuickModel(qm)
       setAiConfig(cfg)
-      setChatGptPlan(plan)
-      if (plan.connected) {
-        setChatGptModels(await authenticatedApi.listChatGptPlanModels())
-      } else {
-        setChatGptModels([])
-      }
     } catch (err) {
       console.error('Failed to load providers:', err)
       setLoadError(true)
@@ -234,40 +224,7 @@ function ProvidersPage() {
           <Plus size={14} weight="bold" />{t("workshop-frontend.providers.add_provider")}</button>
       </header>
 
-      <div className="px-3 pb-3">
-        <div className="rounded-xl border border-kumo-line bg-kumo-base px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-kumo-default">ChatGPT plan</p>
-              <p className="mt-0.5 text-[12px] text-kumo-subtle">
-                {chatGptPlan.connected
-                  ? `Connected${chatGptPlan.email ? ` as ${chatGptPlan.email}` : ''} · ${chatGptModels.length} models available`
-                  : 'Use your ChatGPT subscription for OpenAI agent turns.'}
-              </p>
-            </div>
-            {chatGptPlan.connected ? (
-              <button type="button" className="press h-9 rounded-lg border border-kumo-line px-3 text-[13px] text-kumo-default"
-                onClick={async () => {
-                  await authenticatedApi.disconnectChatGptPlan()
-                  await fetchAll()
-                }}>
-                Disconnect
-              </button>
-            ) : (
-              <button type="button" className={PRIMARY_BTN}
-                onClick={async () => {
-                  const handoff = await authenticatedApi.createChatGptPlanHandoff()
-                  const command = `pnpm chatgpt:connect -- --host ${window.location.origin} --locator ${handoff.locator} --handoff ${handoff.code}`
-                  await navigator.clipboard.writeText(command)
-                  toasts.add({ title: 'Connection command copied', variant: 'success' })
-                  window.location.href = '/chatgpt-plan/connect'
-                }}>
-                Continue with ChatGPT
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <div className="px-3 pb-3"><ChatGptPlanCard onModelsChange={fetchAll} /></div>
 
       {/* Search — hidden when the user has no models */}
       {!loading && !loadError && models.length > 0 && (
@@ -343,13 +300,16 @@ function ProvidersPage() {
               key={model.id}
               className={deletingId === model.id ? 'pointer-events-none opacity-50' : ''}
             >
-              <ModelRow
+              {model.id.startsWith('chatgpt:') ? <div className="rounded-lg px-3 py-2.5">
+                <p className="text-sm font-medium text-kumo-default">{model.name}</p>
+                <p className="text-xs text-kumo-subtle">{t('workshop-frontend.chatgpt.select_model')}</p>
+              </div> : <ModelRow
                 model={model}
                 isQuick={quickModel === model.id}
                 isBuiltIn={isBuiltIn(model.id)}
                 onDelete={() => handleDelete(model)}
                 onSetQuick={() => handleSetQuick(model.id)}
-              />
+              />}
             </div>
           ))
         )}

@@ -119,6 +119,7 @@ export default defineConfig(({ mode }) => {
       host: true,
       proxy: {
         '/api/inbox': { target: `http://${backendHost}`, ws: true },
+        '/api/chatgpt-plan': `http://${backendHost}`,
         '/api/client-errors': `http://${backendHost}`,
         '/blueprint-screenshot': `http://${backendHost}`,
         '/api/site-logo': `http://${backendHost}`,
