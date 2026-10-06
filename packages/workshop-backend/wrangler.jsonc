@@ -73,6 +73,13 @@
 			"new_sqlite_classes": [
 				"LinkDirectoryDurableObject"
 			]
+		},
+		{
+			// Short-lived opaque locator directory for ChatGPT-plan OAuth handoffs.
+			"tag": "v4",
+			"new_sqlite_classes": [
+				"ChatGptPlanHandoffDirectory"
+			]
 		}
 	],
 	// All DO classes (UserDurableObject, OverseerDurableObject, AdminSettings, PendingLogin, ...) are

@@ -7,6 +7,16 @@ import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 import { createTypedStorage, collection } from "@gadgets/typed-storage";
 import { createWorkshopLogger } from "./observability";
 import { getAiGatewayConfig } from "./ai-gateway.js";
+import {
+  listChatGptPlanModels as fetchChatGptPlanModels,
+  refreshChatGptPlanCredential,
+  shouldRefreshChatGptPlanCredential,
+  verifyChatGptPlanCredential,
+  revokeChatGptPlanCredential,
+  ChatGptPlanReauthorizationRequired,
+  type ChatGptPlanCredential,
+  type ChatGptPlanModel,
+} from "./chatgpt-plan.js";
 import { utcDayKey, nextUtcMidnightIso, DailyQuotaResult } from "./ai-gateway-billing/limits/config.js";
 import type { AdminSettings } from "./admin-settings.js";
 import { isReservedBlueprintKey, readBlueprintKvRecord } from "./blueprint-archive.js";
@@ -76,6 +86,14 @@ export type UserChatContext = {
   aiModel?: UserAiModelRecord;
   quickModel?: AiModelConfig;
 }
+
+type ChatGptPlanHandoffRecord = {
+  codeHash: string;
+  nonce: string;
+  expiresAt: number;
+  /** Opaque public locator; reveals no username or user DO id. */
+  locator: string;
+};
 
 type LoginSessionRecord = {
   tokenId: string,  // sha256 hash of token, hex-formatted
@@ -169,6 +187,12 @@ function makeUserStorage(storage: DurableObjectStorage) {
       sessions: collection<LoginSessionRecord>()({
         primaryKey: "tokenId",
       }),
+      chatGptPlanHandoffs: collection<ChatGptPlanHandoffRecord>()({
+        primaryKey: "codeHash",
+        uniqueIndexes: {
+          byLocator(record: ChatGptPlanHandoffRecord) { return record.locator; },
+        },
+      }),
       blueprints: collection<BlueprintUserRecord>()({
         primaryKey: "id",
       }),
@@ -190,6 +214,12 @@ function makeUserStorage(storage: DurableObjectStorage) {
       // AI Gateway billing state (selected account + cached balance) for the optional top-up flow;
       // null until a Cloudflare account is connected and resolved.
       cloudflareBilling: <CloudflareBilling | null>null,
+
+      // Per-user ChatGPT-plan OAuth credentials. These never cross the authenticated RPC surface
+      // as raw tokens; callers receive only redacted connection metadata.
+      chatGptPlanCredential: <ChatGptPlanCredential | null>null,
+      chatGptPlanModels: <ChatGptPlanModel[]>[],
+      chatGptPlanRegistration: <{extAgentHostId: string; clientId?: string; subject?: string} | null>null,
 
       created: false,
       profile: <AiChatAuthorInfo>{
@@ -281,6 +311,9 @@ async function checkGatekeeperVendorFilter(
 /** Durable Object that stores information about a user. */
 export class UserDurableObject extends DurableObject<Cloudflare.Env> {
   private storage: UserStorage;
+  private chatGptPlanRefresh: Promise<ChatGptPlanCredential> | undefined;
+  private chatGptPlanGeneration = 0;
+  private chatGptPlanAttemptGeneration = 0;
   private vendors: Map<string, Service<GatekeeperVendor>>;
   private adminSettings: DurableObjectNamespace<AdminSettings>;
 
@@ -450,6 +483,123 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
     return this.storage.profile.get();
   }
 
+  async createChatGptPlanHandoff() {
+    ++this.chatGptPlanAttemptGeneration;
+    const code = crypto.getRandomValues(new Uint8Array(32))
+        .toBase64({alphabet: "base64url", omitPadding: true});
+    const codeHash = new Uint8Array(await crypto.subtle.digest(
+        "SHA-256", new TextEncoder().encode(code))).toHex();
+    const locator = crypto.getRandomValues(new Uint8Array(18))
+        .toBase64({alphabet: "base64url", omitPadding: true});
+    const nonce = crypto.randomUUID();
+    const expiresAt = Date.now() + 5 * 60 * 1000;
+    const registration = this.storage.chatGptPlanRegistration.get()
+        ?? {extAgentHostId: `urn:uuid:${crypto.randomUUID()}`};
+    this.storage.chatGptPlanRegistration.put(registration);
+    // A new attempt supersedes earlier attempts, bounding per-user storage.
+    for (const record of Array.from(this.storage.chatGptPlanHandoffs.list())) {
+      this.storage.chatGptPlanHandoffs.delete(record.codeHash);
+    }
+    this.storage.chatGptPlanHandoffs.put({codeHash, nonce, expiresAt, locator});
+    return {code, locator, nonce, expiresAt, ...registration};
+  }
+
+  async consumeChatGptPlanHandoff(
+      code: string, locator: string, credential: ChatGptPlanCredential): Promise<void> {
+    const codeHash = new Uint8Array(await crypto.subtle.digest(
+        "SHA-256", new TextEncoder().encode(code))).toHex();
+    const handoff = this.storage.chatGptPlanHandoffs.get(codeHash);
+    if (handoff) this.storage.chatGptPlanHandoffs.delete(codeHash);
+    if (!handoff || handoff.locator !== locator || handoff.expiresAt <= Date.now()) {
+      throw new Error("ChatGPT plan handoff code is invalid or expired.");
+    }
+    const registration = this.storage.chatGptPlanRegistration.get();
+    if (registration?.extAgentHostId !== credential.extAgentHostId ||
+        (registration.clientId && registration.clientId !== credential.clientId) ||
+        (registration.subject && registration.subject !== credential.subject)) {
+      throw new Error("ChatGPT plan registration does not match.");
+    }
+    const generation = this.chatGptPlanGeneration;
+    const attempt = this.chatGptPlanAttemptGeneration;
+    await verifyChatGptPlanCredential(credential, handoff.nonce);
+    const models = await fetchChatGptPlanModels(credential.accessToken);
+    // A disconnect or a newer connection must not be undone by a slow OAuth result.
+    if (generation !== this.chatGptPlanGeneration || attempt !== this.chatGptPlanAttemptGeneration) {
+      throw new Error("ChatGPT connection was cancelled.");
+    }
+    ++this.chatGptPlanGeneration;
+    this.chatGptPlanRefresh = undefined;
+    this.storage.chatGptPlanCredential.put(credential);
+    this.storage.chatGptPlanModels.put(models);
+    this.storage.chatGptPlanRegistration.put({extAgentHostId: credential.extAgentHostId,
+      clientId: credential.clientId, subject: credential.subject});
+  }
+
+  async getChatGptPlanConnection() {
+    const credential = this.storage.chatGptPlanCredential.get();
+    if (!credential) return {connected: false};
+    return {connected: true, ...(credential.email ? {email: credential.email} : {}),
+      expiresAt: credential.expiresAt};
+  }
+
+  async disconnectChatGptPlan(): Promise<{revoked: boolean}> {
+    ++this.chatGptPlanGeneration;
+    const refreshing = this.chatGptPlanRefresh;
+    this.chatGptPlanRefresh = undefined;
+    const credential = this.storage.chatGptPlanCredential.get();
+    this.storage.chatGptPlanCredential.put(null);
+    this.storage.chatGptPlanModels.put([]);
+    for (const record of Array.from(this.storage.chatGptPlanHandoffs.list())) {
+      this.storage.chatGptPlanHandoffs.delete(record.codeHash);
+    }
+    const latest = await refreshing?.catch(() => undefined);
+    return {revoked: !credential || await revokeChatGptPlanCredential(latest ?? credential)};
+  }
+
+  /** Internal-only credential capability; never exposed on AuthenticatedApi. */
+  async getChatGptPlanAccessToken(): Promise<string | null> {
+    const credential = this.storage.chatGptPlanCredential.get();
+    if (!credential) return null;
+    if (!this.chatGptPlanRefresh && !shouldRefreshChatGptPlanCredential(credential)) {
+      if (credential.expiresAt <= Date.now()) throw new Error("ChatGPT token has expired. Reconnect.");
+      return credential.accessToken;
+    }
+    const generation = this.chatGptPlanGeneration;
+    const refresh = this.chatGptPlanRefresh ?? refreshChatGptPlanCredential(credential);
+    this.chatGptPlanRefresh = refresh;
+    try {
+      const next = await refresh;
+      if (generation !== this.chatGptPlanGeneration) throw new Error("ChatGPT connection changed.");
+      this.storage.chatGptPlanCredential.put(next);
+      return next.accessToken;
+    } catch (error) {
+      if (generation === this.chatGptPlanGeneration && error instanceof ChatGptPlanReauthorizationRequired) {
+        this.storage.chatGptPlanCredential.put(null);
+        this.storage.chatGptPlanModels.put([]);
+      }
+      throw error;
+    } finally {
+      if (this.chatGptPlanRefresh === refresh) this.chatGptPlanRefresh = undefined;
+    }
+  }
+
+  async listChatGptPlanModels() {
+    const generation = this.chatGptPlanGeneration;
+    const token = await this.getChatGptPlanAccessToken();
+    if (!token) return [];
+    const models = await fetchChatGptPlanModels(token);
+    if (generation !== this.chatGptPlanGeneration) throw new Error("ChatGPT connection changed.");
+    this.storage.chatGptPlanModels.put(models);
+    return models.map(model => ({id: model.slug, name: model.displayName}));
+  }
+
+  private chatGptPlanModel(id: string): UserAiModelRecord | undefined {
+    if (!this.storage.chatGptPlanCredential.get()) return undefined;
+    const model = this.storage.chatGptPlanModels.get().find(candidate => `chatgpt:${candidate.slug}` === id);
+    return model ? {profile: {type: "agent", id, name: `${model.displayName} (ChatGPT)`},
+      config: {provider: "openai", model: model.slug, apiToken: "", billing: "chatgpt-plan"}} : undefined;
+  }
+
   /** Like whoami(), but returns null if the account was never initialized. */
   async whoamiIfExists(): Promise<AiChatAuthorInfo | null> {
     if (!this.storage.created.get()) {
@@ -544,10 +694,18 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
         result.push(model.profile);
       }
     }
+    if (this.storage.chatGptPlanCredential.get()) {
+      for (const model of this.storage.chatGptPlanModels.get()) {
+        result.push(this.chatGptPlanModel(`chatgpt:${model.slug}`)!.profile);
+      }
+    }
     return result;
   }
 
   async addModel(profile: AiChatAuthorInfo, config: AiModelConfig): Promise<void> {
+    if (profile.id.startsWith("chatgpt:") || config.billing) {
+      throw new Error("ChatGPT plan models are managed by the connection.");
+    }
     let gwConfig = getAiGatewayConfig(this.env);
     if (gwConfig && !gwConfig.providers.has(config.provider)) {
       throw new Error(`Provider "${config.provider}" is not available in AI Gateway mode.`);
@@ -558,6 +716,7 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
   }
 
   async deleteModel(id: string): Promise<void> {
+    if (id.startsWith("chatgpt:")) throw new Error("Disconnect ChatGPT to remove its models.");
     // In AI Gateway mode, don't allow deleting built-in suggested models.
     let gwConfig = getAiGatewayConfig(this.env);
     if (gwConfig) {
@@ -572,6 +731,7 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
   }
 
   async setQuickModel(id: string | null): Promise<void> {
+    if (id?.startsWith("chatgpt:")) throw new Error("ChatGPT plan models are for agent turns only.");
     this.storage.quickModel.put(id);
   }
 
@@ -700,8 +860,9 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
       profile: this.storage.profile.get()
     };
     if (modelId) {
+      result.aiModel = this.chatGptPlanModel(modelId);
       // In AI Gateway mode, resolve gateway models first.
-      if (gwConfig) {
+      if (!result.aiModel && gwConfig) {
         result.aiModel = gwConfig.resolveModel(modelId);
       }
       if (!result.aiModel) {
@@ -728,6 +889,9 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
 
   async getExternalMessageChatContext(existingChatModelId: string | null): Promise<UserChatContext> {
     let models = await this.listModels();
+    if (existingChatModelId?.startsWith("chatgpt:") && !this.chatGptPlanModel(existingChatModelId)) {
+      throw new Error("Reconnect your ChatGPT plan before continuing this chat.");
+    }
     // Prefer the existing chat's model, then the user's preferred model, then the first available model.
     let selectedModel = models.find(model => model.id === existingChatModelId)
       ?? models.find(model => model.id === this.storage.preferredModel.get())

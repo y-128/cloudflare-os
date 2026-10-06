@@ -2,6 +2,9 @@ import { authorizeInboxRequest, authorizePhotosRequest } from "./inbox-auth";
 import { LinkDirectoryApiImpl } from "./link-directory";
 import type { LinkDirectoryApi } from "@gadgets/workshop-shared/api";
 export { LinkDirectoryDurableObject } from "./link-directory";
+import type { ChatGptPlanHandoff } from "@gadgets/workshop-shared/api";
+import { ChatGptPlanHandoffDirectory, handoffDirectory, handleChatGptPlanHandoff } from "./chatgpt-plan-handoff";
+export { ChatGptPlanHandoffDirectory };
 import { RpcStub, RpcTarget, newHttpBatchRpcResponse, newWebSocketRpcSession, RpcSessionOptions } from "capnweb";
 import { validateRpc } from "capnweb-validate";
 import type { JWTPayload } from "jose";
@@ -87,11 +90,13 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
     this.overseers = this.ctx.exports.OverseerDurableObject;
     this.adminSettings = this.ctx.exports.AdminSettings;
     this.users = this.ctx.exports.UserDurableObject;
+    this.chatGptHandoffs = this.ctx.exports.ChatGptPlanHandoffDirectory;
   }
 
   private overseers: DurableObjectNamespace<OverseerDurableObject>;
   private adminSettings: DurableObjectNamespace<AdminSettings>;
   private users: DurableObjectNamespace<UserDurableObject>;
+  private chatGptHandoffs: DurableObjectNamespace<ChatGptPlanHandoffDirectory>;
 
   #userId: DurableObjectId;
 
@@ -129,6 +134,22 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
     // Pure-read delegations retry once across a user-DO reset (see retryOnDoReset); writes never do.
     return retryOnDoReset(() => this.#user.whoami());
   }
+  async createChatGptPlanHandoff(): Promise<ChatGptPlanHandoff> {
+    const handoff = await this.#user.createChatGptPlanHandoff();
+    await handoffDirectory(this.chatGptHandoffs).register(
+        handoff.locator, this.#userId.toString(), handoff.expiresAt);
+    return handoff;
+  }
+  getChatGptPlanConnection() {
+    return retryOnDoReset(() => this.#user.getChatGptPlanConnection());
+  }
+  listChatGptPlanModels() {
+    return this.#user.listChatGptPlanModels();
+  }
+  disconnectChatGptPlan(): Promise<{revoked: boolean}> {
+    return this.#user.disconnectChatGptPlan();
+  }
+
   setOwnDisplayName(name: string): Promise<void> {
     return this.#user.setOwnDisplayName(name);
   }
@@ -817,6 +838,11 @@ export default {
     // OAuth redirect lands on `/gatekeeper/<name>/oauth`); the result is bridged back to the waiting
     // browser via the `attempt` stub from PublicApi.startGatekeeperLogin(). So the backend no longer
     // hosts /auth/* callbacks.
+
+    if (url.pathname === "/api/chatgpt-plan/handoff") {
+      return handleChatGptPlanHandoff(req, ctx.exports.UserDurableObject,
+          ctx.exports.ChatGptPlanHandoffDirectory);
+    }
 
     if (url.pathname === "/api/inbox-auth" || url.pathname === "/api/photos-auth") {
       const authorize = url.pathname === "/api/inbox-auth" ? authorizeInboxRequest : authorizePhotosRequest;

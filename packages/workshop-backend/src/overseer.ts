@@ -7001,8 +7001,18 @@ class OverseerImpl implements AgentHooks {
       // When the Cloudflare limits flow is disabled, checkUsageAndBalance() always allows.
       // (This runs inside the try so the `finally` below still clears the active-agent state and
       // emits a stream "clear" — otherwise the UI would spin forever on a block.)
+      // Use the same account that selected this model, including collaborator and callback turns.
+      let chatGptPlanAccessToken: string | undefined;
+      if (aiModel.config.billing === "chatgpt-plan") {
+        const record = this.storage.activeAgents.get(chatId);
+        if (!record) throw new Error("ChatGPT model account is unavailable.");
+        const user = this.users.get(this.users.idFromString(record.initiatorUserId));
+        chatGptPlanAccessToken = (await user.getChatGptPlanAccessToken()) ?? undefined;
+        if (!chatGptPlanAccessToken) throw new Error("Reconnect your ChatGPT plan.");
+      }
+
       let byokRouting: UserGatewayRouting | undefined;
-      if (!callbackInitiated && this.ownerId) {
+      if (!chatGptPlanAccessToken && !callbackInitiated && this.ownerId) {
         let ownerStub = this.users.get(this.users.idFromString(this.ownerId));
         let usage = await checkUsageAndBalance(this.env, ownerStub);
         if (!usage.allowed) {
@@ -7024,10 +7034,12 @@ class OverseerImpl implements AgentHooks {
       }
 
       let sessionAffinity = await computeSessionAffinity(this.ctx.id.toString(), chatId);
+
       let chosenModel = getModel(
           this.env, aiModel.config, initiator, {
             sessionAffinity,
-            userGateway: byokRouting,
+            chatGptPlanAccessToken,
+            userGateway: chatGptPlanAccessToken ? undefined : byokRouting,
             metadata: { source: "chat", gadgetId: this.ctx.id.toString(), chatId },
           });
 

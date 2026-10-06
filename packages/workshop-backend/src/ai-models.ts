@@ -51,6 +51,8 @@ type GatewayMetadataContext = {
 
 type ModelRoutingOptions = {
   sessionAffinity?: string;
+  /** OAuth access token authorized for ChatGPT-plan direct inference. */
+  chatGptPlanAccessToken?: string;
   userGateway?: UserGatewayRouting;
   metadata?: GatewayMetadataContext;
 };
@@ -356,6 +358,17 @@ function makeHandle(args: HandleArgs): ModelHandle {
 export function getModel(env: Cloudflare.Env, config: AiModelConfig,
                          initiator: AiChatAuthorInfo,
                          options: ModelRoutingOptions = {}): ModelHandle {
+  // ChatGPT-plan OAuth is direct OpenAI billing. Never send this bearer token through
+  // Cloudflare AI Gateway, where it could be interpreted as provider BYOK credentials.
+  if (config.billing === "chatgpt-plan") {
+    if (!options.chatGptPlanAccessToken) throw new Error("Reconnect your ChatGPT plan before using this model.");
+    if (config.provider !== "openai") {
+      throw new Error("ChatGPT plan credentials can only be used with OpenAI models.");
+    }
+    return getModelViaChatGptPlan(
+        config, options.chatGptPlanAccessToken, options.sessionAffinity);
+  }
+
   // BYOK: a connected user's own Cloudflare account pays for everything (all providers, including
   // Workers AI), routed through the user's own AI Gateway with unified billing. Honored regardless
   // of whether a platform AI Gateway is configured, so connected users are always billed correctly.
@@ -373,6 +386,32 @@ export function getModel(env: Cloudflare.Env, config: AiModelConfig,
   }
 
   return getModelDirect(config, options.sessionAffinity);
+}
+
+function getModelViaChatGptPlan(
+  config: AiModelConfig,
+  accessToken: string,
+  sessionAffinity?: string,
+): ModelHandle {
+  const catalog = catalogModel("openai", config.model);
+  const window = modelTokenWindow(config, catalog);
+  return makeHandle({
+    model: {
+      id: config.model,
+      name: catalog?.name ?? config.model,
+      api: "openai-responses",
+      provider: "openai",
+      baseUrl: "https://api.openai.com/v1",
+      reasoning: catalog?.reasoning ?? true,
+      input: catalog?.input ?? ["text", "image"],
+      cost: ZERO_COST,
+      ...window,
+      thinkingLevelMap: catalog?.thinkingLevelMap,
+      compat: catalog?.compat,
+    },
+    apiKey: accessToken,
+    sessionAffinity,
+  });
 }
 
 // Route inference through the user's own account (unified billing) via their account's default AI

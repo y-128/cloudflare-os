@@ -570,3 +570,62 @@ describe("PDF attachment bridging", () => {
     }));
   }, 15000);
 });
+
+describe("ChatGPT plan routing", () => {
+  beforeEach(() => { capturedRequests.length = 0; });
+  const config: AiModelConfig = {provider: "openai", model: "gpt-6.1-sol", apiToken: "", billing: "chatgpt-plan"};
+
+  it("uses direct Responses with OAuth, zero API cost, stateless streaming and no gateway headers", async () => {
+    const handle = getModel(env(), config, INITIATOR, {
+      chatGptPlanAccessToken: "chatgpt-oauth", userGateway: {accountId: "other-account", apiKey: "gateway-secret"},
+      metadata: {source: "chat", gadgetId: "gadget", chatId: 7},
+    });
+    expect(handle.aiGatewayLogRoute).toBeUndefined();
+    expect(handle.model.cost.input).toBe(0);
+    const request = await captureRequest(handle);
+    expect(request.url).toBe("https://api.openai.com/v1/responses");
+    expect(request.headers.get("authorization")).toBe("Bearer chatgpt-oauth");
+    expect(request.headers.get("cf-aig-authorization")).toBeNull();
+    expect(request.headers.get("cf-aig-metadata")).toBeNull();
+    expect(JSON.parse(request.body)).toMatchObject({model: "gpt-6.1-sol", store: false, stream: true});
+  });
+
+  it("requires an explicit plan model and fails closed without a connection", () => {
+    expect(() => getModel(env(), config, INITIATOR)).toThrow("Reconnect");
+    expect(() => getModel(env(), {...config, provider: "anthropic"}, INITIATOR,
+      {chatGptPlanAccessToken: "chatgpt-oauth"})).toThrow("only be used with OpenAI");
+    const apiModel = getModel(env(), {...config, billing: undefined}, INITIATOR,
+      {chatGptPlanAccessToken: "chatgpt-oauth"});
+    expect(apiModel.model.baseUrl).toContain("gateway.ai.cloudflare.com");
+  });
+});
+
+describe("ChatGPT plan streaming failures", () => {
+  const config: AiModelConfig = {provider: "openai", model: "gpt-6.1-sol", apiToken: "", billing: "chatgpt-plan"};
+  it.each(["subscription_sharing_usage_limit_exceeded", "subscription_sharing_user_unavailable"])(
+    "surfaces a streamed provider failure %s without changing billing", async code => {
+      const handle = getModel(env(), config, INITIATOR, {chatGptPlanAccessToken: "chatgpt-oauth"});
+      const stream = handle.stream(handle.model, {messages: [{role: "user", content: "hello", timestamp: 0}]}, {
+        maxRetries: 0,
+        fetch: async () => new Response(`data: ${JSON.stringify({type: "response.failed", response: {
+          status: "failed", error: {code, message: "Limit or temporary unavailability"},
+        }})}\n\n`, {headers: {"content-type": "text/event-stream"}}),
+      });
+      const result = await stream.result();
+      expect(result.stopReason).toBe("error");
+      expect(result.errorMessage).toContain(code);
+      expect(handle.aiGatewayLogRoute).toBeUndefined();
+    });
+
+  it("rejects a stream that ends without a terminal response event", async () => {
+    const handle = getModel(env(), config, INITIATOR, {chatGptPlanAccessToken: "chatgpt-oauth"});
+    const stream = handle.stream(handle.model, {messages: [{role: "user", content: "hello", timestamp: 0}]}, {
+      maxRetries: 0,
+      fetch: async () => new Response('data: {"type":"response.created","response":{"id":"resp_test"}}\n\n',
+        {headers: {"content-type": "text/event-stream"}}),
+    });
+    const result = await stream.result();
+    expect(result.stopReason).toBe("error");
+    expect(result.errorMessage).toContain("ended before a terminal response event");
+  });
+});

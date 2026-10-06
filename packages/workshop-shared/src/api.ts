@@ -461,6 +461,18 @@ export interface AuthenticatedApi extends RpcTarget {
   /** Get profile info for the user who is logged in. */
   whoami(): Promise<AiChatAuthorInfo>;
 
+  /** Create a five-minute, single-purpose code for the local ChatGPT OAuth helper. */
+  createChatGptPlanHandoff(): Promise<ChatGptPlanHandoff>;
+
+  /** Redacted status for the user's ChatGPT-plan connection. */
+  getChatGptPlanConnection(): Promise<ChatGptPlanConnectionInfo>;
+
+  /** Models currently exposed to this user's ChatGPT plan. */
+  listChatGptPlanModels(): Promise<ChatGptPlanModelInfo[]>;
+
+  /** Erase credentials and try remote revocation; false means remote revocation is unconfirmed. */
+  disconnectChatGptPlan(): Promise<{revoked: boolean}>;
+
   /** Set the user's own display name, seen in chats, etc. */
   setOwnDisplayName(name: string): Promise<void>;
 
@@ -1238,6 +1250,30 @@ export type CloudflareAccountOption = {
   accountName: string;
 };
 
+/** A short-lived capability for attaching the local OAuth result to this account. */
+export type ChatGptPlanHandoff = {
+  code: string;
+  locator: string;
+  nonce: string;
+  extAgentHostId: string;
+  expiresAt: number;
+  clientId?: string;
+  subject?: string;
+};
+
+/** Connection metadata with no OAuth credentials. */
+export type ChatGptPlanConnectionInfo = {
+  connected: boolean;
+  email?: string;
+  expiresAt?: number;
+};
+
+/** An account-specific model available through ChatGPT plan billing. */
+export type ChatGptPlanModelInfo = {
+  id: string;
+  name: string;
+};
+
 /** Supported AI providers. */
 export type AiModelProvider = "openai" | "anthropic" | "google" | "cloudflare" | "ollama";
 
@@ -1253,6 +1289,9 @@ export type AiGatewayInfo = {
 export type AiModelConfig = {
   /** Which AI provider hosts the model? */
   provider: AiModelProvider;
+
+  /** Explicitly use ChatGPT plan billing instead of API-key or AI Gateway billing. */
+  billing?: "chatgpt-plan";
 
   /** Name of the specific model, as specified to the provider's API. */
   model: string;

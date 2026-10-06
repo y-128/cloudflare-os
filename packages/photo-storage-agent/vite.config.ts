@@ -5,7 +5,10 @@ export default {
   run: {
     tasks: {
       build: { command: "tsc -p ." },
-      test: { command: withTestTimeout("node --test 'test/**/*.test.ts'"), env: TESTS_WITH_TIMEOUT_ENV },
+      test: {
+        command: withTestTimeout("node --test 'test/**/*.test.ts'"),
+        env: [...TESTS_WITH_TIMEOUT_ENV, "PHOTO_AGENT_CONFIG", "PHOTO_AGENT_LOG"],
+      },
     },
   },
 };

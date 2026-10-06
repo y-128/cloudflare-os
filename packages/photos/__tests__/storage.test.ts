@@ -1,5 +1,5 @@
 import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   DownloadTargetView, PhotoDetail, StorageConnectionView, UploadFile, UploadSlot, UploadTargetView,
 } from "../shared/api-types";
@@ -99,26 +99,31 @@ describe("storage connections", () => {
   });
 
   it("stores S3 credentials encrypted and never returns them", async () => {
-    const response = await call("POST", "/storage", { body: {
-      kind: "r2-s3", name: "Gallery", endpoint: "https://acct.r2.cloudflarestorage.com", bucket: "gallery",
-      accessKeyId: "AKID", secretAccessKey: "SECRET",
-    } });
-    const view = await response.json() as StorageConnectionView;
-    expect(response.status).toBe(201);
-    expect(JSON.stringify(view)).not.toContain("SECRET");
-    expect(view.hasSecret).toBe(true);
-    // The fake endpoint is unreachable from the test, which is recorded rather than thrown.
-    expect(view.status).toBe("error");
-    const row = await env.PHOTOS_DB.prepare("SELECT config_json, secret_ciphertext FROM storage_connections WHERE id = ?")
-      .bind(view.id).first<{ config_json: string; secret_ciphertext: number[] }>();
-    expect(row?.config_json).not.toContain("SECRET");
-    expect(new TextDecoder().decode(new Uint8Array(row!.secret_ciphertext))).not.toContain("SECRET");
+    const unreachable = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("fixture endpoint unavailable"));
+    try {
+      const response = await call("POST", "/storage", { body: {
+        kind: "r2-s3", name: "Gallery", endpoint: "https://acct.r2.cloudflarestorage.com", bucket: "gallery",
+        accessKeyId: "AKID", secretAccessKey: "SECRET",
+      } });
+      const view = await response.json() as StorageConnectionView;
+      expect(response.status).toBe(201);
+      expect(JSON.stringify(view)).not.toContain("SECRET");
+      expect(view.hasSecret).toBe(true);
+      // The endpoint failure is recorded without depending on live network access.
+      expect(view.status).toBe("error");
+      const row = await env.PHOTOS_DB.prepare("SELECT config_json, secret_ciphertext FROM storage_connections WHERE id = ?")
+        .bind(view.id).first<{ config_json: string; secret_ciphertext: number[] }>();
+      expect(row?.config_json).not.toContain("SECRET");
+      expect(new TextDecoder().decode(new Uint8Array(row!.secret_ciphertext))).not.toContain("SECRET");
 
-    // Replacing the name keeps the stored credentials usable.
-    await callJson("PATCH", `/storage/${view.id}`, { name: "Film Gallery" });
-    const kept = await env.PHOTOS_DB.prepare("SELECT secret_ciphertext FROM storage_connections WHERE id = ?")
-      .bind(view.id).first<{ secret_ciphertext: number[] }>();
-    expect(await decryptSecret(env, view.id, kept!.secret_ciphertext)).toEqual({ accessKeyId: "AKID", secretAccessKey: "SECRET" });
+      // Replacing the name keeps the stored credentials usable.
+      await callJson("PATCH", `/storage/${view.id}`, { name: "Film Gallery" });
+      const kept = await env.PHOTOS_DB.prepare("SELECT secret_ciphertext FROM storage_connections WHERE id = ?")
+        .bind(view.id).first<{ secret_ciphertext: number[] }>();
+      expect(await decryptSecret(env, view.id, kept!.secret_ciphertext)).toEqual({ accessKeyId: "AKID", secretAccessKey: "SECRET" });
+    } finally {
+      unreachable.mockRestore();
+    }
   });
 
   it("rejects plain-http endpoints", async () => {

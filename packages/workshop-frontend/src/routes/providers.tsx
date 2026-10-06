@@ -17,6 +17,7 @@ import {
   DotsThreeVertical,
 } from '@phosphor-icons/react'
 import AddModelModal from '../AddModelModal'
+import { ChatGptPlanCard } from '../features/chatgpt-plan/ChatGptPlanCard'
 import { useDocumentTitle } from '../useDocumentTitle'
 import { MENU_CONTENT, MENU_ITEM, MENU_ITEM_DANGER } from '../components/menuStyles'
 
@@ -223,6 +224,8 @@ function ProvidersPage() {
           <Plus size={14} weight="bold" />{t("workshop-frontend.providers.add_provider")}</button>
       </header>
 
+      <div className="px-3 pb-3"><ChatGptPlanCard onModelsChange={fetchAll} /></div>
+
       {/* Search — hidden when the user has no models */}
       {!loading && !loadError && models.length > 0 && (
         <div className="mb-3 px-3">
@@ -297,13 +300,16 @@ function ProvidersPage() {
               key={model.id}
               className={deletingId === model.id ? 'pointer-events-none opacity-50' : ''}
             >
-              <ModelRow
+              {model.id.startsWith('chatgpt:') ? <div className="rounded-lg px-3 py-2.5">
+                <p className="text-sm font-medium text-kumo-default">{model.name}</p>
+                <p className="text-xs text-kumo-subtle">{t('workshop-frontend.chatgpt.select_model')}</p>
+              </div> : <ModelRow
                 model={model}
                 isQuick={quickModel === model.id}
                 isBuiltIn={isBuiltIn(model.id)}
                 onDelete={() => handleDelete(model)}
                 onSetQuick={() => handleSetQuick(model.id)}
-              />
+              />}
             </div>
           ))
         )}
