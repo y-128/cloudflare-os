@@ -31,6 +31,7 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "wrangler": "catalog:"
+    "wrangler": "catalog:",
+    "jose": "^6.2.8"
   }
 }
